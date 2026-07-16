@@ -7,6 +7,7 @@ agp = "9.3.0"
 # Kotlinx
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.10.0"
+kotlinx-datetime = "0.8.0"
 
 # Architecture / DI / network / db
 orbit = "10.0.0"
@@ -49,6 +50,7 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 
 # Orbit MVI
 orbit-core = { module = "org.orbit-mvi:orbit-core", version.ref = "orbit" }
