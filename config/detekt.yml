@@ -1,3 +1,12 @@
+coroutines:
+  # Flags direct Dispatchers.* usage in production code (should be injected
+  # for testability) — noisy false positive in test source sets, where
+  # building a real in-memory Room DB / MockEngine test double with a
+  # concrete dispatcher is the standard, correct pattern, not a DI smell.
+  InjectDispatcher:
+    active: true
+    excludes: ["**/test/**", "**/androidTest/**", "**/*Test.kt"]
+
 complexity:
   LongMethod:
     threshold: 40

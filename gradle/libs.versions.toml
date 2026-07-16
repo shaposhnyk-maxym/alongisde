@@ -18,6 +18,7 @@ ktor = "3.5.0"
 # ships full multiplatform support with the same API as Android Room.
 # Bump back to a real 3.0.x once JetBrains actually ships it.
 room = "2.8.4"
+sqlite = "2.7.0"
 ksp = "2.3.10"
 
 # AndroidX (Android-only shell, not Compose Multiplatform)
@@ -44,6 +45,7 @@ kotlin-gradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", ve
 compose-gradlePlugin = { module = "org.jetbrains.compose:compose-gradle-plugin", version.ref = "compose-multiplatform" }
 ksp-gradlePlugin = { module = "com.google.devtools.ksp:symbol-processing-gradle-plugin", version.ref = "ksp" }
 roborazzi-gradlePlugin = { module = "io.github.takahirom.roborazzi:roborazzi-gradle-plugin", version.ref = "roborazzi" }
+room-gradlePlugin = { module = "androidx.room:room-gradle-plugin", version.ref = "room" }
 
 # Kotlinx
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
@@ -79,6 +81,7 @@ activity-compose = { module = "androidx.activity:activity-compose", version.ref 
 # Room
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
 
 # Navigation 3 / Material 3 Adaptive
 navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
@@ -117,3 +120,4 @@ convention-kmp-library-compose = { id = "convention.kmp.library.compose", versio
 convention-roborazzi = { id = "convention.roborazzi", version = "unspecified" }
 convention-android-application = { id = "convention.android.application", version = "unspecified" }
 convention-koin = { id = "convention.koin", version = "unspecified" }
+convention-room = { id = "convention.room", version = "unspecified" }

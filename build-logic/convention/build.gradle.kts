@@ -16,6 +16,7 @@ dependencies {
     compileOnly(libs.compose.gradlePlugin)
     compileOnly(libs.ksp.gradlePlugin)
     compileOnly(libs.roborazzi.gradlePlugin)
+    compileOnly(libs.room.gradlePlugin)
 }
 
 gradlePlugin {
@@ -39,6 +40,10 @@ gradlePlugin {
         register("koin") {
             id = "convention.koin"
             implementationClass = "KoinPlugin"
+        }
+        register("room") {
+            id = "convention.room"
+            implementationClass = "RoomPlugin"
         }
     }
 }
