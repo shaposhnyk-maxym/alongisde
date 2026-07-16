@@ -107,15 +107,58 @@ match-статусом...) +
 
 ---
 
-### M2 — DB
-`core:database` — Room 3.0 реалізація дата сорсів з M1.
+### M2 — DB ✅ done
+`core:database` — Room реалізація дата сорсів з M1 (Trip, DiaryEntry,
+Episode+Photo, PlaceCandidate).
 
 **Accept:**
-- Усі DAO покриті інтеграційними тестами на `Room.inMemoryDatabaseBuilder`
-  (без Android Context, без реального файлу БД)
-- Тести покривають: insert/update/delete, реактивні `Flow`-запити
-  (емітять оновлення при зміні даних), конфлікти первинних ключів
-- Міграції (навіть якщо схема поки одна) — тест на створення БД з нуля
+- [x] Усі DAO покриті інтеграційними тестами на `Room.inMemoryDatabaseBuilder`
+      (без Android Context, без реального файлу БД) — `TripDaoTest`,
+      `DiaryEntryDaoTest`, `PlaceCandidateDaoTest`, `EpisodeDaoTest`, усі в
+      `core:database/src/jvmTest`
+- [x] Тести покривають: insert/update/delete, реактивні `Flow`-запити
+      (емітять оновлення при зміні даних), конфлікти первинних ключів
+      (`upsert with existing id replaces existing row` у кожному DAO-тесті)
+- [x] Міграції (навіть якщо схема поки одна) — `DatabaseCreationTest`
+      створює БД з нуля й проганяє round-trip по кожній з 5 таблиць;
+      `exportSchema = true` комітить schema-1 JSON у `core/database/schemas/`
+- Додатково (не в буквальних Accept-критеріях, але з testing-strategy
+  CLAUDE.md "repository-логіка — обов'язково до merge"): кожен
+  `*RepositoryImpl` (домен-мапінг над DAO) також вкритий `*RepositoryImplTest`
+
+**Відхилення від початкового плану:**
+- **Room/KSP wiring через новий `convention.room`-плагін** — Room 2.8.4 KMP
+  не автовайрить per-target KSP (на відміну від класичної Android-only
+  Room+KSP звʼязки), тож `room-compiler` додається вручну через
+  `dependencies.add("ksp<Target>", ...)` для `kspAndroid`/`kspJvm`/
+  `kspIosArm64`/`kspIosSimulatorArm64`. Плагіни `com.google.devtools.ksp`
+  та `androidx.room` довелось додатково задекларувати з `apply false` в
+  корневому `build.gradle.kts` (за тим самим патерном, що й `roborazzi`) —
+  інакше `pluginManager.apply(...)` всередині convention-плагіна не міг їх
+  зарезолвити без версії.
+- **`Dispatchers.IO` недоступний на Kotlin/Native** (`internal` у
+  kotlinx.coroutines 1.11.0 для Native-таргетів) — спільна
+  `getRoomDatabase(builder)`-функція використовує `Dispatchers.Default`
+  замість `Dispatchers.IO` для query-coroutine-контексту, єдиний вибір,
+  доступний одразу на android/jvm/iosArm64/iosSimulatorArm64.
+- **`Episode.photos: List<Photo>`** — `PhotoEntity` отримав окрему таблицю
+  з FK+CASCADE на `EpisodeEntity` (єдиний enforced FK у схемі — Photo не
+  має власного репозиторія/lifecycle в домені), читання назад через
+  `@Relation`-проєкцію `EpisodeWithPhotos`. Немає FK/cascade між Trip і
+  його дочірніми сутностями (DiaryEntry/Episode/PlaceCandidate) — поведінка
+  при видаленні поїздки не визначена ні в M1, ні в concept-документі,
+  тож не вигадувалась зараз; переглянути, коли delete-trip буде реально
+  реалізовано.
+- **Детект-правило `coroutines.InjectDispatcher`** (дефолтний детект-рулсет,
+  не кастомний) спрацьовував на прямі `Dispatchers.IO`-виклики в
+  test-сетапах (побудова in-memory Room БД) — додано `excludes` для
+  test-джерел у `config/detekt.yml`, оскільки для тестової інфраструктури
+  пряма побудова реального диспатчера є стандартним, а не хибним,
+  патерном.
+- **Продакшн (не-тестове) провіжинування БД** — надано мінімально:
+  `getDatabaseBuilder(...)` per-platform (`androidMain`/`iosMain`/`jvmMain`)
+  + спільна `getRoomDatabase(builder)`. Без Koin-реєстрації — DI-вайринг
+  свідомо відкладено на мілстоун, що збирає `data`/`app` (M9+).
 
 ---
 
