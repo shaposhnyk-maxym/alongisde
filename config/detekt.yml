@@ -1,0 +1,30 @@
+complexity:
+  LongMethod:
+    threshold: 40
+  LongParameterList:
+    active: true
+    functionThreshold: 6
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 15
+
+style:
+  # Вимкнено на старті — забагато шуму на ранньому етапі проєкту,
+  # варто увімкнути пізніше, коли з'явиться конкретний домен констант
+  MagicNumber:
+    active: false
+
+# Compose-специфічні правила (ru.kode:detekt-rules-compose)
+compose:
+  ReusedModifierInstance:
+    active: true
+  UnnecessaryEventHandlerParameter:
+    active: true
+  ModifierHeightWithText:
+    active: true
+  ComposableEventParameterNaming:
+    active: true
+  ComposableParametersOrdering:
+    active: true
+  MissingModifierDefaultValue:
+    active: true

@@ -1,0 +1,27 @@
+name: iOS Framework Check
+
+# Тільки вручну (кнопка "Run workflow" на вкладці Actions) — не на
+# кожен PR, бо macOS-раннер рахується у 10x проти безкоштовного ліміту
+on:
+  workflow_dispatch:
+
+jobs:
+  ios-build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle (з кешем)
+        uses: gradle/actions/setup-gradle@v4
+
+      # Точна назва таски залежить від того, як назвеш framework-таргет
+      # в build.gradle.kts модуля :app (baseName у binaries.framework{})
+      - name: Link iOS framework (debug)
+        run: ./gradlew :app:linkDebugFrameworkIosArm64 :app:linkDebugFrameworkIosSimulatorArm64
