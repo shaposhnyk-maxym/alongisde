@@ -24,8 +24,6 @@ val detektMergeSarif by tasks.registering(ReportMergeTask::class) {
 
 val versionCatalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
 
-fun isGeneratedPath(file: File): Boolean = file.path.contains("${File.separatorChar}build${File.separatorChar}")
-
 subprojects {
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
     apply(plugin = "io.gitlab.arturbosch.detekt")
@@ -37,21 +35,14 @@ subprojects {
     }
 
     // KtlintExtension.filter{} has no effect on generated Compose resource
-    // accessors: BaseKtLintCheckTask.source is a flat ConfigurableFileCollection
-    // (not a rooted file tree), so Ant-style glob excludes never get a relative
-    // path to match against. Filter the already-resolved file collection directly
-    // instead — this works regardless of how the files were unioned together.
+    // accessors, and mutating `source` at execution time (doFirst) trips the
+    // configuration cache ("Task.project invocation ... unsupported" /
+    // "cannot serialize Gradle script object references" — tried both).
+    // BaseKtLintCheckTask implements PatternFilterable directly; calling
+    // exclude() on the task itself at configuration time is the one approach
+    // that's both correct and configuration-cache-safe.
     tasks.withType<BaseKtLintCheckTask>().configureEach {
-        doFirst {
-            // Idempotent: re-wrapping an already-filtered FileCollection in another
-            // filter{} layer on every build (daemon reuse means this configuration
-            // re-runs repeatedly against the same live task objects) compounds into
-            // a StackOverflowError once the wrapper chain gets deep enough. Only
-            // filter if there's actually something to remove.
-            if (source.any(::isGeneratedPath)) {
-                setSource(source.filter { file -> !isGeneratedPath(file) })
-            }
-        }
+        exclude { entry -> entry.file.path.contains("${File.separatorChar}build${File.separatorChar}") }
     }
 
     dependencies {
@@ -69,22 +60,10 @@ subprojects {
             sarif.outputLocation.set(layout.buildDirectory.file("reports/detekt/${name}.sarif"))
         }
         finalizedBy(detektMergeSarif)
-        // Same generated-Compose-resources problem as ktlint above, plus detekt's
-        // own plugin re-assigns `source` from an afterEvaluate block of its own —
-        // filtering in configureEach{} loses the race against that. doFirst{} runs
-        // after all configuration (every afterEvaluate) has finished, so it wins.
-        // The idempotency check (only filter if there's a generated path present)
-        // matters even more here than for ktlint, since daemon reuse across builds
-        // would otherwise compound source.filter{} wrapping into a
-        // StackOverflowError once the FilteredFileCollection chain gets deep enough.
-        onlyIf {
-            source.any { file -> !isGeneratedPath(file) }
-        }
-        doFirst {
-            if (source.any(::isGeneratedPath)) {
-                setSource(source.filter { file -> !isGeneratedPath(file) })
-            }
-        }
+        // Same generated-Compose-resources problem as ktlint above — Detekt also
+        // extends SourceTask (implements PatternFilterable directly), so the same
+        // configuration-time exclude() applies and stays configuration-cache-safe.
+        exclude { entry -> entry.file.path.contains("${File.separatorChar}build${File.separatorChar}") }
     }
 
     detektMergeSarif.configure {
