@@ -6,14 +6,50 @@
 
 ---
 
-### M0 — Project structure
+### M0 — Project structure ✅ done
 Скелет за `settings.gradle.kts` + `libs.versions.toml`, усі модулі
 підключені й білдяться (навіть пустими).
 
 **Accept:**
-- `./gradlew build` проходить без помилок на всіх модулях
-- Структура відповідає `docs/kmp-module-architecture.md`
-- CI (`ci.yml`) зелений на пустому скелеті
+- [x] `./gradlew build` проходить без помилок на всіх модулях
+- [x] Структура відповідає `docs/kmp-module-architecture.md`
+- [x] CI (`ci.yml`) зелений на пустому скелеті (перевірено локально
+      відтворенням точних тасок з `ci.yml`; сам PR на GitHub ще не
+      мерджився)
+
+**Відхилення від початкового плану (виявлено реальністю Maven/AGP,
+не суб'єктивний вибір):**
+- **Room**: `CLAUDE.md` пінить `3.0.0-rc01`, якої не існує на Maven.
+  Використано `2.8.4` (останній стабільний, повна multiplatform-
+  підтримка). Повернутись до `3.0.x`, коли JetBrains реально випустить.
+- **AGP 9 + KMP**: `com.android.library`/`com.android.application`
+  разом з `org.jetbrains.kotlin.multiplatform` в одному модулі більше
+  **не підтримується взагалі** (не лише для app/androidApp, як
+  малося на увазі в `kmp-module-architecture.md`, а для кожного
+  KMP-бібліотечного модуля). Усі `core:*`/`feature:*`/`data`/`app`
+  тепер використовують `com.android.kotlin.multiplatform.library` —
+  новий уніфікований плагін з іншою DSL (`kotlin { android { ... } }`
+  замість окремого `android {}` блоку) і без debug/release-варіантів.
+  Це також змінило назву Roborazzi-таски: `verifyRoborazziDebug` →
+  `verifyRoborazzi` (виправлено в `ci.yml`).
+- **iOS-таргети**: `iosX64` (Intel-симулятор) прибрано — Compose
+  Multiplatform не публікує під нього артефакти після
+  `1.11.0-alpha`. Залишились лише `iosArm64`/`iosSimulatorArm64`
+  (актуально й для M1+ — не додавати `iosX64` назад).
+  Release-фреймворки (`linkRelease...`) не збираються — лінкування
+  падало з `OutOfMemoryError`, а публікація в App Store свідомо поза
+  скоупом. Аналогічно вимкнено `lint.checkReleaseBuilds` для
+  `androidApp` (release-lint по всьому графу з 17 модулів впирався в
+  `StackOverflowError`).
+- **ktlint/detekt і згенерований код**: Compose Multiplatform генерує
+  ресурс-акцесори в `build/generated/...`, які потрапляють у
+  `commonMain` як звичайний source root. `KtlintExtension.filter{}`
+  на це не впливає (джерело ktlint-задачі — плаский
+  `ConfigurableFileCollection`, а не дерево з коренем, тому ant-glob
+  патерни не матчаться) — довелось фільтрувати вже резолвлений
+  `source` файлів напряму в `build.gradle.kts` (root, `subprojects{}`
+  блок). Якщо додаватимеш нові ktlint/detekt-конфігурації — дивись
+  туди, а не в `KtlintExtension`/`DetektExtension` filter-и.
 
 ---
 

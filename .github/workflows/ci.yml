@@ -53,8 +53,11 @@ jobs:
       - name: Integration tests
         run: ./gradlew :core:database:jvmTest :core:network:jvmTest :data:jvmTest
 
+      # AGP 9's com.android.kotlin.multiplatform.library plugin is single-variant
+      # (no debug/release build types), so the task is verifyRoborazzi, not
+      # verifyRoborazziDebug like classic AGP screenshot-test setups.
       - name: Screenshot tests (Roborazzi)
-        run: ./gradlew verifyRoborazziDebug
+        run: ./gradlew verifyRoborazzi
 
       - name: Завантажити diff-скріншоти, якщо тест не пройшов
         if: failure()

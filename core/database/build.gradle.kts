@@ -1,0 +1,17 @@
+plugins {
+    alias(libs.plugins.convention.kmp.library)
+}
+
+kotlin {
+    android {
+        namespace = "com.alongside.core.database"
+    }
+}
+
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation(projects.core.domain)
+        }
+    }
+}
