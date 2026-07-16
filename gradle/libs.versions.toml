@@ -42,6 +42,7 @@ detekt-rules-compose = "1.4.0"
 roborazzi = "1.68.0"
 robolectric = "4.16.1"
 composable-preview-scanner = "0.9.1"
+junit = "4.13.2"
 
 [libraries]
 # Gradle-plugin classpath deps, consumed by build-logic/convention
@@ -102,6 +103,19 @@ material3-adaptive-layout = { module = "androidx.compose.material3.adaptive:adap
 roborazzi = { module = "io.github.takahirom.roborazzi:roborazzi", version.ref = "roborazzi" }
 roborazzi-compose = { module = "io.github.takahirom.roborazzi:roborazzi-compose", version.ref = "roborazzi" }
 roborazzi-junit-rule = { module = "io.github.takahirom.roborazzi:roborazzi-junit-rule", version.ref = "roborazzi" }
+roborazzi-compose-preview-scanner-support = { module = "io.github.takahirom.roborazzi:roborazzi-compose-preview-scanner-support", version.ref = "roborazzi" }
+junit = { module = "junit:junit", version.ref = "junit" }
+# compose.uiTest (org.jetbrains.compose.ui:ui-test) only covers the KMP-agnostic ComposeUiTest API -
+# createComposeRule()/ComposeContentTestRule specifically need this JUnit4 artifact too.
+compose-ui-test-junit4 = { module = "org.jetbrains.compose.ui:ui-test-junit4", version.ref = "compose-multiplatform" }
+# Supersedes compose.components.uiToolingPreview as of Compose Multiplatform 1.11 - provides the
+# real androidx.compose.ui.tooling.preview.Preview annotation directly for commonMain use (the
+# JetBrains org.jetbrains.compose.ui.tooling.preview.Preview wrapper is now deprecated).
+compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
+# No JetBrains-multiplatform equivalent exists (Android-manifest-specific, doesn't apply to other
+# targets) - provides the test-host ComponentActivity manifest entry createComposeRule() launches
+# under Robolectric; without it, tests fail with "Unable to resolve activity for Intent...".
+compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "compose-multiplatform" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 composable-preview-scanner-android = { module = "io.github.sergio-sastre.ComposablePreviewScanner:android", version.ref = "composable-preview-scanner" }
 

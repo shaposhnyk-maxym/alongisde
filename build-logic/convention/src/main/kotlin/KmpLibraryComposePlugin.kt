@@ -20,6 +20,14 @@ class KmpLibraryComposePlugin : Plugin<Project> {
                     implementation(compose.material3)
                     implementation(compose.ui)
                     implementation(compose.components.resources)
+                    // Real androidx.compose.ui.tooling.preview.Preview, multiplatform-ready as of
+                    // Compose Multiplatform 1.11 (supersedes the now-deprecated
+                    // org.jetbrains.compose.ui.tooling.preview.Preview wrapper) - also what
+                    // ComposablePreviewScanner/Roborazzi's generateComposePreviewRobolectricTests
+                    // scan for (see RoborazziConventionPlugin.kt).
+                    implementation(libs.findLibrary("compose-ui-tooling-preview").get())
+                    // AnimatedVisibility/fadeIn/slideInVertically, used by StaggerRevealColumn.
+                    implementation(compose.animation)
                 }
             }
         }

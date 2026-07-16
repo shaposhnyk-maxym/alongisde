@@ -7,6 +7,9 @@ plugins {
 dependencies {
     implementation(projects.core.ui)
     implementation(compose.desktop.currentOs)
+    implementation(compose.runtime)
+    implementation(compose.foundation)
+    implementation(compose.material3)
 }
 
 compose.desktop {
