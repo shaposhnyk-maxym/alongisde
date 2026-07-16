@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "965813009948",
+    "project_id": "alongside-b05f2",
+    "storage_bucket": "alongside-b05f2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:965813009948:android:19b121397f6542b86269d9",
+        "android_client_info": {
+          "package_name": "com.alongside.androidapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBngsPMdA2piAYsJNTTAzVjuA5hbzfX9HY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
