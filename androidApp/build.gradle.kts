@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.convention.android.application)
+    alias(libs.plugins.google.services)
 }
 
 android {

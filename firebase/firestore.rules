@@ -1,0 +1,113 @@
+rules_version = '2';
+
+// Collection layout (flat, top-level - matches core:network's FirestoreApi, which addresses
+// documents by collectionPath + documentId with no nested subcollections):
+//   trips/{tripId}
+//   diaryEntries/{diaryEntryId}   - field tripId
+//   episodes/{episodeId}         - field diaryEntryId (no tripId of its own - looked up via parent)
+//   placeCandidates/{placeId}    - field tripId
+//   pushTokens/{userId}          - one FCM token per user, doc id == owner's uid
+//
+// Scope of "owner-only delete" (docs/backend-plan.md): interpreted here as applying to the Trip
+// document itself - ending/removing a whole trip is the owner's call. Individual content
+// (diary entries, episodes, place candidates) is authored/deleted by whichever trip member
+// created it; both members can read anything within their own trip.
+//
+// Symmetric diary unlock (CLAUDE.md ADR #5) is deliberately NOT enforced here yet: any trip
+// member can read any DiaryEntry in their trip. DiaryEntry.id has no deterministic scheme (M1/M2
+// already shipped random ids), so rules can't look up "does my partner have an entry for this
+// date" via a single get(). Revisit when M11 (symmetric unlock & sync integration) lands - either
+// enforce it in these rules too (would need a deterministic id scheme) or accept that unlock
+// stays a client/domain-layer concern (DayReadiness in core:domain) backed by trip-level access
+// control only.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function tripDoc(tripId) {
+      return get(/databases/$(database)/documents/trips/$(tripId));
+    }
+
+    function isTripMember(tripId) {
+      let trip = tripDoc(tripId).data;
+      return trip.ownerId == request.auth.uid || trip.memberId == request.auth.uid;
+    }
+
+    match /trips/{tripId} {
+      allow read: if isSignedIn() &&
+        (resource.data.ownerId == request.auth.uid || resource.data.memberId == request.auth.uid);
+
+      allow create: if isSignedIn() &&
+        request.resource.data.ownerId == request.auth.uid &&
+        request.resource.data.memberId == null;
+
+      // Two allowed shapes for update: (a) the owner or already-paired member editing their own
+      // trip, or (b) an unpaired second user joining via invite code - claiming an empty
+      // memberId slot without changing ownerId/inviteCode. The join case is a provisional
+      // reading of the not-yet-designed M8 (Pairing) flow - revisit once M8 defines how the
+      // invite-code lookup actually works.
+      allow update: if isSignedIn() && (
+        resource.data.ownerId == request.auth.uid || resource.data.memberId == request.auth.uid ||
+        (
+          resource.data.memberId == null &&
+          request.resource.data.memberId == request.auth.uid &&
+          request.resource.data.ownerId == resource.data.ownerId &&
+          request.resource.data.inviteCode == resource.data.inviteCode
+        )
+      );
+
+      // Reads resource.data directly (not via the isTripOwner() helper) to avoid a redundant
+      // self-get() of the very document already loaded as `resource`.
+      allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /diaryEntries/{diaryEntryId} {
+      allow read: if isSignedIn() && isTripMember(resource.data.tripId);
+
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        isTripMember(request.resource.data.tripId);
+
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /episodes/{episodeId} {
+      function parentDiaryEntry(diaryEntryId) {
+        return get(/databases/$(database)/documents/diaryEntries/$(diaryEntryId)).data;
+      }
+
+      allow read: if isSignedIn() && isTripMember(parentDiaryEntry(resource.data.diaryEntryId).tripId);
+
+      allow create: if isSignedIn() &&
+        parentDiaryEntry(request.resource.data.diaryEntryId).userId == request.auth.uid;
+
+      allow update, delete: if isSignedIn() &&
+        parentDiaryEntry(resource.data.diaryEntryId).userId == request.auth.uid;
+    }
+
+    match /placeCandidates/{placeId} {
+      allow read: if isSignedIn() && isTripMember(resource.data.tripId);
+
+      allow create: if isSignedIn() &&
+        request.resource.data.addedByUserId == request.auth.uid &&
+        isTripMember(request.resource.data.tripId);
+
+      // Either trip member can update (swiping sets ownerSwipe/memberSwipe on the *other*
+      // member's card too) or delete (matcher business logic removes rejected/matched cards).
+      allow update, delete: if isSignedIn() && isTripMember(resource.data.tripId);
+    }
+
+    // The doc id IS the owner's uid, so ownership is a path check, no resource.data read needed.
+    // The Cloud Function (M17) reads this via the Admin SDK, which bypasses these rules entirely -
+    // this rule only governs client access, which no one but the owner needs.
+    match /pushTokens/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
