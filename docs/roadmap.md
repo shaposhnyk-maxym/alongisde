@@ -162,21 +162,61 @@ Episode+Photo, PlaceCandidate).
 
 ---
 
-### M3 — Network
+### M3 — Network ✅ done
 `core:network` — Ktor-клієнт до Firestore REST API + sync-queue логіка.
 
 **Accept:**
-- Усі мережеві виклики тестуються через Ktor `MockEngine` — жодного
-  реального HTTP-запиту в тестах, CI не потребує інтернету і не залежить
-  від живого Firebase-проєкту
-  - MockEngine симулює: успішну відповідь, 4xx (напр. неавторизовано),
-    5xx, timeout, malformed JSON — кожен кейс окремим тестом
-- Sync-queue тестується окремо від HTTP-шару: чергу можна наповнити й
-  обробити з фейковим "мережевим клієнтом" (інтерфейс, не Ktor напряму),
-  щоб перевірити порядок обробки, retry-логіку, поведінку при частковому
-  збої (два з трьох записів синкнулись, третій — ні)
-- Контрактні тести: форма запиту/відповіді відповідає задокументованій
-  схемі Firestore REST API (щоб зміни в цій схемі ловились одразу)
+- [x] Усі мережеві виклики тестуються через Ktor `MockEngine` — жодного
+      реального HTTP-запиту в тестах, CI не потребує інтернету і не залежить
+      від живого Firebase-проєкту
+  - [x] MockEngine симулює: успішну відповідь, 4xx (401 + 404 окремо),
+        5xx, timeout, malformed JSON — кожен кейс окремим тестом у
+        `FirestoreApiReadTest`/`FirestoreApiWriteTest` (`core:network/src/jvmTest`)
+- [x] Sync-queue тестується окремо від HTTP-шару: чергу можна наповнити й
+      обробити з фейковим "мережевим клієнтом" (інтерфейс, не Ktor напряму),
+      щоб перевірити порядок обробки, retry-логіку, поведінку при частковому
+      збої (два з трьох записів синкнулись, третій — ні) —
+      `SyncQueueProcessorTest` + `FakeSyncNetworkClient` (`core:network/src/commonTest`)
+- [x] Контрактні тести: форма запиту/відповіді відповідає задокументованій
+      схемі Firestore REST API (щоб зміни в цій схемі ловились одразу) —
+      `FirestoreValueSerializationTest`, `FirestoreDocumentContractTest`,
+      `FirestoreErrorResponseContractTest` (typed-value wrapper, Document,
+      Google's standard error envelope) + request-body structural
+      assertion в `FirestoreApiWriteTest`
+
+**Відхилення від початкового плану:**
+- **`core:network` не імплементує M1 repository-інтерфейси напряму** —
+  та реконсиляція local (Room) + remote (Firestore) з offline
+  merge/conflict-логікою свідомо належить M9 (`data`), не M3. Тут — лише
+  дві перевикористовувані частини: `FirestoreApi` (Ktor-клієнт) і
+  entity-agnostic `SyncQueueProcessor` (без жодної залежності на
+  core:model/core:domain).
+- **`SyncOperationType` — `UPSERT`/`DELETE`**, не `CREATE`/`UPDATE`, бо
+  M1 repository-інтерфейси мають лише `upsert`/`delete`.
+  `FirestoreApi.upsertDocument` шле `PATCH` без `updateMask` — Firestore
+  REST документує це як create-if-absent + full overwrite, тобто точно
+  upsert-семантика.
+- **`SyncQueue` — інтерфейс** (+ `InMemorySyncQueue` за замовчуванням) —
+  `core:network` не може залежати на `core:database`, тож персистентна
+  черга — задача `data`-модуля (M9), яка зможе підмінити реалізацію без
+  зміни `SyncQueueProcessor`.
+- **`FirestoreSyncNetworkClient`** (адаптер `SyncNetworkClient` →
+  `FirestoreApi`) додано в M3, а не залишено на M9 — інакше
+  "Ktor-клієнт + sync-queue логіка" лишались би двома незв'язаними
+  половинками, які ніколи не говорять одна з одною поза тестами/фейками.
+- **Ретраї без backoff/затримки** — `SyncQueueProcessor` ретраїть
+  одразу до `maxAttempts`, без штучної паузи; тести лишаються швидкими
+  й детермінованими, реальний scheduling — питання пізніших мілстоунів,
+  якщо взагалі знадобиться.
+- **`kotlinx.coroutines.test.runTest` несумісний із Ktor `HttpTimeout`
+  проти `MockEngine`** — під virtual-time-скедулером `runTest` навіть
+  тривіальні (без жодного `delay`) запити падали з
+  `HttpRequestTimeoutException` ще до першої відповіді MockEngine.
+  Усі HTTP-рівневі тести (`FirestoreApiReadTest`, `FirestoreApiWriteTest`,
+  `FirestoreSyncNetworkClientTest`) використовують `runBlocking` замість
+  `runTest`; тест на реальний timeout чекає ~200мс реального часу
+  (`requestTimeoutMillis = 200`, `delay(2_000)` у MockEngine-хендлері) —
+  прийнятно швидко, і уникає цього конфлікту.
 
 ---
 
