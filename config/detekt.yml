@@ -14,6 +14,11 @@ style:
   MagicNumber:
     active: false
 
+naming:
+  # @Composable-функції за конвенцією PascalCase (це не порушення стилю)
+  FunctionNaming:
+    ignoreAnnotated: ["Composable"]
+
 # Compose-специфічні правила (ru.kode:detekt-rules-compose)
 compose:
   ReusedModifierInstance:

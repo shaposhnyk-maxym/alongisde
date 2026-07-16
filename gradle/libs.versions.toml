@@ -1,0 +1,117 @@
+[versions]
+# Kotlin / Compose Multiplatform
+kotlin = "2.4.0"
+compose-multiplatform = "1.11.0"
+agp = "9.3.0"
+
+# Kotlinx
+kotlinx-coroutines = "1.11.0"
+kotlinx-serialization = "1.10.0"
+
+# Architecture / DI / network / db
+orbit = "10.0.0"
+koin = "4.2.2"
+ktor = "3.5.0"
+# CLAUDE.md pins Room 3.0.0-rc01, which does not exist on Google's Maven
+# repo (verified live). 2.8.4 is the latest stable release and already
+# ships full multiplatform support with the same API as Android Room.
+# Bump back to a real 3.0.x once JetBrains actually ships it.
+room = "2.8.4"
+ksp = "2.3.10"
+
+# AndroidX (Android-only shell, not Compose Multiplatform)
+activity-compose = "1.13.0"
+
+# Navigation / adaptive UI
+navigation3 = "1.1.0-alpha01"
+material3-adaptive = "1.1.0"
+
+# Lint / static analysis
+ktlint-gradle = "14.2.0"
+detekt = "1.23.8"
+detekt-rules-compose = "1.4.0"
+
+# Screenshot / unit testing
+roborazzi = "1.68.0"
+robolectric = "4.16.1"
+composable-preview-scanner = "0.9.1"
+
+[libraries]
+# Gradle-plugin classpath deps, consumed by build-logic/convention
+android-gradlePlugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
+kotlin-gradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+compose-gradlePlugin = { module = "org.jetbrains.compose:compose-gradle-plugin", version.ref = "compose-multiplatform" }
+ksp-gradlePlugin = { module = "com.google.devtools.ksp:symbol-processing-gradle-plugin", version.ref = "ksp" }
+roborazzi-gradlePlugin = { module = "io.github.takahirom.roborazzi:roborazzi-gradle-plugin", version.ref = "roborazzi" }
+
+# Kotlinx
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+
+# Orbit MVI
+orbit-core = { module = "org.orbit-mvi:orbit-core", version.ref = "orbit" }
+orbit-viewmodel = { module = "org.orbit-mvi:orbit-viewmodel", version.ref = "orbit" }
+orbit-compose = { module = "org.orbit-mvi:orbit-compose", version.ref = "orbit" }
+orbit-test = { module = "org.orbit-mvi:orbit-test", version.ref = "orbit" }
+
+# Koin
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
+koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin" }
+koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin" }
+
+# Ktor
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
+ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
+
+# AndroidX (Android-only shell)
+activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
+
+# Room
+room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+
+# Navigation 3 / Material 3 Adaptive
+navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
+navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
+material3-adaptive = { module = "androidx.compose.material3.adaptive:adaptive", version.ref = "material3-adaptive" }
+material3-adaptive-layout = { module = "androidx.compose.material3.adaptive:adaptive-layout", version.ref = "material3-adaptive" }
+
+# Screenshot / unit testing
+roborazzi = { module = "io.github.takahirom.roborazzi:roborazzi", version.ref = "roborazzi" }
+roborazzi-compose = { module = "io.github.takahirom.roborazzi:roborazzi-compose", version.ref = "roborazzi" }
+roborazzi-junit-rule = { module = "io.github.takahirom.roborazzi:roborazzi-junit-rule", version.ref = "roborazzi" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+composable-preview-scanner-android = { module = "io.github.sergio-sastre.ComposablePreviewScanner:android", version.ref = "composable-preview-scanner" }
+
+# Detekt Compose rules
+detekt-rules-compose = { module = "ru.kode:detekt-rules-compose", version.ref = "detekt-rules-compose" }
+
+[plugins]
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+room = { id = "androidx.room", version.ref = "room" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-gradle" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+roborazzi = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }
+
+# Convention plugins, defined and resolved via includeBuild("build-logic")
+convention-kmp-library = { id = "convention.kmp.library", version = "unspecified" }
+convention-kmp-library-compose = { id = "convention.kmp.library.compose", version = "unspecified" }
+convention-roborazzi = { id = "convention.roborazzi", version = "unspecified" }
+convention-android-application = { id = "convention.android.application", version = "unspecified" }
+convention-koin = { id = "convention.koin", version = "unspecified" }
