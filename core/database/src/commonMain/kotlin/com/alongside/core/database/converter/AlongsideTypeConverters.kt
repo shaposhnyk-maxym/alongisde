@@ -3,6 +3,7 @@ package com.alongside.core.database.converter
 import androidx.room.TypeConverter
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.place.SwipeDirection
+import com.alongside.core.model.push.PushPlatform
 import kotlinx.datetime.LocalDate
 import kotlin.time.Instant
 
@@ -30,4 +31,10 @@ internal object AlongsideTypeConverters {
 
     @TypeConverter
     fun toSwipeDirection(value: String?): SwipeDirection? = value?.let { SwipeDirection.valueOf(it) }
+
+    @TypeConverter
+    fun fromPushPlatform(platform: PushPlatform?): String? = platform?.name
+
+    @TypeConverter
+    fun toPushPlatform(value: String?): PushPlatform? = value?.let { PushPlatform.valueOf(it) }
 }

@@ -6,6 +6,7 @@ rules_version = '2';
 //   diaryEntries/{diaryEntryId}   - field tripId
 //   episodes/{episodeId}         - field diaryEntryId (no tripId of its own - looked up via parent)
 //   placeCandidates/{placeId}    - field tripId
+//   pushTokens/{userId}          - one FCM token per user, doc id == owner's uid
 //
 // Scope of "owner-only delete" (docs/backend-plan.md): interpreted here as applying to the Trip
 // document itself - ending/removing a whole trip is the owner's call. Individual content
@@ -96,6 +97,13 @@ service cloud.firestore {
       // Either trip member can update (swiping sets ownerSwipe/memberSwipe on the *other*
       // member's card too) or delete (matcher business logic removes rejected/matched cards).
       allow update, delete: if isSignedIn() && isTripMember(resource.data.tripId);
+    }
+
+    // The doc id IS the owner's uid, so ownership is a path check, no resource.data read needed.
+    // The Cloud Function (M17) reads this via the Admin SDK, which bypasses these rules entirely -
+    // this rule only governs client access, which no one but the owner needs.
+    match /pushTokens/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
     }
 
     match /{document=**} {

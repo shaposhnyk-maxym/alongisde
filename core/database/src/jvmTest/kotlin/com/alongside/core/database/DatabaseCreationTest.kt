@@ -6,8 +6,10 @@ import com.alongside.core.database.entity.DiaryEntryEntity
 import com.alongside.core.database.entity.EpisodeEntity
 import com.alongside.core.database.entity.PhotoEntity
 import com.alongside.core.database.entity.PlaceCandidateEntity
+import com.alongside.core.database.entity.PushTokenEntity
 import com.alongside.core.database.entity.TripEntity
 import com.alongside.core.model.SyncStatus
+import com.alongside.core.model.push.PushPlatform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
@@ -80,6 +82,16 @@ class DatabaseCreationTest {
             assertEquals(place, database.placeCandidateDao().getById(place.id))
         }
 
+    @Test
+    fun `push tokens table round trips a row from a freshly created database`() =
+        runTest {
+            val pushToken = pushToken()
+
+            database.pushTokenDao().upsert(pushToken)
+
+            assertEquals(pushToken, database.pushTokenDao().getById(pushToken.userId))
+        }
+
     private fun trip() =
         TripEntity(
             id = "trip-1",
@@ -137,5 +149,14 @@ class DatabaseCreationTest {
             memberSwipe = null,
             syncStatus = SyncStatus.PENDING,
             createdAt = createdAt,
+        )
+
+    private fun pushToken() =
+        PushTokenEntity(
+            userId = "owner-1",
+            token = "fcm-token-1",
+            platform = PushPlatform.ANDROID,
+            syncStatus = SyncStatus.PENDING,
+            updatedAt = createdAt,
         )
 }
