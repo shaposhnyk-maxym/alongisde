@@ -236,6 +236,27 @@ Episode+Photo, PlaceCandidate).
   показаних елементів) композиція має нульовий розмір, через що
   Espresso не може знайти root-компонент для скріншоту; прев'ю
   обгорнуті в `Modifier.size(...)`, сам компонент не змінено.
+- **Golden-скріншоти записані на macOS (arm64) не проходили verify в
+  CI (ubuntu x86_64)** — `AlongsideButtonPrimaryPreview`/
+  `SecondaryPreview`/`PaperCardPreview` падали з `AssertionError`;
+  diff виявився суто антиаліасингом на заокругленому куті (1-2
+  пікселі, не реальна відмінність — підтверджено візуально через
+  `_compare.png` з артефакту невдалого CI-рану). Rounded-corner
+  рендеринг відрізняється між Skia на arm64/macOS і x86_64/Linux.
+  Не знайдено документованого Gradle-рівня способу виставити
+  tolerance для авто-згенерованих `generateComposePreviewRobolectricTests`
+  тестів (RoborazziOptions.CompareOptions приймає tolerance-подібний
+  `Float`-параметр, але auto-generated test завжди використовує
+  дефолтний `RoborazziOptions` без способу його перевизначити з
+  Gradle-конфігу). Практичний фікс: замінено ці 3 golden-файли на
+  реально відрендерені CI зображення (`_actual.png` з артефакту
+  `screenshot-diffs` невдалого рану), а не перезаписано локально.
+  **Наслідок на майбутнє:** якщо надалі локально записувати нові
+  golden'и (`recordRoborazzi` на macOS) для компонентів із
+  заокругленими кутами, вони можуть знову розійтися з CI — надійніше
+  або записувати голдени безпосередньо в CI (напр. workflow_dispatch
+  таска, що комітить результат), або оцінити реальний Gradle-механізм
+  tolerance, коли він знадобиться частіше.
 
 ---
 
