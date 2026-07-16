@@ -53,20 +53,57 @@
 
 ---
 
-### M1 — Core entities, data sources, repo interfaces
+### M1 — Core entities, data sources, repo interfaces ✅ done
 `core:model` (Trip, DiaryEntry, Episode, PlaceCandidate з
 match-статусом...) +
 `core:domain` (інтерфейси репозиторіїв/дата сорсів, use-case'и).
 
 **Accept:**
-- Усі сутності з `docs/concept.md` мають відповідні data-класи
-- Кожна сутність має репозиторій-інтерфейс з мінімум CRUD +
-  реактивним читанням (`Flow<T>`)
-- `core:model`/`core:domain` компілюються без жодної платформної
-  залежності (нуль expect/actual)
-- Юніт-тести на бізнес-правила, які вже можна виразити на рівні
-  моделі (наприклад: `DayReadiness` — правило симетричного
-  розблокування, як чиста функція від двох станів)
+- [x] Усі сутності з `docs/concept.md` мають відповідні data-класи
+      (`docs/concept.md` не існує як файл — стале посилання, актуальний
+      документ `docs/trip-app-concept.md`; усі сутності звідти покриті:
+      Trip, DiaryEntry, Episode, Photo, PlaceCandidate)
+- [x] Кожна сутність має репозиторій-інтерфейс з мінімум CRUD +
+      реактивним читанням (`Flow<T>`) — TripRepository,
+      DiaryEntryRepository, EpisodeRepository, PlaceCandidateRepository
+      (Photo — value-об'єкт всередині Episode, без окремого репозиторія)
+- [x] `core:model`/`core:domain` компілюються без жодної платформної
+      залежності (нуль expect/actual) — перевірено `grep` по обох
+      модулях і повним `build` на всіх таргетах (android, jvm,
+      iosArm64, iosSimulatorArm64)
+- [x] Юніт-тести на бізнес-правила, які вже можна виразити на рівні
+      моделі (наприклад: `DayReadiness` — правило симетричного
+      розблокування, як чиста функція від двох станів) —
+      `isDayUnlocked` (4 тести) + `resolveMatchStatus` для
+      PlaceCandidate-матчингу (7 тестів), TDD (тест спочатку, red
+      → green)
+
+**Відхилення від початкового плану:**
+- **kotlinx-datetime додано в `libs.versions.toml`** (`0.8.0`) —
+  `CLAUDE.md`'s стек-таблиця не згадувала дати/час взагалі. Чистий
+  multiplatform, без expect/actual у нашому коді, тож не порушує
+  M1's accept-критерій. `LocalDate` — для календарних дат
+  (Trip.startDate/endDate, DiaryEntry.date), `kotlin.time.Instant`
+  (стандартна бібліотека Kotlin, не `kotlinx.datetime.Instant` —
+  останній задеклеровано deprecated у 0.8.0 на користь
+  stdlib-варіанту) — для точних міток часу.
+- **`libs.<library>` type-safe accessors не резолвляться** в
+  regular-скриптах модулів цього білда (`core/model/build.gradle.kts`,
+  `core/domain/build.gradle.kts`) — незрозуміла особливість роздачі
+  version-catalog accessors саме для основного білда (тоді як
+  `libs.plugins.*` в `plugins {}` блоці й `libs.<x>` в
+  `build-logic/convention/build.gradle.kts` резолвляться нормально).
+  Обхід — `libs.findLibrary("alias").get()`, той самий патерн, що вже
+  використовується в `KmpLibraryPlugin.kt` з інших причин (precompiled
+  plugin-класи взагалі не отримують codegen). Якщо додаватимеш нову
+  library-залежність у модуль — використовуй `findLibrary`, не
+  `libs.xxx.yyy`.
+- **`iosSimulatorArm64Test` не проганяється локально** — на цій машині
+  не встановлено жодного iOS Simulator runtime (`xcrun simctl list
+  devices` — порожньо). Не блокер: CI (`ubuntu-latest`) взагалі не
+  виконує ці таски (Kotlin/Native не компілює під Apple-таргети з
+  Linux-хоста). `jvmTest`/`testAndroidHostTest` — обидва зелені,
+  11 тестів (4 DayReadiness + 7 PlaceMatchResolver) на кожному.
 
 ---
 

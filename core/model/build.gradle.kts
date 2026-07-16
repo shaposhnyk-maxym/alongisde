@@ -7,3 +7,11 @@ kotlin {
         namespace = "com.alongside.core.model"
     }
 }
+
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation(libs.findLibrary("kotlinx-datetime").get())
+        }
+    }
+}
