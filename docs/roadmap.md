@@ -180,21 +180,62 @@ Episode+Photo, PlaceCandidate).
 
 ---
 
-### M4 — Core UI
+### M4 — Core UI ✅ done
 `core:ui` — дизайн-система, анімації, базові компоненти.
 
 **Accept:**
-- Кожен публічний компонент має `@Preview` у `commonMain`
-- Юніт-тести через `ComposeTestRule` на інтерактивні компоненти
-  (клік, свайп, стан — не тільки статичний рендер)
-- Screenshot-тести (Roborazzi + ComposablePreviewScanner) на кожен
-  `@Preview` — генеруються автоматично, без ручного дублювання тесту
-  на кожен компонент
-- Анімаційні хелпери (count-up/down, typewriter, stagger-reveal)
-  мають юніт-тест на кінцевий стан (наприклад: typewriter після
-  завершення показує повний текст, а не проміжний)
-- Playground (`:playground`) запускається і показує всі компоненти
-  дизайн-системи — вручну перевірено хоч раз
+- [x] Кожен публічний компонент має `@Preview` у `commonMain` —
+      `AlongsideButton` (Primary/Secondary), `PaperCard`, `CountUpText`,
+      `TypewriterText`, `StaggerRevealColumn` (6 preview-функцій)
+- [x] Юніт-тести через `ComposeTestRule` на інтерактивні компоненти
+      (клік, свайп, стан — не тільки статичний рендер) —
+      `AlongsideButtonTest` (клік для обох варіантів + disabled-кейс),
+      `core:ui/src/androidHostTest`
+- [x] Screenshot-тести (Roborazzi + ComposablePreviewScanner) на кожен
+      `@Preview` — генеруються автоматично, без ручного дублювання тесту
+      на кожен компонент — `generateComposePreviewRobolectricTests` у
+      `RoborazziConventionPlugin.kt`, 0 рядків ручного тест-коду;
+      golden-зображення в `core/ui/screenshots/`
+- [x] Анімаційні хелпери (count-up/down, typewriter, stagger-reveal)
+      мають юніт-тест на кінцевий стан (наприклад: typewriter після
+      завершення показує повний текст, а не проміжний) —
+      `CountUpTextTest`, `TypewriterTextTest` (явно перевіряє і
+      проміжний, і фінальний стан), `StaggerRevealColumnTest`
+- [x] Playground (`:playground`) запускається і показує всі компоненти
+      дизайн-системи — вручну перевірено (`./gradlew :playground:run`
+      + скріншот вікна): тема, обидві кнопки, картка, усі три анімації
+      рендеряться коректно
+
+**Відхилення від початкового плану:**
+- **`generateComposePreviewRobolectricTests` вимагає `includePrivatePreviews.set(true)`** —
+  без цього сканер мовчки ігнорує всі `@Preview`-функції (вони
+  ідіоматично `private`), генеруючи 0 тестів замість помилки. Явно
+  перевірено кількість згенерованих тестів (не просто "BUILD SUCCESSFUL"),
+  щоб зловити це.
+- **`androidx.compose.ui.tooling.preview.Preview` напряму, не
+  `org.jetbrains.compose.ui.tooling.preview.Preview`** — CLAUDE.md
+  описував останній як "уніфіковану" анотацію, але в Compose
+  Multiplatform 1.11 (реальна версія в проєкті) вона deprecated на
+  користь прямого використання androidx-анотації, яка сама стала
+  multiplatform-ready.
+- **Golden-зображення — в `<module>/screenshots/`, не в `build/`** —
+  `RoborazziExtension.outputDir` явно виставлено в convention-плагіні,
+  інакше скріншоти живуть в gitignored build-директорії й губляться
+  при clean build (суперечить CLAUDE.md "Golden-зображення — в
+  репозиторії").
+- **`separateOutputDirs` + `robolectric.pixelCopyRenderMode=hardware`** —
+  два додаткові фікси в `RoborazziConventionPlugin.kt`, знайдені по
+  ходу (race condition на спільній intermediates-директорії; Roborazzi
+  сам рекомендує другий для якості зображень).
+- **`FunctionNaming.ignoreAnnotated` розширено на `"Test"`** —
+  backtick-named `org.junit.Test`-функції (androidHostTest,
+  Robolectric+Compose) не покривались вже наявним виключенням для
+  `kotlin.test.Test`.
+- **`TypewriterText`/`StaggerRevealColumn` preview з фіксованим
+  розміром** — у першому кадрі анімації (порожній текст / нуль
+  показаних елементів) композиція має нульовий розмір, через що
+  Espresso не може знайти root-компонент для скріншоту; прев'ю
+  обгорнуті в `Modifier.size(...)`, сам компонент не змінено.
 
 ---
 
