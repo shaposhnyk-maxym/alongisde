@@ -23,10 +23,19 @@ style:
   MagicNumber:
     active: false
 
+  # Private @Preview composables are invoked reflectively by
+  # ComposablePreviewScanner/Roborazzi (generateComposePreviewRobolectricTests),
+  # never called directly from Kotlin source - real usage, not dead code.
+  UnusedPrivateMember:
+    ignoreAnnotated: ["Preview"]
+
 naming:
-  # @Composable-функції за конвенцією PascalCase (це не порушення стилю)
+  # @Composable-функції за конвенцією PascalCase (це не порушення стилю).
+  # "Test" покриває як kotlin.test.Test (jvmTest/commonTest), так і org.junit.Test
+  # (androidHostTest, Robolectric+Compose) - backtick-named test-функції з пробілами
+  # інакше не проходять патерн [a-z][a-zA-Z0-9]*.
   FunctionNaming:
-    ignoreAnnotated: ["Composable"]
+    ignoreAnnotated: ["Composable", "Test"]
 
 # Compose-специфічні правила (ru.kode:detekt-rules-compose)
 compose:
