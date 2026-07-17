@@ -49,6 +49,42 @@ class AlongsideButtonTest {
     }
 
     @Test
+    fun `click on onPaper button invokes onClick`() {
+        var clicked = false
+        composeTestRule.setContent {
+            AlongsideTheme {
+                AlongsideButton(
+                    text = "Continue with Google",
+                    onClick = { clicked = true },
+                    variant = AlongsideButtonVariant.OnPaper,
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Continue with Google").performClick()
+
+        assertEquals(true, clicked)
+    }
+
+    @Test
+    fun `click on text button invokes onClick`() {
+        var clicked = false
+        composeTestRule.setContent {
+            AlongsideTheme {
+                AlongsideButton(
+                    text = "Not now",
+                    onClick = { clicked = true },
+                    variant = AlongsideButtonVariant.Text,
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Not now").performClick()
+
+        assertEquals(true, clicked)
+    }
+
+    @Test
     fun `disabled button does not invoke onClick`() {
         var clicked = false
         composeTestRule.setContent {
