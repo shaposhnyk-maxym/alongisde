@@ -16,5 +16,15 @@ val versionCatalog = extensions.getByType<org.gradle.api.artifacts.VersionCatalo
 
 dependencies {
     implementation(projects.app)
+    implementation(projects.feature.auth)
+    implementation(projects.core.network)
+    implementation(projects.core.database)
+    implementation(projects.core.domain)
+    implementation(projects.core.ui)
     implementation(versionCatalog.findLibrary("activity-compose").get())
+    implementation(versionCatalog.findLibrary("koin-core").get())
+    implementation(versionCatalog.findLibrary("koin-android").get())
+    implementation(versionCatalog.findLibrary("koin-compose-viewmodel").get())
+    implementation(versionCatalog.findLibrary("ktor-client-core").get())
+    implementation(versionCatalog.findLibrary("room-runtime").get())
 }

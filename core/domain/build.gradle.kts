@@ -11,7 +11,7 @@ kotlin {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation(projects.core.model)
+            api(projects.core.model)
             implementation(libs.findLibrary("kotlinx-coroutines-core").get())
         }
     }
