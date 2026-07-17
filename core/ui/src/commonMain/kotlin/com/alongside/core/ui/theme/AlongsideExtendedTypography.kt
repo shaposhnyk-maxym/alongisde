@@ -66,9 +66,11 @@ internal fun defaultExtendedTypography(
             ),
     )
 
-internal val LocalAlongsideExtendedTypography = staticCompositionLocalOf {
-    defaultExtendedTypography()
-}
+internal val LocalAlongsideExtendedTypography =
+    staticCompositionLocalOf {
+        defaultExtendedTypography()
+    }
 
 public val MaterialTheme.alongsideTypography: AlongsideExtendedTypography
-    @Composable @ReadOnlyComposable get() = LocalAlongsideExtendedTypography.current
+    @Composable @ReadOnlyComposable
+    get() = LocalAlongsideExtendedTypography.current

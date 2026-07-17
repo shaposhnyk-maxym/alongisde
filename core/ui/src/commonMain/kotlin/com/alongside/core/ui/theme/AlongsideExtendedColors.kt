@@ -28,22 +28,24 @@ public class AlongsideExtendedColors(
     public val gradientBottom: Color,
 )
 
-internal val LocalAlongsideExtendedColors = staticCompositionLocalOf {
-    AlongsideExtendedColors(
-        paper = AlongsideColor.Paper,
-        onPaper = AlongsideColor.TextOnPaper,
-        onPaperSecondary = AlongsideColor.TextOnPaperSecondary,
-        paperWhite = AlongsideColor.PaperWhite,
-        iconTileOnPaper = AlongsideColor.IconTileOnPaper,
-        toast = AlongsideColor.ToastBrown,
-        onToast = AlongsideColor.TextOnInk,
-        iconMuted = AlongsideColor.IconMuted,
-        labelMuted = AlongsideColor.LabelMuted,
-        digitAccent = AlongsideColor.Primary,
-        gradientTop = AlongsideColor.Ink,
-        gradientBottom = AlongsideColor.InkGradientBottom,
-    )
-}
+internal val LocalAlongsideExtendedColors =
+    staticCompositionLocalOf {
+        AlongsideExtendedColors(
+            paper = AlongsideColor.Paper,
+            onPaper = AlongsideColor.TextOnPaper,
+            onPaperSecondary = AlongsideColor.TextOnPaperSecondary,
+            paperWhite = AlongsideColor.PaperWhite,
+            iconTileOnPaper = AlongsideColor.IconTileOnPaper,
+            toast = AlongsideColor.ToastBrown,
+            onToast = AlongsideColor.TextOnInk,
+            iconMuted = AlongsideColor.IconMuted,
+            labelMuted = AlongsideColor.LabelMuted,
+            digitAccent = AlongsideColor.Primary,
+            gradientTop = AlongsideColor.Ink,
+            gradientBottom = AlongsideColor.InkGradientBottom,
+        )
+    }
 
 public val MaterialTheme.alongsideColors: AlongsideExtendedColors
-    @Composable @ReadOnlyComposable get() = LocalAlongsideExtendedColors.current
+    @Composable @ReadOnlyComposable
+    get() = LocalAlongsideExtendedColors.current

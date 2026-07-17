@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.alongside.core.ui.theme.AlongsideSpacing
 import com.alongside.core.ui.theme.AlongsideTheme
-import com.alongside.core.ui.theme.alongsideColors
 import com.alongside.core.ui.theme.alongsideTypography
 
 private const val PULSE_DURATION_MILLIS = 900
@@ -58,8 +57,7 @@ public fun PulsingDot(
                     this.alpha = alpha
                     scaleX = scale
                     scaleY = scale
-                }
-                .background(color, CircleShape)
+                }.background(color, CircleShape)
                 .testTag("pulsing-dot"),
     )
 }

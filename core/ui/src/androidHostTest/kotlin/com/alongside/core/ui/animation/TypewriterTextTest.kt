@@ -61,7 +61,11 @@ class TypewriterTextTest {
         // non-empty partial text with the trailing cursor.
         val partialWithCursor =
             SemanticsMatcher("partial text with trailing cursor") { node ->
-                val texts = node.config.getOrNull(SemanticsProperties.Text)?.map { it.text }.orEmpty()
+                val texts =
+                    node.config
+                        .getOrNull(SemanticsProperties.Text)
+                        ?.map { it.text }
+                        .orEmpty()
                 texts.any { it.endsWith("_") && it.length in 2 until fullText.length + 1 }
             }
         composeTestRule.onNode(partialWithCursor).assertExists()
