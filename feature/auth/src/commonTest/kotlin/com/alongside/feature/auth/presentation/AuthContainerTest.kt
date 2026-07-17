@@ -162,6 +162,7 @@ class AuthContainerTest {
             container.test(this) {
                 runOnCreate()
                 expectState { copy(session = testSession) }
+                expectSideEffect(AuthSideEffect.SignedIn)
             }
         }
 

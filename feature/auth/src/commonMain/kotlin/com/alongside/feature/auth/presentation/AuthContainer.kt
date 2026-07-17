@@ -42,6 +42,9 @@ public class AuthContainer(
             refreshExpiredSession()
         } else {
             reduce { state.copy(session = cached) }
+            // Every path that ends signed-in posts SignedIn - the nav graph advances past
+            // Login on it, so a restored session must fire it just like a fresh sign-in.
+            postSideEffect(AuthSideEffect.SignedIn)
         }
     }
 

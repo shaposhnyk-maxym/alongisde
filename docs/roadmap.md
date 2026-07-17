@@ -393,20 +393,81 @@ Episode+Photo, PlaceCandidate).
 
 ---
 
-### M6 — Android Onboarding
+### M6 — Android Onboarding ✅ done
 `feature:onboarding`, Android-специфічна частина.
 
 **Accept:**
-- Послідовність кроків (photo permission → geolocation-для-камери →
-  share-setup → notification permission) перевіряється Compose UI-тестом
-  навігації — правильний наступний крок при кожному можливому вихідному
-  стані (дозвіл вже наданий раніше → крок пропускається)
-- Screenshot-тести на кожен крок окремо (включно зі станом "дозвіл
-  відхилено — показуємо пояснення")
-- Дозволи запитуються just-in-time (не всі одразу на старті), з
-  поясненням-рационале перед системним діалогом там, де це доречно
-- Відмова в дозволі не блокує застосунок повністю — показує шлях назад
-  (посилання в системні налаштування), це окремо перевірено тестом
+- [x] Послідовність кроків (photo permission → geolocation-для-камери →
+      share-setup → notification permission) перевіряється Compose UI-тестом
+      навігації — правильний наступний крок при кожному можливому вихідному
+      стані (дозвіл вже наданий раніше → крок пропускається) —
+      `OnboardingScreenNavigationTest` (4 сценарії: нічого не надано →
+      повний прохід усіх 4 кроків; photo вже надано → одразу
+      CAMERA_GEOLOCATION; обидва дозволи вже надано → пропускає обидва
+      permission-кроки; DENIED все одно показує крок, не пропускає) +
+      `OnboardingStepTest` (11 тестів чистої `nextOnboardingStep`)
+- [x] Screenshot-тести на кожен крок окремо (включно зі станом "дозвіл
+      відхилено — показуємо пояснення") — 8 `@Preview` (photo/notification
+      × {not-determined, denied, denied-permanently}, camera-geolocation,
+      share-setup), auto-generated Roborazzi-голдени в
+      `feature/onboarding/screenshots/androidHostTest/`
+- [x] Дозволи запитуються just-in-time (не всі одразу на старті), з
+      поясненням-рационале перед системним діалогом там, де це доречно —
+      `OnboardingContainer`'s onCreate лише читає `PermissionController.status()`,
+      ніколи не викликає `request()`; системний діалог з'являється тільки
+      по явному тапу на кроці; `DENIED`-стан показує `DotBanner`-пояснення
+      перед кнопкою повторної спроби
+- [x] Відмова в дозволі не блокує застосунок повністю — показує шлях назад
+      (посилання в системні налаштування), це окремо перевірено тестом —
+      `OnboardingPermissionRecoveryTest` + мануально на emulator (Pixel
+      8 Pro, API 36): DENIED_PERMANENTLY → "Open Settings" реально відкриває
+      `com.android.settings`' App Info екран
+
+**Відхилення від початкового плану:**
+- **`PermissionStatus` — 4 стани, не 2** (`GRANTED`/`NOT_DETERMINED`/
+  `DENIED`/`DENIED_PERMANENTLY`) — Android API сам не розрізняє
+  "ніколи не питали" від "назавжди відхилено"
+  (`shouldShowRequestPermissionRationale()` повертає `false` для обох
+  випадків), тож `AndroidPermissionController` тримає власний
+  `SharedPreferences`-прапорець "чи питали раніше" per permission,
+  записаний в момент виклику `request()` (до результату — переживає
+  process death посеред діалогу).
+- **`OnboardingIntent.RefreshPermissions` + `ON_RESUME`-хук у
+  `OnboardingScreen`** — не в буквальних Accept-критеріях M6, але
+  необхідний, щоб критерій "показує шлях назад" реально працював: без
+  цього користувач, що надав дозвіл через системні Налаштування і
+  повернувся в застосунок, назавжди застряг би на
+  `DENIED_PERMANENTLY`-екрані, бо ніщо не перепитало б ОС. Мануально
+  підтверджено на emulator: DENIED_PERMANENTLY → Open Settings → дозвіл
+  надано в Налаштуваннях → повернення в застосунок → онбординг сам
+  завершується екраном "You're all set" без перезапуску.
+- **Навігація між кроками — похідний `currentStep` у `OnboardingState`**
+  (чиста функція від permission-статусів + acknowledgement-прапорців),
+  не Navigation 3 — `androidx.navigation3` лишається невикористаним і в
+  M6 (свідоме рішення, узгоджене з користувачем перед реалізацією; лінійний
+  4-кроковий wizard без back-навігації не потребує повного back-stack).
+- **Camera-geolocation і share-setup — завжди показуються, ніколи не
+  пропускаються** (узгоджене рішення) — на відміну від photo/notification,
+  це суто інструктивні кроки без реального OS-дозволу для перевірки;
+  немає persisted "вже бачив" прапорця в M6.
+- **`MainActivity` тимчасово показує `OnboardingScreen` замість
+  `AuthScreen`** — так само, як M5 тимчасово показував `AuthScreen`
+  напряму (коментар "Navigation 3 lands in M6+" виявився занадто
+  оптимістичним - реальний нав-граф, що з'єднає auth → onboarding →
+  решту застосунку, відкладено на майбутній мілстоун, коли з'явиться
+  реальна потреба в cross-feature навігації).
+  *Оновлення (пост-M6, 2026-07-18):* хребет Navigation 3 таки заведено —
+  `AlongsideApp` у `:app` тримає повний граф з
+  `docs/navigation-flow.mermaid` (auth-гейт через side effects
+  `SignedIn`/`Completed`, 5 табів + Settings/Recap як
+  placeholder-екрани до своїх мілстоунів); `MainActivity` тепер показує
+  `AlongsideApp`. `navigation3-ui` (NavDisplay) не публікує iOS-артефактів
+  у 1.1.0-alpha01, тож рендер стека — expect/actual
+  (`AlongsideNavDisplay`): Android — справжній `NavDisplay`, iOS/jvm —
+  плаский рендер верхнього entry без анімацій.
+- **`feature:onboarding`'s `commonMain` не залежить від `core:domain`**
+  (стаб-модуль мав цю залежність, прибрано) — уся логіка кроку/дозволів
+  самодостатня всередині фічі, нічого не торкається domain-шару.
 
 ---
 
