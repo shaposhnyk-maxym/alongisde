@@ -8,11 +8,16 @@ coroutines:
     excludes: ["**/test/**", "**/androidTest/**", "**/*Test.kt"]
 
 complexity:
+  # @Composable-функції — декларативний UI: розмір/кількість параметрів там
+  # задаються дизайном компонента (у Material3 Button — 9 параметрів), а не
+  # складністю логіки. Для звичайних функцій пороги лишаються чинними.
   LongMethod:
     threshold: 40
+    ignoreAnnotated: ["Composable"]
   LongParameterList:
     active: true
     functionThreshold: 6
+    ignoreAnnotated: ["Composable"]
   TooManyFunctions:
     active: true
     thresholdInFiles: 15

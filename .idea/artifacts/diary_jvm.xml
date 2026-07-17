@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="diary-jvm">
+    <output-path>$PROJECT_DIR$/feature/diary/build/libs</output-path>
+    <root id="archive" name="diary-jvm.jar">
+      <element id="module-output" name="Alongside.feature.diary.jvmMain" />
+    </root>
+  </artifact>
+</component>

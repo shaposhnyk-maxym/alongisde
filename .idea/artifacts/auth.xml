@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="auth">
+    <output-path>$PROJECT_DIR$/feature/auth/build/libs</output-path>
+    <root id="archive" name="auth.jar">
+      <element id="module-output" name="Alongside.feature.auth.androidMain" />
+    </root>
+  </artifact>
+</component>

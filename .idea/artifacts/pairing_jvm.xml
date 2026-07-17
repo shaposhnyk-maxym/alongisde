@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="pairing-jvm">
+    <output-path>$PROJECT_DIR$/feature/pairing/build/libs</output-path>
+    <root id="archive" name="pairing-jvm.jar">
+      <element id="module-output" name="Alongside.feature.pairing.jvmMain" />
+    </root>
+  </artifact>
+</component>

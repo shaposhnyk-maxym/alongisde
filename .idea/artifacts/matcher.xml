@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="matcher">
+    <output-path>$PROJECT_DIR$/feature/matcher/build/libs</output-path>
+    <root id="archive" name="matcher.jar">
+      <element id="module-output" name="Alongside.feature.matcher.androidMain" />
+    </root>
+  </artifact>
+</component>

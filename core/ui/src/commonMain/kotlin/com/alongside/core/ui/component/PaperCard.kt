@@ -9,9 +9,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import com.alongside.core.ui.theme.AlongsideSpacing
 import com.alongside.core.ui.theme.AlongsideTheme
+import com.alongside.core.ui.theme.alongsideColors
 
+/** Cream "paper" card — callouts, list rows, sheets on the dark canvas. */
 @Composable
 public fun PaperCard(
     modifier: Modifier = Modifier,
@@ -19,11 +21,11 @@ public fun PaperCard(
 ) {
     Surface(
         modifier = modifier,
-        color = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.alongsideColors.paper,
+        contentColor = MaterialTheme.alongsideColors.onPaper,
+        shape = MaterialTheme.shapes.large,
     ) {
-        Column(modifier = Modifier.padding(16.dp), content = content)
+        Column(modifier = Modifier.padding(AlongsideSpacing.xl), content = content)
     }
 }
 

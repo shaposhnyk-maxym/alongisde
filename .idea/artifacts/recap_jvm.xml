@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="recap-jvm">
+    <output-path>$PROJECT_DIR$/feature/recap/build/libs</output-path>
+    <root id="archive" name="recap-jvm.jar">
+      <element id="module-output" name="Alongside.feature.recap.jvmMain" />
+    </root>
+  </artifact>
+</component>

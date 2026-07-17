@@ -3,14 +3,26 @@ package com.alongside.core.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * Eyeballed from `design/main-app.pdf` / `design/login_pairing_onboarding.pdf` (dark ink canvas,
- * warm paper cards, burnt-orange accent) - not pixel-sampled. Revisit with exact values once a
- * real visual-design pass happens.
+ * Pixel-sampled from `design/login_pairing_onboarding.pdf` and `design/main-app.pdf`
+ * (near-black ink canvas, blue-charcoal elevated cards, cream paper surfaces,
+ * terracotta accent).
  */
 public object AlongsideColor {
-    public val InkBackground: Color = Color(0xFF0A0A0C)
-    public val PaperCard: Color = Color(0xFFF3ECE0)
-    public val AccentOrange: Color = Color(0xFFE0793C)
-    public val TextOnInk: Color = Color(0xFFEDEDED)
-    public val TextOnPaper: Color = Color(0xFF1A1A1A)
+    public val Ink: Color = Color(0xFF000000)
+    public val InkGradientBottom: Color = Color(0xFF070A0F)
+    public val SurfaceInk: Color = Color(0xFF171D26)
+    public val Paper: Color = Color(0xFFF9F5EC)
+    public val PaperWhite: Color = Color(0xFFFFFFFF)
+    public val Primary: Color = Color(0xFFE2764A)
+    public val PrimaryDeep: Color = Color(0xFFD9723E)
+    public val TextOnInk: Color = Color(0xFFF2F2F2)
+    public val IconMuted: Color = Color(0xFFA7ADBB)
+    public val TextMuted: Color = Color(0xFF9AA1AD)
+    public val LabelMuted: Color = Color(0xFF8A8F98)
+    public val IconTileOnPaper: Color = Color(0xFFD0CEC7)
+    public val ToastBrown: Color = Color(0xFF22120A)
+    public val TextOnPaper: Color = Color(0xFF17181A)
+    public val TextOnPaperSecondary: Color = Color(0xFF6E7076)
+    public val OutlineSubtle: Color = Color(0xFF262C36)
+    public val Destructive: Color = Color(0xFFE5484D)
 }
