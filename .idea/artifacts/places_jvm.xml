@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="places-jvm">
+    <output-path>$PROJECT_DIR$/feature/places/build/libs</output-path>
+    <root id="archive" name="places-jvm.jar">
+      <element id="module-output" name="Alongside.feature.places.jvmMain" />
+    </root>
+  </artifact>
+</component>

@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="places">
+    <output-path>$PROJECT_DIR$/feature/places/build/libs</output-path>
+    <root id="archive" name="places.jar">
+      <element id="module-output" name="Alongside.feature.places.androidMain" />
+    </root>
+  </artifact>
+</component>

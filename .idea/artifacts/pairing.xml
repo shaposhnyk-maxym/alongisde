@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="pairing">
+    <output-path>$PROJECT_DIR$/feature/pairing/build/libs</output-path>
+    <root id="archive" name="pairing.jar">
+      <element id="module-output" name="Alongside.feature.pairing.androidMain" />
+    </root>
+  </artifact>
+</component>

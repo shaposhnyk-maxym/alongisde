@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.Color
  * the toast banner, muted text tiers, and the ink gradient stops.
  */
 @Immutable
+@Suppress("LongParameterList") // Token holder, mirrors Material's own ColorScheme shape.
 public class AlongsideExtendedColors(
     public val paper: Color,
     public val onPaper: Color,

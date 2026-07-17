@@ -28,9 +28,9 @@ import com.alongside.core.ui.theme.AlongsideTheme
 import com.alongside.core.ui.theme.alongsideColors
 import com.alongside.core.ui.theme.alongsideTypography
 
-private const val PulseDurationMillis = 900
-private const val PulseMinAlpha = 0.4f
-private const val PulseMaxScale = 1.25f
+private const val PULSE_DURATION_MILLIS = 900
+private const val PULSE_MIN_ALPHA = 0.4f
+private const val PULSE_MAX_SCALE = 1.25f
 
 /** Softly pulsing status dot ("Waiting for your partner to join..."). */
 @Composable
@@ -42,13 +42,13 @@ public fun PulsingDot(
     val transition = rememberInfiniteTransition()
     val alpha by transition.animateFloat(
         initialValue = 1f,
-        targetValue = PulseMinAlpha,
-        animationSpec = infiniteRepeatable(tween(PulseDurationMillis), RepeatMode.Reverse),
+        targetValue = PULSE_MIN_ALPHA,
+        animationSpec = infiniteRepeatable(tween(PULSE_DURATION_MILLIS), RepeatMode.Reverse),
     )
     val scale by transition.animateFloat(
         initialValue = 1f,
-        targetValue = PulseMaxScale,
-        animationSpec = infiniteRepeatable(tween(PulseDurationMillis), RepeatMode.Reverse),
+        targetValue = PULSE_MAX_SCALE,
+        animationSpec = infiniteRepeatable(tween(PULSE_DURATION_MILLIS), RepeatMode.Reverse),
     )
     Box(
         modifier =

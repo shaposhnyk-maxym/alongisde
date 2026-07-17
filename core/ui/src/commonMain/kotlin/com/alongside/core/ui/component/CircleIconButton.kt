@@ -19,14 +19,6 @@ import com.alongside.core.ui.theme.AlongsideSpacing
 import com.alongside.core.ui.theme.AlongsideTheme
 import com.alongside.core.ui.theme.alongsideColors
 
-public enum class CircleIconButtonStyle {
-    /** Dark circle with a muted glyph — matcher "skip". */
-    Dark,
-
-    /** Larger terracotta circle with a white glyph — matcher "want to go". */
-    Primary,
-}
-
 /** Circular action button pair from the matcher screen. */
 @Composable
 public fun CircleIconButton(

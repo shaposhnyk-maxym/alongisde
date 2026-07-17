@@ -22,7 +22,7 @@ import com.alongside.core.ui.theme.alongsideColors
 private val DotSize = 6.dp
 private val SelectedDotWidth = 18.dp
 private val DotShape = RoundedCornerShape(percent = 50)
-private const val InactiveDotAlpha = 0.5f
+private const val INACTIVE_DOT_ALPHA = 0.5f
 
 /** Pager indicator from the diary card: small muted dots, the active page an orange pill. */
 @Composable
@@ -43,7 +43,7 @@ public fun PagerDots(
                 if (selected) {
                     MaterialTheme.colorScheme.primary
                 } else {
-                    MaterialTheme.alongsideColors.labelMuted.copy(alpha = InactiveDotAlpha)
+                    MaterialTheme.alongsideColors.labelMuted.copy(alpha = INACTIVE_DOT_ALPHA)
                 }
             Box(
                 modifier =

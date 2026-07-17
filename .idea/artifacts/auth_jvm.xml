@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="auth-jvm">
+    <output-path>$PROJECT_DIR$/feature/auth/build/libs</output-path>
+    <root id="archive" name="auth-jvm.jar">
+      <element id="module-output" name="Alongside.feature.auth.jvmMain" />
+    </root>
+  </artifact>
+</component>

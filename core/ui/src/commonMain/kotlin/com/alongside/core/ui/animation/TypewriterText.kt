@@ -19,7 +19,7 @@ import com.alongside.core.ui.theme.AlongsideTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
-private const val CursorBlinkMillis = 500L
+private const val CURSOR_BLINK_MILLIS = 500L
 
 /**
  * Reveals [text] one character at a time, [charDelayMillis] apart, then calls [onComplete].
@@ -50,7 +50,7 @@ public fun TypewriterText(
     if (showCursor) {
         LaunchedEffect(Unit) {
             while (isActive) {
-                delay(CursorBlinkMillis)
+                delay(CURSOR_BLINK_MILLIS)
                 cursorVisible = !cursorVisible
             }
         }

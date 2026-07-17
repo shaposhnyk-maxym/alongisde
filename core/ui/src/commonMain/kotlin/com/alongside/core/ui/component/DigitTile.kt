@@ -17,14 +17,6 @@ import com.alongside.core.ui.theme.AlongsideTheme
 import com.alongside.core.ui.theme.alongsideColors
 import com.alongside.core.ui.theme.alongsideTypography
 
-public enum class DigitTileTone {
-    /** Terracotta glyph — trip-day counter, invite code. */
-    Accent,
-
-    /** Cream glyph — quieter tiles. */
-    Paper,
-}
-
 /** Dark rounded tile with a single large mono character (flip-counter digits, invite codes). */
 @Composable
 public fun DigitTile(

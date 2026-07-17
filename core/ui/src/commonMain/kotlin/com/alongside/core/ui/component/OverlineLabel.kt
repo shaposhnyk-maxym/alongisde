@@ -12,14 +12,6 @@ import com.alongside.core.ui.theme.AlongsideTheme
 import com.alongside.core.ui.theme.alongsideColors
 import com.alongside.core.ui.theme.alongsideTypography
 
-public enum class OverlineLabelTone {
-    /** Terracotta — step markers, emphasized sections ("STEP 1 OF 4", "TRIP DAY"). */
-    Accent,
-
-    /** Muted gray — quiet section headers ("TODAY", "NEW MATCHES", "LVIV"). */
-    Muted,
-}
-
 /** Mono uppercase letterspaced label used above sections and inside cards. */
 @Composable
 public fun OverlineLabel(
