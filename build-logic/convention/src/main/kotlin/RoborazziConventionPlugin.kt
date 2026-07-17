@@ -47,6 +47,17 @@ class RoborazziConventionPlugin : Plugin<Project> {
                     // @Preview composables are conventionally private (dev-tool only, not public
                     // API) - the scanner ignores private previews unless told otherwise.
                     includePrivatePreviews.set(true)
+                    // Goldens recorded on macOS/arm64 differ from ubuntu/x86_64 CI renders by
+                    // 1-2px of Skia anti-aliasing on rounded corners and glyph edges. The custom
+                    // tester wraps the default one with a comparison tolerance instead of
+                    // requiring goldens to be re-recorded in CI (see the tester's KDoc for the
+                    // measured numbers). Its source lives in config/roborazzi/src and is added
+                    // to androidHostTest below, so every module using this plugin compiles it.
+                    testerQualifiedClassName.set("com.alongside.screenshot.ToleranceComposePreviewTester")
+                    // The tolerance tester delegates testParameters() to the default
+                    // AndroidComposePreviewTester, which reads scanOptions (incl.
+                    // includePrivatePreviews) at runtime - safe to keep them plugin-side.
+                    useScanOptionParametersInTester.set(true)
                 }
             }
 
@@ -63,6 +74,10 @@ class RoborazziConventionPlugin : Plugin<Project> {
                 }
 
                 val compose = extensions.getByType<ComposePlugin.Dependencies>()
+                // Shared screenshot-test support (the tolerance tester) - one source file
+                // compiled into each module's host tests rather than a dedicated module.
+                sourceSets.getByName("androidHostTest").kotlin
+                    .srcDir(rootProject.file("config/roborazzi/src"))
                 sourceSets.getByName("androidHostTest").dependencies {
                     implementation(kotlin("test"))
                     // androidHostTest doesn't automatically see commonMain's `implementation`
