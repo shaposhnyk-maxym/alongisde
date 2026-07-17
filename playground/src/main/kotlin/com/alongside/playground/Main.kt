@@ -29,8 +29,10 @@ import com.alongside.core.ui.animation.CountUpText
 import com.alongside.core.ui.animation.PulsingDot
 import com.alongside.core.ui.animation.StaggerRevealColumn
 import com.alongside.core.ui.animation.TypewriterText
-import com.alongside.core.ui.component.AlongsideButton
-import com.alongside.core.ui.component.AlongsideButtonVariant
+import com.alongside.core.ui.component.AlongsideOnPaperButton
+import com.alongside.core.ui.component.AlongsidePrimaryButton
+import com.alongside.core.ui.component.AlongsideSecondaryButton
+import com.alongside.core.ui.component.AlongsideTextButton
 import com.alongside.core.ui.component.CircleIconButton
 import com.alongside.core.ui.component.CircleIconButtonStyle
 import com.alongside.core.ui.component.DigitTile
@@ -105,26 +107,22 @@ private fun BrandSection() {
 private fun ButtonsSection() {
     Section(title = "Buttons") {
         Column(verticalArrangement = Arrangement.spacedBy(AlongsideSpacing.md)) {
-            AlongsideButton(
+            AlongsidePrimaryButton(
                 text = "Allow Photo Access",
                 onClick = {},
                 modifier = Modifier.fillMaxWidth(),
             )
-            AlongsideButton(
+            AlongsideSecondaryButton(
                 text = "Copy Code",
                 onClick = {},
                 modifier = Modifier.fillMaxWidth(),
-                variant = AlongsideButtonVariant.Secondary,
             )
-            PaperCard(modifier = Modifier.fillMaxWidth()) {
-                AlongsideButton(
-                    text = "Continue with Google",
-                    onClick = {},
-                    modifier = Modifier.fillMaxWidth(),
-                    variant = AlongsideButtonVariant.OnPaper,
-                )
-            }
-            AlongsideButton(text = "Not now", onClick = {}, variant = AlongsideButtonVariant.Text)
+            AlongsideOnPaperButton(
+                text = "Continue with Google",
+                onClick = {},
+                modifier = Modifier.fillMaxWidth(),
+            )
+            AlongsideTextButton(text = "Not now", onClick = {})
         }
     }
 }

@@ -12,6 +12,7 @@ kotlin {
 kotlin {
     sourceSets {
         commonMain.dependencies {
+            implementation(projects.core.domain)
             implementation(libs.findLibrary("ktor-client-core").get())
             implementation(libs.findLibrary("ktor-client-content-negotiation").get())
             implementation(libs.findLibrary("ktor-serialization-kotlinx-json").get())

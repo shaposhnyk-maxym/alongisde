@@ -300,28 +300,96 @@ Episode+Photo, PlaceCandidate).
 
 ---
 
-### M5 — Login (Google Sign-In)
+### M5 — Login (Google Sign-In) ✅ done
 `feature:auth`.
 
 **Accept:**
-- Бізнес-логіка (Orbit `AuthContainer`: `State`/`Intent`/`SideEffect`)
-  юніт-тестується повністю через **фейкову** реалізацію
-  `GoogleAuthProvider`-інтерфейсу — успіх, відмова користувача, мережевий
-  збій, невалідний токен. Використовується `orbit-test` для перевірки
-  послідовності станів.
-- **Чесне обмеження, яке варто прийняти, а не вдавати, що його нема:**
-  сам виклик нативного SDK (Credential Manager на Android, GIDSignIn на
-  iOS) — це системний UI-флоу з реальним Google-акаунтом, його не можна
-  надійно автоматизувати в CI. Це НЕ юніт-теститься напряму — теститься
-  тільки код по обидва боки від нього (наш `Container` + обробка
-  результату).
-- Інтеграційний тест — на етап **після** отримання ID-токена: обмін
-  токена на сесію через Firebase Auth REST API, протестований через
-  Ktor `MockEngine` (симулюємо відповідь Firebase Auth на валідний і
-  невалідний токен)
-- Мануальний чекліст (не автоматизований, документується як такий):
-  реальний Sign-In на фізичному Android-пристрої й iOS-пристрої/симуляторі
-  хоча б раз перед мержем
+- [x] Бізнес-логіка (Orbit `AuthContainer`: `State`/`Intent`/`SideEffect`)
+      юніт-тестується повністю через **фейкову** реалізацію
+      `GoogleAuthProvider`-інтерфейсу — успіх, відмова користувача, мережевий
+      збій, невалідний токен. Використовується `orbit-test` для перевірки
+      послідовності станів — `AuthContainerTest` (11 тестів, incl. dismiss-error,
+      провайдер-фейлюр як `SIGN_IN_FAILED`, і сесія-кеш сценарії нижче)
+- [x] **Чесне обмеження, яке варто прийняти, а не вдавати, що його нема:**
+      сам виклик нативного SDK (Credential Manager на Android, GIDSignIn на
+      iOS) — це системний UI-флоу з реальним Google-акаунтом, його не можна
+      надійно автоматизувати в CI. Це НЕ юніт-теститься напряму — теститься
+      тільки код по обидва боки від нього (наш `Container` + обробка
+      результату) — `CredentialManagerGoogleAuthProvider`, KDoc фіксує це явно
+- [x] Інтеграційний тест — на етап **після** отримання ID-токена: обмін
+      токена на сесію через Firebase Auth REST API, протестований через
+      Ktor `MockEngine` (симулюємо відповідь Firebase Auth на валідний і
+      невалідний токен) — `FirebaseAuthApiTest` + `FirebaseAuthSessionRepositoryTest`
+      (200/400 INVALID_IDP_RESPONSE/INVALID_ID_TOKEN/інший 400/500/malformed
+      JSON/timeout)
+- [x] Мануальний чекліст (не автоматизований, документується як такий):
+      реальний Sign-In на фізичному Android-пристрої й iOS-пристрої/симуляторі
+      хоча б раз перед мержем — `docs/manual-checklists.md`
+
+**Відхилення від початкового плану:**
+- **Локальний кеш сесії + silent re-auth — додано поза буквальними
+  Accept-критеріями M5, за прямим запитом користувача під час мануальної
+  перевірки.** Виявлено на реальному пристрої: відповідь Firebase
+  `accounts:signInWithIdp` для цього проєкту не містить `refreshToken`
+  (і часом `expiresIn`) попри `returnSecureToken: true` — задокументована
+  поведінка per Google's REST API docs, але без нього штатний Firebase
+  silent-refresh неможливий. Замість "sign in щоразу при запуску
+  застосунку" (що й так було б поведінкою M5 без цього, оскільки сесія
+  жила тільки в `AuthState`) — додано:
+  - `AuthSession.issuedAt` + `core:domain`'s `isExpired()` (чиста функція,
+    5-хвилинний safety margin, own unit-тести — `AuthSessionExpiryTest`)
+  - `core:domain.AuthSessionCache` seam, `core:database`-реалізація на
+    Room (single-row таблиця `auth_session`, schema bumped 2→3, DAO +
+    repository тести + `DatabaseCreationTest`-кейс, той самий підхід, що
+    й `PushToken`)
+  - `GoogleAuthProvider.signInSilently` (Android:
+    `filterByAuthorizedAccounts(true)` — без UI, якщо акаунт уже
+    авторизований)
+  - `AuthContainer`'s `container(AuthState()) { restoreSession() }`
+    onCreate-хук: не протермінована кешована сесія відновлюється без
+    жодного мережевого виклику; протермінована — silent re-auth через
+    Credential Manager, потім той самий REST-обмін, що й явний sign-in;
+    будь-яка невдача цього фонового флоу тихо чистить кеш і лишає idle
+    (без банера помилки — користувач цей флоу не запускав)
+  - Обмін `androidApp` DI: `androidAppModule` тепер приймає `Context` (для
+    Room) поряд з `firebaseApiKey`
+- **Скоуп розширено мінімальним `AuthScreen`** — Accept-критерії M5 явно
+  говорять тільки про логіку, але CLAUDE.md вимагає screenshot-тести для
+  будь-якого нового/зміненого Composable в `feature:*`. Додано мінімальний
+  екран (заголовок, кнопка "Continue with Google", pulsing-dot під час
+  завантаження, `DotBanner` для помилки) з трьома preview (idle/loading/error)
+  і auto-generated Roborazzi-тестами.
+- **iOS-частина мануального чекліста — BLOCKED, не пройдена** — `iosApp`
+  (Xcode-проєкт) ще не існує, Apple Developer акаунт заблокований (окрема
+  відома проблема). `GoogleAuthProvider` спроєктований під майбутню
+  Swift-реалізацію (callback-based, без `suspend`, single-method interface),
+  але сам GIDSignIn-код і його мануальна перевірка відкладені до моменту,
+  коли iOS-таргет реально з'явиться в проєкті — зафіксовано в
+  `docs/manual-checklists.md`, а не приховано.
+- **`core:network` тепер залежить від `core:domain`** (раніше — незалежний
+  шар) — `FirebaseAuthSessionRepository` імплементує
+  `core.domain.auth.AuthSessionRepository`; дозволено доком
+  (`core:network` — "імплементує remote дата сорси з `core:domain`"), тому
+  не порушує архітектурні межі, лише вперше їх реально задіює.
+- **`core:domain`'s залежність на `core:model` — `implementation` → `api`** —
+  публічні інтерфейси (`TripRepository` тощо) вже експонували model-типи;
+  зроблено явним, щоб `feature:auth` бачив `AuthSession`/`AuthUser` через
+  `core:domain`, не додаючи прямої залежності на `core:model` (яка порушила б
+  правило "feature-модулі залежать тільки на core:domain + core:ui").
+- **`androidHostTest` не успадковує `commonMain`'ові `implementation`-залежності**
+  (задокументовано раніше в `RoborazziConventionPlugin.kt` для Compose-залежностей,
+  M5 — перший випадок, де це вдарило по project-залежностях: `core:domain`/
+  `core:model`) — довелось явно передекларувати `implementation(projects.core.domain)`
+  для `androidHostTest`-сорссету в `feature/auth/build.gradle.kts`. Якщо
+  наступні мілстоуни пишуть `androidHostTest`-тести, що імпортують типи з
+  іншого модуля (а не лише свого) — дивись сюди першою чергою.
+- **DI-вайринг, що читає `google-services.json`-ресурси (`google_api_key`,
+  `default_web_client_id`), живе в `androidApp`, не в `app`** — ці рядки
+  генеруються тільки в модулі, де застосований `com.google.gms.google-services`
+  (`androidApp`), і не видимі з `app`'s окремого namespace. `androidApp` тепер
+  має власний `AlongsideApplication`/`AndroidAppModule` (замість тільки
+  `MainActivity`), і тимчасово показує `AuthScreen` напряму — `AlongsideApp()`
+  (Navigation 3 граф у `app`) підключиться в M6+.
 
 ---
 

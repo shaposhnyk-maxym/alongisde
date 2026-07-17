@@ -2,6 +2,7 @@ package com.alongside.core.database
 
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import com.alongside.core.database.entity.AuthSessionEntity
 import com.alongside.core.database.entity.DiaryEntryEntity
 import com.alongside.core.database.entity.EpisodeEntity
 import com.alongside.core.database.entity.PhotoEntity
@@ -92,6 +93,16 @@ class DatabaseCreationTest {
             assertEquals(pushToken, database.pushTokenDao().getById(pushToken.userId))
         }
 
+    @Test
+    fun `auth session table round trips a row from a freshly created database`() =
+        runTest {
+            val session = authSession()
+
+            database.authSessionDao().upsert(session)
+
+            assertEquals(session, database.authSessionDao().get())
+        }
+
     private fun trip() =
         TripEntity(
             id = "trip-1",
@@ -158,5 +169,17 @@ class DatabaseCreationTest {
             platform = PushPlatform.ANDROID,
             syncStatus = SyncStatus.PENDING,
             updatedAt = createdAt,
+        )
+
+    private fun authSession() =
+        AuthSessionEntity(
+            uid = "owner-1",
+            email = "owner@example.com",
+            displayName = "Owner One",
+            photoUrl = null,
+            idToken = "id-token-1",
+            refreshToken = null,
+            expiresInSeconds = 3600L,
+            issuedAt = createdAt,
         )
 }

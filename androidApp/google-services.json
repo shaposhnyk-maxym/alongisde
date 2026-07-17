@@ -12,7 +12,20 @@
           "package_name": "com.alongside.androidapp"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "965813009948-6if5332370ujckcerqouu2fjl7c76n2f.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.alongside.androidapp",
+            "certificate_hash": "b4a68b45e74fa3a08ce1570fe9b67f8d4c8b12f1"
+          }
+        },
+        {
+          "client_id": "965813009948-0bq5l2ke4snh42t5mdbrl9bh8e02sj10.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBngsPMdA2piAYsJNTTAzVjuA5hbzfX9HY"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "965813009948-0bq5l2ke4snh42t5mdbrl9bh8e02sj10.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "965813009948-crgi379s8dasn6ba8mjrt6bl34sr14gn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.alongside.androidapp"
+              }
+            }
+          ]
         }
       }
     }

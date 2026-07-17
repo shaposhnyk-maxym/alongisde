@@ -29,6 +29,12 @@ class KmpLibraryComposePlugin : Plugin<Project> {
                     // AnimatedVisibility/fadeIn/slideInVertically, used by StaggerRevealColumn.
                     implementation(compose.animation)
                 }
+
+                sourceSets.getByName("androidMain").dependencies {
+                    // Required for Android Studio to host and render Compose Previews; provides the
+                    // actual androidx.compose.ui.tooling.ComposeViewAdapter class LayoutLib looks for.
+                    implementation(libs.findLibrary("compose-ui-tooling").get())
+                }
             }
         }
     }

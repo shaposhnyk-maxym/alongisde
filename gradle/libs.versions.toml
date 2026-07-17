@@ -23,6 +23,8 @@ ksp = "2.3.10"
 
 # AndroidX (Android-only shell, not Compose Multiplatform)
 activity-compose = "1.13.0"
+androidx-credentials = "1.6.0"
+googleid = "1.1.1"
 
 # Firebase Cloud Messaging (Android-only - native SDK, not the multiplatform
 # wrapper the ADR in kmp-module-architecture.md avoids; see docs/roadmap.md M17)
@@ -83,6 +85,9 @@ ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "k
 
 # AndroidX (Android-only shell)
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
+androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "androidx-credentials" }
+androidx-credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "androidx-credentials" }
+googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 
 # Firebase Cloud Messaging (Android-only)
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
@@ -112,6 +117,9 @@ compose-ui-test-junit4 = { module = "org.jetbrains.compose.ui:ui-test-junit4", v
 # real androidx.compose.ui.tooling.preview.Preview annotation directly for commonMain use (the
 # JetBrains org.jetbrains.compose.ui.tooling.preview.Preview wrapper is now deprecated).
 compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
+# Required for Android Studio to host and render Compose Previews; provides the actual
+# androidx.compose.ui.tooling.ComposeViewAdapter class LayoutLib looks for.
+compose-ui-tooling = { module = "org.jetbrains.compose.ui:ui-tooling", version.ref = "compose-multiplatform" }
 # No JetBrains-multiplatform equivalent exists (Android-manifest-specific, doesn't apply to other
 # targets) - provides the test-host ComponentActivity manifest entry createComposeRule() launches
 # under Robolectric; without it, tests fail with "Unable to resolve activity for Intent...".
