@@ -3,9 +3,9 @@ package com.alongside.core.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * Pixel-sampled from `design/login_pairing_onboarding.pdf` and `design/main-app.pdf`
- * (near-black ink canvas, blue-charcoal elevated cards, cream paper surfaces,
- * terracotta accent).
+ * Pixel-sampled from `design/Alongside - Onboarding and Pairing Flow (standalone).html`
+ * and `design/main-app.pdf` (near-black ink canvas, blue-charcoal elevated cards,
+ * cream paper surfaces, terracotta accent).
  */
 public object AlongsideColor {
     public val Ink: Color = Color(0xFF000000)

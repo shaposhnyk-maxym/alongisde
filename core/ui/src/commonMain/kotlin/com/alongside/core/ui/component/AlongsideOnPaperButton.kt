@@ -2,6 +2,7 @@ package com.alongside.core.ui.component
 
 import alongside.core.ui.generated.resources.Res
 import alongside.core.ui.generated.resources.ic_google
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -16,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.alongside.core.ui.theme.AlongsideSpacing
@@ -45,6 +47,9 @@ public fun AlongsideOnPaperButton(
         color = MaterialTheme.alongsideColors.paperWhite,
         contentColor = MaterialTheme.alongsideColors.onPaper,
         shape = MaterialTheme.shapes.medium,
+        // The design's warm hairline border - keeps the white button legible when it sits
+        // inside the cream PaperCard rather than directly on the ink canvas.
+        border = BorderStroke(1.dp, MaterialTheme.alongsideColors.iconTileOnPaper),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp),
@@ -55,6 +60,8 @@ public fun AlongsideOnPaperButton(
                 modifier = Modifier.size(24.dp),
                 painter = painterResource(Res.drawable.ic_google),
                 contentDescription = null,
+                // The Google mark keeps its own brand colors instead of the content tint.
+                tint = Color.Unspecified,
             )
             Text(text)
         }

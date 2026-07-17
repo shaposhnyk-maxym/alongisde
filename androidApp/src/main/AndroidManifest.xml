@@ -4,6 +4,13 @@
     <!-- Required at runtime on API 33+ to actually display push notifications. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Photo access for the diary's EXIF import - split by API level per Android's own
+         permission migration (READ_MEDIA_IMAGES replaces READ_EXTERNAL_STORAGE on 33+). -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
     <application
         android:name=".AlongsideApplication"
         android:label="Alongside"
