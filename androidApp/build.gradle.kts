@@ -1,7 +1,18 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.convention.android.application)
     alias(libs.plugins.google.services)
 }
+
+// Unlike Firebase (google-services.json, committed, auto-processed), Google Places and Gemini
+// have no auto-generated key delivery - both read from local.properties (gitignored, not committed).
+// See docs/local-setup.md for the keys this project expects there.
+val localProperties =
+    Properties().apply {
+        val file = rootProject.file("local.properties")
+        if (file.exists()) file.inputStream().use { load(it) }
+    }
 
 android {
     namespace = "com.alongside.androidapp"
@@ -9,6 +20,15 @@ android {
         applicationId = "com.alongside.androidapp"
         versionCode = 1
         versionName = "0.1.0"
+        buildConfigField(
+            "String",
+            "GOOGLE_PLACES_API_KEY",
+            "\"${localProperties.getProperty("GOOGLE_PLACES_API_KEY", "")}\"",
+        )
+        buildConfigField("String", "GEMINI_API_KEY", "\"${localProperties.getProperty("GEMINI_API_KEY", "")}\"")
+    }
+    buildFeatures {
+        buildConfig = true
     }
 }
 

@@ -25,6 +25,9 @@ ksp = "2.3.10"
 activity-compose = "1.13.0"
 androidx-credentials = "1.6.0"
 googleid = "1.1.1"
+# EXIF reading for feature:diary's photo capture step - Android-only (see docs/roadmap.md M10;
+# iOS EXIF/photo-library reading is deferred, same as M7).
+androidx-exifinterface = "1.3.7"
 
 # Firebase Cloud Messaging (Android-only - native SDK, not the multiplatform
 # wrapper the ADR in kmp-module-architecture.md avoids; see docs/roadmap.md M17)
@@ -88,6 +91,7 @@ activity-compose = { module = "androidx.activity:activity-compose", version.ref 
 androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "androidx-credentials" }
 androidx-credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "androidx-credentials" }
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
+androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "androidx-exifinterface" }
 
 # Firebase Cloud Messaging (Android-only)
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
