@@ -89,7 +89,7 @@ class SyncCoordinatorTest {
     // --- Accept criterion 2: deterministic last-write-wins ---
 
     @Test
-    fun `remote newer - remote wins, nothing pushed, remote copy lands locally as SYNCED`() =
+    fun `remote newer - remote wins - nothing pushed - remote copy lands locally as SYNCED`() =
         runTest {
             repository.upsert(testTrip(id = "trip-1", memberId = null))
             val remoteTrip =
@@ -111,7 +111,7 @@ class SyncCoordinatorTest {
         }
 
     @Test
-    fun `local newer - local wins and is pushed, remote copy is not applied`() =
+    fun `local newer - local wins and is pushed - remote copy is not applied`() =
         runTest {
             repository.upsert(testTrip(id = "trip-1", memberId = null))
             val remoteTrip =

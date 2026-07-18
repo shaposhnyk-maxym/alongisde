@@ -615,21 +615,186 @@ Episode+Photo, PlaceCandidate).
 
 ---
 
-### M10 — Diary: capture & processing pipeline
+### M10 — Diary: capture & processing pipeline ✅ done
 `feature:diary` (частина 1) — EXIF, кластеризація епізодів, Google
 Places геокодинг, Gemini vision-опис.
 
 **Accept:**
-- Юніт-тести кластеризації: синтетичні набори фото з відомими
-  timestamp/координатами → перевірка, що епізоди групуються правильно
-  (межові випадки: фото рівно на межі 500м/2год порогу)
-- Places геокодинг і Gemini виклики — тестуються через фейкові клієнти
-  (інтерфейс, не HTTP напряму), окремо від `core:network`, який вже
-  покритий в M3
-- Тест вибору репрезентативних фото з епізоду (2-4 з N, за критерієм
-  найбільшої різниці в часі)
-- Тест ліміту перегенерації тексту (лічильник спроб на епізод, поведінка
-  при вичерпанні)
+- [x] Юніт-тести кластеризації: синтетичні набори фото з відомими
+      timestamp/координатами → перевірка, що епізоди групуються правильно
+      (межові випадки: фото рівно на межі 500м/2год порогу) —
+      `EpisodeClusteringTest` (`core:domain`, 12 тестів: порожній список,
+      одне фото, злиття/розрив по часу й по відстані окремо, обидва
+      межові випадки в обох напрямках, sliding-chain vs anchor-based
+      поведінка, порядок вхідних фото не має значення)
+- [x] Places геокодинг і Gemini виклики — тестуються через фейкові клієнти
+      (інтерфейс, не HTTP напряму), окремо від `core:network`, який вже
+      покритий в M3 — `EpisodeProcessingPipelineTest` (`core:domain`, 6
+      тестів на фейкових `PlaceGeocodingClient`/`EpisodeVisionDescriptionClient`)
+- [x] Тест вибору репрезентативних фото з епізоду (2-4 з N, за критерієм
+      найбільшої різниці в часі) — `RepresentativePhotoSelectorTest`
+      (`core:domain`, 7 тестів)
+- [x] Тест ліміту перегенерації тексту (лічильник спроб на епізод, поведінка
+      при вичерпанні) — `EpisodeDescriptionAttemptsTest` (`core:domain`,
+      3 тести) + `Episode.descriptionAttempts` персиститься (schema v4→v5)
+
+**Відхилення від початкового плану (усі узгоджені з користувачем перед
+реалізацією):**
+- **Реальні HTTP-клієнти для Places і Gemini, не лише фейки** —
+  розширення поза буквальним Accept-критерієм, за прямим запитом
+  користувача. `core:network`'s `GooglePlacesGeocodingApi`/`GeminiVisionApi`
+  повторюють `FirebaseAuthApi`'s скелет (config → rawRequest/throwIfError/
+  parseBody → sealed exception → MockEngine `jvmTest`), плюс адаптери
+  (`GooglePlacesGeocodingClient`/`GeminiVisionDescriptionClient`), що
+  імплементують `core:domain`'s `PlaceGeocodingClient`/
+  `EpisodeVisionDescriptionClient` seam-інтерфейси (той самий патерн, що
+  `PairingTripDataSource` з M8). Google Geocoding API (не "Places API"
+  буквально) — правильний Google-продукт для reverse-геокодингу за
+  координатами; назва пакета/класів лишена "places" відповідно до
+  CLAUDE.md-термінології.
+- **Ключі API — нова територія, без готового механізму** (на відміну від
+  Firebase, де `google-services.json` авто-генерує ресурси) —
+  `GOOGLE_PLACES_API_KEY`/`GEMINI_API_KEY` читаються з `local.properties`
+  (вже в `.gitignore`) в `androidApp/build.gradle.kts` через
+  `buildConfigField`; задокументовано в `docs/local-setup.md`.
+- **Правило кластеризації** (не зафіксоване в жодному доці до цього):
+  sliding-chain, не anchor-based — фото лишається в поточному епізоді,
+  тільки якщо воно в межах 2год **І** 500м від **попереднього** фото (не
+  від першого фото епізоду); перевищення будь-якого з порогів починає
+  новий епізод. Межовий випадок (рівно 500м/2год) — лишається в тому ж
+  епізоді (inclusive).
+- **Ліміт перегенерації = 3 спроби** — конкретне число не було
+  зафіксоване ніде. При вичерпанні — регенерація вимикається, але
+  останній згенерований текст лишається (користувач ніколи не
+  залишається зовсім без тексту).
+- **EXIF-читання (`ExifPhotoReader`/`PhotoByteReader`) — тільки Android**,
+  через `androidx.exifinterface`; iOS-реалізація відкладена (Apple dev
+  акаунт заблокований, `iosApp` ще не існує — той самий статус, що й M7).
+  Чесне обмеження: сам виклик `ContentResolver`/`ExifInterface` не
+  юніт-тестується напряму (немає дешевого фейка для `ContentResolver`,
+  той самий клас проблеми, що нативний SDK у M5) — але пайплайн, який він
+  живить (`clusterPhotosIntoEpisodes` і решта), повністю покритий тестами
+  на синтетичних `Photo`-списках, незалежно від способу захоплення.
+  **Формат фото не обмежений JPEG**: `androidx.exifinterface` (не
+  платформний `android.media.ExifInterface`) читає EXIF з JPEG, PNG,
+  WebP, HEIF/HEIC, AVIF і купи RAW-форматів — жодного JPEG-хардкоду в
+  коді, `ExifInterface(stream)` формат-агностичний. Перевірено емпірично
+  (2026-07-19): реальний JPEG сконвертовано в HEIC (`sips`), GPS +
+  `DateTimeOriginal` пережили конвертацію 1:1, файл запушено на пристрій
+  — MediaStore проіндексував як `image/heic` з коректним `datetaken`.
+  Компоненти (бібліотека + MediaStore) сумісні з HEIC/HEIF (Samsung
+  опційно, iPhone за замовчуванням) — але наскрізний виклик
+  `AndroidExifPhotoReader.readOne()` проти цього файлу ще не запущений
+  (той самий блокер: немає entry point/UI).
+- **`GeocodeResult.preferredPlaceName()` пріоритет розширено** — реальний
+  виклик Google Geocoding API (2026-07-19, ключ з `local.properties`,
+  координати обох тестових епізодів) показав: `point_of_interest`/
+  `premise` майже ніколи не зустрічаються як тип окремого
+  `address_component` (навіть коли результат В ЦІЛОМУ — заклад), тож
+  алгоритм падав аж до `locality` — обидва тестові епізоди (різні
+  вулиці, ~4.2км одна від одної, те саме місто) отримували однакову
+  назву "Arezzo". Додано `route`/`neighborhood` у пріоритет (між
+  `sublocality_level_1` і `locality`) — тепер відрізняються за назвою
+  вулиці/району. `GeocodeResultTest.kt` — 6 тестів на всю пріоритетну
+  логіку (раніше перевірялась лише побіжно, одним фікстур-кейсом у
+  `GooglePlacesGeocodingClientTest`).
+- **Gemini vision-опис протестовано наскрізно реальним викликом**
+  (2026-07-19): 4 представницьких фото епізоду 1 (відібрані вручну за
+  тим самим алгоритмом, що `selectRepresentativePhotos`) + промпт у
+  точному форматі `GeminiVisionDescriptionClient` → реальний
+  `gemini-flash-latest`. Результат — саме "емоційний абзац, не сухий
+  опис", як вимагає концепт-документ, і природно підхопив
+  `placeName`-підказку з промпту. Дорогою знайдено й виправлено 2 реальні
+  проблеми (окремі коміти): (1) дефолтна модель `gemini-2.0-flash` мала
+  нульову free-tier квоту на реальному ключі — замінено на
+  `gemini-flash-latest`; (2) `GeminiVisionApi`/`GooglePlacesGeocodingApi`
+  не парсили JSON error envelope на HTTP 4xx/5xx, губили реальне
+  повідомлення (напр. "Your prepayment credits are depleted..." замість
+  generic "Too Many Requests") — виправлено за тим самим патерном, що
+  `FirebaseAuthApi` вже використовував.
+  **Білінг-нюанс, не пов'язаний з кодом**: проєкт, спільний з Firebase
+  (`alongside-b05f2`), автоматично стає Gemini API "Tier 1" (вимагає
+  prepay-баланс) сам факт наявності білінг-акаунта на проєкті — Free
+  Tier практично недоступний, поки білінг лишається підключеним.
+  Робочий ключ узято з окремого, не пов'язаного з Firebase проєкту.
+- **Промпт переписано після живої перевірки якості тексту, не лише
+  факту виклику** (2026-07-19) — перший варіант промпту генерував
+  правильний за змістом, але типовий "AI-травелблог" текст ("wrapped in
+  the warmth... a dream we never want to wake up from"). Новий промпт
+  додає: (1) **локалізацію** — `EpisodeVisionDescriptionClient.describeEpisode`
+  отримав третій параметр `languageTag: String` (BCP-47, напр. "uk"),
+  протягнутий через `EpisodeProcessingPipeline.process` — Gemini пишуть
+  рідною мовою локалі застосунку, не перекладом; (2) явну заборону
+  кліше ("magical", "breathtaking", "wrapped up in" тощо), вимогу
+  прив'язки до однієї конкретної видимої деталі (об'єкт/колір/текстура),
+  формат "підпис" (1-2 речення), а не розлогий абзац. Перевірено вживу
+  тим самим набором фото у двох мовах — англійською й українською:
+  укр. "Втекли від сонця на цю алею і тепер просто блукаємо вздовж
+  старого кам'яного муру, згрібаючи ногами сухе руде листя на гравії" —
+  природна, не перекладена українська, прив'язана до реального
+  кам'яного муру й листя на фото. **Хто ще не отримав `languageTag`**:
+  реального джерела локалі застосунку (Android `Locale.getDefault()`
+  чи подібне) ще не підключено — жоден виклик з реального коду поки не
+  існує (той самий "немає entry point" блокер), тож параметр наразі
+  тільки протестований, не звʼязаний з реальною системною локаллю.
+- **Немає UI/Orbit Container у M10** — Accept-критерії цього мілстоуна не
+  мають жодної UI-вимоги (Timeline UI — M12); `feature:diary` отримав
+  лише capture/processing-логіку.
+- **`Episode.descriptionAttempts: Int`** — нове поле, schema v4→v5,
+  `MIGRATION_4_5` (backfill 0 для існуючих рядків), окремий
+  migration-тест (`core:database`, hand-rolled v4-фікстура, той самий
+  підхід, що v3→v4 в M9).
+
+**iOS TODO (накопичено в M10, перевірити коли `iosApp` реально стартує):**
+- [ ] `ExifPhotoReader` — немає `iosMain`-реалізації взагалі (тільки
+      commonMain-інтерфейс). На Android — `ContentResolver` +
+      `androidx.exifinterface`; на iOS еквівалент — швидше за все
+      `PHAsset`/`PHImageManager` (доступ до фото) + `CGImageSource`/
+      `CGImageSourceCopyPropertiesAtIndex` (читання EXIF GPS+
+      DateTimeOriginal з `kCGImagePropertyExifDictionary`/
+      `kCGImagePropertyGPSDictionary`) — інший API, інша структура даних,
+      писати з нуля, не портувати Android-код.
+- [ ] `PhotoByteReader` — та сама історія: немає `iosMain`, на Android —
+      `ContentResolver.openInputStream`, на iOS — читання байтів з
+      `PHAsset` через `PHImageManager.requestImageDataAndOrientation`
+      (async callback-based API, не suspend напряму — знадобиться
+      обгортка, як `GoogleAuthProvider` в M5).
+- [ ] `androidx.exifinterface` — Android-only бібліотека в
+      `libs.versions.toml`; для iOS жодної бібліотеки ще не обрано
+      (ImageIO — системний фреймворк, не Gradle-залежність, тож питання
+      radше в `iosApp`/cinterop налаштуванні, коли Xcode-проєкт з'явиться).
+- [ ] **Google Places/Gemini Ktor-клієнти (`core:network`) технічно
+      мультиплатформні** (`ktor-client-darwin` вже підключений для iOS в
+      `core:network/build.gradle.kts`), **але жодного разу не перевірені
+      на Darwin-таргеті** — самі HTTP-виклики можуть просто запрацювати,
+      коли з'явиться iOS-виклик, а можуть і ні (напр. `kotlin.io.encoding.Base64`
+      у `GeminiVisionDescriptionClient` теоретично мультиплатформний, але
+      не тестований на Kotlin/Native). Перевірити першим ділом, це
+      найдешевше з усього списку.
+- [ ] **Ключі API (`GOOGLE_PLACES_API_KEY`/`GEMINI_API_KEY`) — механізм
+      Android/Gradle-специфічний** (`local.properties` → `BuildConfig`
+      через `buildConfigField`). Для iOS еквівалента ще не існує (варіанти:
+      `.xcconfig` + `Info.plist`, або окремий `Secrets.swift`, не
+      закритий у Git — треба спроєктувати, коли `iosApp` з'явиться, не
+      раніше).
+- [ ] `iosApp` (Xcode-проєкт) все ще не існує — жодна з вищенаведених
+      точок не тестована на реальному пристрої/симуляторі. Заблоковано
+      тим самим Apple dev account issue, що й M7.
+
+**Знайдено при підготовці реальних тестових фото (не iOS, Android-специфічно):**
+`AndroidExifPhotoReader` спершу читав GPS через звичайний
+`ContentResolver.openInputStream()` — на API 29+ MediaStore редагує
+(вирізає) GPS EXIF-теги з цього виклику за замовчуванням (privacy
+scoped storage), тож `ExifInterface.latLong` мовчки повертав би `null`
+для КОЖНОГО фото на будь-якому сучасному пристрої (перевірено на
+реальному пристрої, API 37). Виправлено:
+`MediaStore.setRequireOriginal(uri)` перед відкриттям стріму + fallback
+на редаговану версію, якщо permission не надано. Додано
+`ACCESS_MEDIA_LOCATION` в `AndroidManifest.xml`. **Сам runtime-запит
+цього permission ще не заведений** (немає permission-флоу для diary
+capture, як є в M6 для photo/notification) — тобто GPS все одно буде
+`null`, поки якийсь майбутній мілстоун не додасть реальний запит
+дозволу. Задокументовано в kdoc `AndroidExifPhotoReader`, не приховано.
 
 ---
 

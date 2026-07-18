@@ -19,6 +19,8 @@ class AlongsideApplication : Application() {
                     this@AlongsideApplication,
                     getString(R.string.google_api_key),
                     getString(R.string.project_id),
+                    BuildConfig.GOOGLE_PLACES_API_KEY,
+                    BuildConfig.GEMINI_API_KEY,
                 ),
                 dataModule,
                 authFeatureModule,

@@ -16,5 +16,8 @@ kotlin {
             implementation(projects.core.domain)
             implementation(projects.core.ui)
         }
+        androidMain.dependencies {
+            implementation(libs.findLibrary("androidx-exifinterface").get())
+        }
     }
 }

@@ -29,3 +29,11 @@ internal val MIGRATION_3_4: Migration =
             )
         }
     }
+
+/** v4 -> v5 (M10): descriptionAttempts on episodes, backing the per-episode regeneration limit. */
+internal val MIGRATION_4_5: Migration =
+    object : Migration(4, 5) {
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL("ALTER TABLE `episodes` ADD COLUMN `descriptionAttempts` INTEGER NOT NULL DEFAULT 0")
+        }
+    }

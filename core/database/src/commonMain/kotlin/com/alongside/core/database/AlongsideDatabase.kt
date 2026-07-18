@@ -23,6 +23,7 @@ import com.alongside.core.database.entity.PushTokenEntity
 import com.alongside.core.database.entity.SyncOperationEntity
 import com.alongside.core.database.entity.TripEntity
 import com.alongside.core.database.migration.MIGRATION_3_4
+import com.alongside.core.database.migration.MIGRATION_4_5
 import com.alongside.core.database.repository.AuthSessionCacheImpl
 import com.alongside.core.database.repository.RoomPairingTripDataSource
 import com.alongside.core.database.repository.SyncOperationStoreImpl
@@ -46,7 +47,7 @@ internal const val DATABASE_FILE_NAME = "alongside.db"
         AuthSessionEntity::class,
         SyncOperationEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 @TypeConverters(AlongsideTypeConverters::class)
@@ -79,7 +80,7 @@ public fun getRoomDatabase(builder: RoomDatabase.Builder<AlongsideDatabase>): Al
     builder
         .setDriver(BundledSQLiteDriver())
         .setQueryCoroutineContext(Dispatchers.Default)
-        .addMigrations(MIGRATION_3_4)
+        .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
         .build()
 
 /** Factory rather than a public [AuthSessionCacheImpl] - keeps the Room-backed impl an internal detail. */

@@ -33,7 +33,10 @@ public class SessionFirestoreTokenProvider(
     override suspend fun currentToken(): String? =
         mutex.withLock {
             val session = cache.get()
-            println("SessionFirestoreTokenProvider: session=${session != null} expired=${session?.isExpired(clock.now())}")
+            println(
+                "SessionFirestoreTokenProvider: session=${session != null} " +
+                    "expired=${session?.isExpired(clock.now())}",
+            )
             if (session == null) return@withLock null
             if (!session.isExpired(clock.now())) return@withLock session.idToken
             val refreshToken = session.refreshToken ?: return@withLock null

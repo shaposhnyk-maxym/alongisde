@@ -13,6 +13,12 @@
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
 
+    <!-- Required on API 29+ so AndroidExifPhotoReader can read unredacted GPS EXIF tags via
+         MediaStore.setRequireOriginal() - without it, every photo's location silently reads as
+         null (scoped storage privacy redaction). Runtime request not wired up yet - see
+         AndroidExifPhotoReader's kdoc and roadmap.md M10. -->
+    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
+
     <application
         android:name=".AlongsideApplication"
         android:label="Alongside"
