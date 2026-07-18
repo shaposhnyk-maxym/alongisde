@@ -683,6 +683,57 @@ Places геокодинг, Gemini vision-опис.
   migration-тест (`core:database`, hand-rolled v4-фікстура, той самий
   підхід, що v3→v4 в M9).
 
+**iOS TODO (накопичено в M10, перевірити коли `iosApp` реально стартує):**
+- [ ] `ExifPhotoReader` — немає `iosMain`-реалізації взагалі (тільки
+      commonMain-інтерфейс). На Android — `ContentResolver` +
+      `androidx.exifinterface`; на iOS еквівалент — швидше за все
+      `PHAsset`/`PHImageManager` (доступ до фото) + `CGImageSource`/
+      `CGImageSourceCopyPropertiesAtIndex` (читання EXIF GPS+
+      DateTimeOriginal з `kCGImagePropertyExifDictionary`/
+      `kCGImagePropertyGPSDictionary`) — інший API, інша структура даних,
+      писати з нуля, не портувати Android-код.
+- [ ] `PhotoByteReader` — та сама історія: немає `iosMain`, на Android —
+      `ContentResolver.openInputStream`, на iOS — читання байтів з
+      `PHAsset` через `PHImageManager.requestImageDataAndOrientation`
+      (async callback-based API, не suspend напряму — знадобиться
+      обгортка, як `GoogleAuthProvider` в M5).
+- [ ] `androidx.exifinterface` — Android-only бібліотека в
+      `libs.versions.toml`; для iOS жодної бібліотеки ще не обрано
+      (ImageIO — системний фреймворк, не Gradle-залежність, тож питання
+      radше в `iosApp`/cinterop налаштуванні, коли Xcode-проєкт з'явиться).
+- [ ] **Google Places/Gemini Ktor-клієнти (`core:network`) технічно
+      мультиплатформні** (`ktor-client-darwin` вже підключений для iOS в
+      `core:network/build.gradle.kts`), **але жодного разу не перевірені
+      на Darwin-таргеті** — самі HTTP-виклики можуть просто запрацювати,
+      коли з'явиться iOS-виклик, а можуть і ні (напр. `kotlin.io.encoding.Base64`
+      у `GeminiVisionDescriptionClient` теоретично мультиплатформний, але
+      не тестований на Kotlin/Native). Перевірити першим ділом, це
+      найдешевше з усього списку.
+- [ ] **Ключі API (`GOOGLE_PLACES_API_KEY`/`GEMINI_API_KEY`) — механізм
+      Android/Gradle-специфічний** (`local.properties` → `BuildConfig`
+      через `buildConfigField`). Для iOS еквівалента ще не існує (варіанти:
+      `.xcconfig` + `Info.plist`, або окремий `Secrets.swift`, не
+      закритий у Git — треба спроєктувати, коли `iosApp` з'явиться, не
+      раніше).
+- [ ] `iosApp` (Xcode-проєкт) все ще не існує — жодна з вищенаведених
+      точок не тестована на реальному пристрої/симуляторі. Заблоковано
+      тим самим Apple dev account issue, що й M7.
+
+**Знайдено при підготовці реальних тестових фото (не iOS, Android-специфічно):**
+`AndroidExifPhotoReader` спершу читав GPS через звичайний
+`ContentResolver.openInputStream()` — на API 29+ MediaStore редагує
+(вирізає) GPS EXIF-теги з цього виклику за замовчуванням (privacy
+scoped storage), тож `ExifInterface.latLong` мовчки повертав би `null`
+для КОЖНОГО фото на будь-якому сучасному пристрої (перевірено на
+реальному пристрої, API 37). Виправлено:
+`MediaStore.setRequireOriginal(uri)` перед відкриттям стріму + fallback
+на редаговану версію, якщо permission не надано. Додано
+`ACCESS_MEDIA_LOCATION` в `AndroidManifest.xml`. **Сам runtime-запит
+цього permission ще не заведений** (немає permission-флоу для diary
+capture, як є в M6 для photo/notification) — тобто GPS все одно буде
+`null`, поки якийсь майбутній мілстоун не додасть реальний запит
+дозволу. Задокументовано в kdoc `AndroidExifPhotoReader`, не приховано.
+
 ---
 
 ### M11 — Diary: symmetric unlock & sync integration
