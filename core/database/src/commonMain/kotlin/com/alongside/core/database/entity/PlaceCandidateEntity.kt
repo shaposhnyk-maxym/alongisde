@@ -1,5 +1,6 @@
 package com.alongside.core.database.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -21,6 +22,7 @@ internal data class PlaceCandidateEntity(
     val memberSwipe: SwipeDirection?,
     val syncStatus: SyncStatus,
     val createdAt: Instant,
+    @ColumnInfo(defaultValue = "0") val updatedAt: Instant,
 )
 
 internal fun PlaceCandidateEntity.toDomain(): PlaceCandidate =
@@ -36,7 +38,7 @@ internal fun PlaceCandidateEntity.toDomain(): PlaceCandidate =
         memberSwipe = memberSwipe,
         syncStatus = syncStatus,
         createdAt = createdAt,
-        updatedAt = createdAt,
+        updatedAt = updatedAt,
     )
 
 internal fun PlaceCandidate.toEntity(): PlaceCandidateEntity =
@@ -52,4 +54,5 @@ internal fun PlaceCandidate.toEntity(): PlaceCandidateEntity =
         memberSwipe = memberSwipe,
         syncStatus = syncStatus,
         createdAt = createdAt,
+        updatedAt = updatedAt,
     )

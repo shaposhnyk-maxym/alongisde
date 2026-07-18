@@ -8,6 +8,7 @@ import com.alongside.core.database.entity.EpisodeEntity
 import com.alongside.core.database.entity.PhotoEntity
 import com.alongside.core.database.entity.PlaceCandidateEntity
 import com.alongside.core.database.entity.PushTokenEntity
+import com.alongside.core.database.entity.SyncOperationEntity
 import com.alongside.core.database.entity.TripEntity
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.push.PushPlatform
@@ -103,6 +104,16 @@ class DatabaseCreationTest {
             assertEquals(session, database.authSessionDao().get())
         }
 
+    @Test
+    fun `sync operations table round trips a row from a freshly created database`() =
+        runTest {
+            val operation = syncOperation()
+
+            database.syncOperationDao().insert(operation)
+
+            assertEquals(listOf(operation.copy(seq = 1)), database.syncOperationDao().getAll())
+        }
+
     private fun trip() =
         TripEntity(
             id = "trip-1",
@@ -113,6 +124,7 @@ class DatabaseCreationTest {
             endDate = LocalDate(2026, 7, 23),
             syncStatus = SyncStatus.PENDING,
             createdAt = createdAt,
+            updatedAt = createdAt,
         )
 
     private fun diaryEntry() =
@@ -123,6 +135,7 @@ class DatabaseCreationTest {
             date = LocalDate(2026, 7, 16),
             syncStatus = SyncStatus.PENDING,
             createdAt = createdAt,
+            updatedAt = createdAt,
         )
 
     private fun episode() =
@@ -160,6 +173,7 @@ class DatabaseCreationTest {
             memberSwipe = null,
             syncStatus = SyncStatus.PENDING,
             createdAt = createdAt,
+            updatedAt = createdAt,
         )
 
     private fun pushToken() =
@@ -169,6 +183,18 @@ class DatabaseCreationTest {
             platform = PushPlatform.ANDROID,
             syncStatus = SyncStatus.PENDING,
             updatedAt = createdAt,
+        )
+
+    private fun syncOperation() =
+        SyncOperationEntity(
+            opId = "op-1",
+            collectionPath = "trips",
+            documentId = "trip-1",
+            type = "UPSERT",
+            fieldsJson = """{"ownerId":{"stringValue":"owner-1"}}""",
+            attempts = 0,
+            status = "PENDING",
+            enqueuedAt = createdAt,
         )
 
     private fun authSession() =

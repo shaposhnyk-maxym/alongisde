@@ -1,5 +1,6 @@
 package com.alongside.core.database.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -16,6 +17,7 @@ internal data class DiaryEntryEntity(
     val date: LocalDate,
     val syncStatus: SyncStatus,
     val createdAt: Instant,
+    @ColumnInfo(defaultValue = "0") val updatedAt: Instant,
 )
 
 internal fun DiaryEntryEntity.toDomain(): DiaryEntry =
@@ -26,7 +28,7 @@ internal fun DiaryEntryEntity.toDomain(): DiaryEntry =
         date = date,
         syncStatus = syncStatus,
         createdAt = createdAt,
-        updatedAt = createdAt,
+        updatedAt = updatedAt,
     )
 
 internal fun DiaryEntry.toEntity(): DiaryEntryEntity =
@@ -37,4 +39,5 @@ internal fun DiaryEntry.toEntity(): DiaryEntryEntity =
         date = date,
         syncStatus = syncStatus,
         createdAt = createdAt,
+        updatedAt = updatedAt,
     )
