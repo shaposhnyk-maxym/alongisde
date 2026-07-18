@@ -48,6 +48,7 @@ class DefaultPairingRepositoryTest {
             assertEquals(endDate, created.endDate)
             assertEquals(SyncStatus.PENDING, created.syncStatus)
             assertEquals(FIXED_NOW, created.createdAt)
+            assertEquals(FIXED_NOW, created.updatedAt)
         }
 
     @Test

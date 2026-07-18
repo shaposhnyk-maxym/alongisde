@@ -13,4 +13,5 @@ public data class Trip(
     val endDate: LocalDate,
     val syncStatus: SyncStatus,
     val createdAt: Instant,
+    val updatedAt: Instant,
 )

@@ -26,6 +26,7 @@ public class DefaultPairingRepository
                 inviteCodeGenerator.generateUnique { code ->
                     dataSource.findByInviteCode(code) != null
                 }
+            val now = clock.now()
             val trip =
                 Trip(
                     id = generateTripId(),
@@ -35,7 +36,8 @@ public class DefaultPairingRepository
                     startDate = startDate,
                     endDate = endDate,
                     syncStatus = SyncStatus.PENDING,
-                    createdAt = clock.now(),
+                    createdAt = now,
+                    updatedAt = now,
                 )
             dataSource.save(trip)
             return trip

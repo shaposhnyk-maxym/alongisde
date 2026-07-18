@@ -11,4 +11,5 @@ public data class DiaryEntry(
     val date: LocalDate,
     val syncStatus: SyncStatus,
     val createdAt: Instant,
+    val updatedAt: Instant,
 )

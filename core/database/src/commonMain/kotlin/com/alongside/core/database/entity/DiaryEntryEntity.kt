@@ -26,6 +26,7 @@ internal fun DiaryEntryEntity.toDomain(): DiaryEntry =
         date = date,
         syncStatus = syncStatus,
         createdAt = createdAt,
+        updatedAt = createdAt,
     )
 
 internal fun DiaryEntry.toEntity(): DiaryEntryEntity =

@@ -29,6 +29,7 @@ internal fun TripEntity.toDomain(): Trip =
         endDate = endDate,
         syncStatus = syncStatus,
         createdAt = createdAt,
+        updatedAt = createdAt,
     )
 
 internal fun Trip.toEntity(): TripEntity =

@@ -15,4 +15,5 @@ public data class PlaceCandidate(
     val memberSwipe: SwipeDirection?,
     val syncStatus: SyncStatus,
     val createdAt: Instant,
+    val updatedAt: Instant,
 )

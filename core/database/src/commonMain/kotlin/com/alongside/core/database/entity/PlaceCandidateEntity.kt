@@ -36,6 +36,7 @@ internal fun PlaceCandidateEntity.toDomain(): PlaceCandidate =
         memberSwipe = memberSwipe,
         syncStatus = syncStatus,
         createdAt = createdAt,
+        updatedAt = createdAt,
     )
 
 internal fun PlaceCandidate.toEntity(): PlaceCandidateEntity =
