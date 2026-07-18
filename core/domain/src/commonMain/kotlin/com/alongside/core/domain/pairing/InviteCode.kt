@@ -10,8 +10,9 @@ public const val INVITE_CODE_ALPHABET: String = "ABCDEFGHJKLMNPQRSTUVWXYZ2345678
 /** Upper bound of [InviteCodeGenerator.generateUnique] retries before giving up. */
 public const val INVITE_CODE_MAX_GENERATION_ATTEMPTS: Int = 100
 
-public fun isValidInviteCodeFormat(code: String): Boolean =
-    code.length == INVITE_CODE_LENGTH && code.all { it in INVITE_CODE_ALPHABET }
+private val INVITE_CODE_REGEX = Regex("[$INVITE_CODE_ALPHABET]{$INVITE_CODE_LENGTH}")
+
+public fun isValidInviteCodeFormat(code: String): Boolean = code.matches(INVITE_CODE_REGEX)
 
 public class InviteCodeGenerator(
     private val random: Random = Random.Default,

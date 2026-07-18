@@ -17,7 +17,7 @@ public data object Login : NavKey
 @Serializable
 public data object Onboarding : NavKey
 
-/** Create/Join choice + invite-code screens (`feature:pairing`, M7). */
+/** Create/Join choice + invite-code screens (`feature:pairing`, M8). */
 @Serializable
 public data object Pairing : NavKey
 

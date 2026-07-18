@@ -33,7 +33,7 @@ private fun PairingPreview(state: PairingState) {
             onCreateTrip = {},
             onStartJoinFlow = {},
             onBackToChoice = {},
-            onCodeInputChanged = {},
+            onCodeInputChange = {},
             onSubmitCode = {},
             modifier = PreviewSize,
             // Settled end state so the golden captures the finished layout, not the blank

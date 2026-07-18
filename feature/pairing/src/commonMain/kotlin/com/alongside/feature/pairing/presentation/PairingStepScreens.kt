@@ -168,7 +168,7 @@ internal fun JoinEnterCodeStep(
     isJoining: Boolean,
     joinError: PairingJoinError?,
     onBackToChoice: () -> Unit,
-    onCodeInputChanged: (String) -> Unit,
+    onCodeInputChange: (String) -> Unit,
     onSubmitCode: () -> Unit,
 ) {
     StepColumn {
@@ -187,7 +187,7 @@ internal fun JoinEnterCodeStep(
             Spacer(Modifier.height(AlongsideSpacing.md))
             OutlinedTextField(
                 value = codeInput,
-                onValueChange = onCodeInputChanged,
+                onValueChange = onCodeInputChange,
                 modifier =
                     Modifier
                         .fillMaxWidth()

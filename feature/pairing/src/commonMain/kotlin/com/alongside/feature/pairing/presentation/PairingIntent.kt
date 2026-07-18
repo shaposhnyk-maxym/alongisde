@@ -7,7 +7,9 @@ public sealed interface PairingIntent {
 
     public data object BackToChoice : PairingIntent
 
-    public data class CodeInputChanged(val value: String) : PairingIntent
+    public data class CodeInputChanged(
+        val value: String,
+    ) : PairingIntent
 
     public data object SubmitCode : PairingIntent
 }

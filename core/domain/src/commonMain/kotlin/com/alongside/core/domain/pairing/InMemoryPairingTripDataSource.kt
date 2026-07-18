@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.update
 public class InMemoryPairingTripDataSource : PairingTripDataSource {
     private val trips = MutableStateFlow<Map<String, Trip>>(emptyMap())
 
-    override suspend fun findByInviteCode(code: String): Trip? = trips.value.values.firstOrNull { it.inviteCode == code }
+    override suspend fun findByInviteCode(code: String): Trip? = snapshot().firstOrNull { it.inviteCode == code }
 
     override fun observeByUserId(userId: String): Flow<Trip?> =
         trips.map { stored ->

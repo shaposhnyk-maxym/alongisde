@@ -485,17 +485,61 @@ Episode+Photo, PlaceCandidate).
 
 ---
 
-### M8 — Pairing
+### M8 — Pairing ✅ done
 `feature:pairing` — створення/приєднання до поїздки.
 
 **Accept:**
-- Юніт-тести: генерація інвайт-коду (унікальність, формат), логіка
-  приєднання (валідний код / невалідний / вже використаний власний код)
-- Repository-логіка тестується на фейкових дата сорсах (без реальної
-  мережі/БД — той самий підхід, що в M1-M3)
-- UI-флоу create/join — screenshot-тести + Compose UI-тест навігації
-  (create → показ коду → очікування партнера; join → введення коду →
-  успіх/помилка)
+- [x] Юніт-тести: генерація інвайт-коду (унікальність, формат), логіка
+      приєднання (валідний код / невалідний / вже використаний власний
+      код) — `InviteCodeGeneratorTest` (7: довжина/алфавіт, 1000
+      seeded-кодів без колізій, retry повз зайняті коди,
+      `IllegalStateException` після вичерпання спроб, формат-валідація),
+      `ResolveJoinOutcomeTest` (6: Joined / InvalidCode для битого
+      формату й невідомого коду / OwnCode / AlreadyUsed / ідемпотентний
+      re-join), TDD red → green
+- [x] Repository-логіка тестується на фейкових дата сорсах (без
+      реальної мережі/БД — той самий підхід, що в M1-M3) —
+      `DefaultPairingRepositoryTest` (6) на
+      `RecordingPairingTripDataSource`; Orbit-контейнер —
+      `PairingContainerTest` (12, orbit-test) на `FakePairingRepository`
+      + `FakeAuthSessionCache`
+- [x] UI-флоу create/join — screenshot-тести + Compose UI-тест
+      навігації — 9 `@Preview` → auto-generated Roborazzi-голдени
+      (choice, code+waiting, join порожній/заповнений/submitting, всі
+      3 error-стани) + `PairingScreenNavigationTest` (5 сценаріїв:
+      create → показ коду → waiting → партнер приєднався → paired;
+      join → валідний код → paired; невідомий код → error і лишаємось
+      на кроці; використаний код → error; back → choice)
+
+**Відхилення від початкового плану:**
+- **Формат інвайт-коду** (концепт-документ його не фіксував): 6
+  символів, A–Z + 2–9 без амбіговних 0/O/1/I (32 символи, ~1.07 млрд
+  комбінацій) — узгоджено з користувачем перед реалізацією.
+- **Fakes-only скоуп** (узгоджено з користувачем): реальна
+  Firestore-реалізація свідомо НЕ входить у M8 — це задача M9 (`data`).
+  У `core:domain` додано вузьку seam `PairingTripDataSource`
+  (`findByInviteCode`/`observeByUserId`/`save`) замість розширення
+  id-keyed `TripRepository` (це потягло б core:database у скоуп M8).
+  Рантайм тимчасово на `InMemoryPairingTripDataSource` (прецедент —
+  `InMemorySyncQueue`): пейрінг не переживає рестарт застосунку й не
+  видимий крос-девайс, доки M9 не підмінить біндінг.
+- **Дати поїздки**: create бере сьогодні..сьогодні+14
+  (`DEFAULT_TRIP_LENGTH_DAYS`); date-picker UI свідомо відкладено — не
+  в Accept-критеріях, а API `createTrip(ownerId, startDate, endDate)`
+  вже приймає дати, тож M9+ нічого не змінює.
+- **Єдиний шлях до `Paired`**: side effect постить спостереження
+  `observeActiveTrip` (owner, що чекає, і joiner, що ввів код,
+  проходять один детермінований шлях). Нескінченний onCreate-колектор
+  у orbit-test закривається `cancelAndIgnoreRemainingItems()` — інакше
+  таймаут "waiting for remaining intents".
+- **Код-інпут join-кроку не в `FadeUpReveal`** — `AnimatedVisibility`
+  не компонує unrevealed контент, тож поле було б недоступне до кінця
+  анімації (той самий принцип, що в onboarding: інтерактив поза
+  reveal). `OutlinedTextField` потребував явних on-paper кольорів —
+  дефолтні colorScheme-токени дають крем-на-кремі на `PaperCard`.
+- **Мануальний smoke на emulator** (Pixel 8 Pro, API 36): login →
+  onboarding → pairing → Create a Trip → реальний згенерований код
+  показано з waiting-станом.
 
 ---
 

@@ -23,7 +23,7 @@ public fun PairingScreen(
         onCreateTrip = { container.onIntent(PairingIntent.CreateTrip) },
         onStartJoinFlow = { container.onIntent(PairingIntent.StartJoinFlow) },
         onBackToChoice = { container.onIntent(PairingIntent.BackToChoice) },
-        onCodeInputChanged = { container.onIntent(PairingIntent.CodeInputChanged(it)) },
+        onCodeInputChange = { container.onIntent(PairingIntent.CodeInputChanged(it)) },
         onSubmitCode = { container.onIntent(PairingIntent.SubmitCode) },
         modifier = modifier,
     )
@@ -35,7 +35,7 @@ internal fun PairingContent(
     onCreateTrip: () -> Unit,
     onStartJoinFlow: () -> Unit,
     onBackToChoice: () -> Unit,
-    onCodeInputChanged: (String) -> Unit,
+    onCodeInputChange: (String) -> Unit,
     onSubmitCode: () -> Unit,
     modifier: Modifier = Modifier,
     animateEntrance: Boolean = true,
@@ -71,7 +71,7 @@ internal fun PairingContent(
                         isJoining = state.isJoining,
                         joinError = state.joinError,
                         onBackToChoice = onBackToChoice,
-                        onCodeInputChanged = onCodeInputChanged,
+                        onCodeInputChange = onCodeInputChange,
                         onSubmitCode = onSubmitCode,
                     )
             }
