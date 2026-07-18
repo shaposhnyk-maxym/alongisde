@@ -5,6 +5,7 @@ import android.net.Uri
 import android.provider.MediaStore
 import androidx.exifinterface.media.ExifInterface
 import com.alongside.core.model.diary.Photo
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -29,9 +30,10 @@ import kotlin.time.Instant
  */
 public class AndroidExifPhotoReader(
     private val contentResolver: ContentResolver,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ExifPhotoReader {
     override suspend fun readExifPhotos(uris: List<String>): List<Photo> =
-        withContext(Dispatchers.IO) {
+        withContext(dispatcher) {
             uris.mapNotNull(::readOne)
         }
 

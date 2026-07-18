@@ -22,7 +22,8 @@ class GeminiVisionDescriptionClientTest {
                 }
             val client = GeminiVisionDescriptionClient(api)
 
-            val result = client.describeEpisode(listOf(byteArrayOf(1, 2, 3)), placeName = "Rynok Square", languageTag = "en")
+            val result =
+                client.describeEpisode(listOf(byteArrayOf(1, 2, 3)), placeName = "Rynok Square", languageTag = "en")
 
             assertEquals(VisionDescriptionResult.Generated("A wander through the old town."), result)
         }
