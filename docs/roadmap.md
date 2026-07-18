@@ -615,21 +615,73 @@ Episode+Photo, PlaceCandidate).
 
 ---
 
-### M10 — Diary: capture & processing pipeline
+### M10 — Diary: capture & processing pipeline ✅ done
 `feature:diary` (частина 1) — EXIF, кластеризація епізодів, Google
 Places геокодинг, Gemini vision-опис.
 
 **Accept:**
-- Юніт-тести кластеризації: синтетичні набори фото з відомими
-  timestamp/координатами → перевірка, що епізоди групуються правильно
-  (межові випадки: фото рівно на межі 500м/2год порогу)
-- Places геокодинг і Gemini виклики — тестуються через фейкові клієнти
-  (інтерфейс, не HTTP напряму), окремо від `core:network`, який вже
-  покритий в M3
-- Тест вибору репрезентативних фото з епізоду (2-4 з N, за критерієм
-  найбільшої різниці в часі)
-- Тест ліміту перегенерації тексту (лічильник спроб на епізод, поведінка
-  при вичерпанні)
+- [x] Юніт-тести кластеризації: синтетичні набори фото з відомими
+      timestamp/координатами → перевірка, що епізоди групуються правильно
+      (межові випадки: фото рівно на межі 500м/2год порогу) —
+      `EpisodeClusteringTest` (`core:domain`, 12 тестів: порожній список,
+      одне фото, злиття/розрив по часу й по відстані окремо, обидва
+      межові випадки в обох напрямках, sliding-chain vs anchor-based
+      поведінка, порядок вхідних фото не має значення)
+- [x] Places геокодинг і Gemini виклики — тестуються через фейкові клієнти
+      (інтерфейс, не HTTP напряму), окремо від `core:network`, який вже
+      покритий в M3 — `EpisodeProcessingPipelineTest` (`core:domain`, 6
+      тестів на фейкових `PlaceGeocodingClient`/`EpisodeVisionDescriptionClient`)
+- [x] Тест вибору репрезентативних фото з епізоду (2-4 з N, за критерієм
+      найбільшої різниці в часі) — `RepresentativePhotoSelectorTest`
+      (`core:domain`, 7 тестів)
+- [x] Тест ліміту перегенерації тексту (лічильник спроб на епізод, поведінка
+      при вичерпанні) — `EpisodeDescriptionAttemptsTest` (`core:domain`,
+      3 тести) + `Episode.descriptionAttempts` персиститься (schema v4→v5)
+
+**Відхилення від початкового плану (усі узгоджені з користувачем перед
+реалізацією):**
+- **Реальні HTTP-клієнти для Places і Gemini, не лише фейки** —
+  розширення поза буквальним Accept-критерієм, за прямим запитом
+  користувача. `core:network`'s `GooglePlacesGeocodingApi`/`GeminiVisionApi`
+  повторюють `FirebaseAuthApi`'s скелет (config → rawRequest/throwIfError/
+  parseBody → sealed exception → MockEngine `jvmTest`), плюс адаптери
+  (`GooglePlacesGeocodingClient`/`GeminiVisionDescriptionClient`), що
+  імплементують `core:domain`'s `PlaceGeocodingClient`/
+  `EpisodeVisionDescriptionClient` seam-інтерфейси (той самий патерн, що
+  `PairingTripDataSource` з M8). Google Geocoding API (не "Places API"
+  буквально) — правильний Google-продукт для reverse-геокодингу за
+  координатами; назва пакета/класів лишена "places" відповідно до
+  CLAUDE.md-термінології.
+- **Ключі API — нова територія, без готового механізму** (на відміну від
+  Firebase, де `google-services.json` авто-генерує ресурси) —
+  `GOOGLE_PLACES_API_KEY`/`GEMINI_API_KEY` читаються з `local.properties`
+  (вже в `.gitignore`) в `androidApp/build.gradle.kts` через
+  `buildConfigField`; задокументовано в `docs/local-setup.md`.
+- **Правило кластеризації** (не зафіксоване в жодному доці до цього):
+  sliding-chain, не anchor-based — фото лишається в поточному епізоді,
+  тільки якщо воно в межах 2год **І** 500м від **попереднього** фото (не
+  від першого фото епізоду); перевищення будь-якого з порогів починає
+  новий епізод. Межовий випадок (рівно 500м/2год) — лишається в тому ж
+  епізоді (inclusive).
+- **Ліміт перегенерації = 3 спроби** — конкретне число не було
+  зафіксоване ніде. При вичерпанні — регенерація вимикається, але
+  останній згенерований текст лишається (користувач ніколи не
+  залишається зовсім без тексту).
+- **EXIF-читання (`ExifPhotoReader`/`PhotoByteReader`) — тільки Android**,
+  через `androidx.exifinterface`; iOS-реалізація відкладена (Apple dev
+  акаунт заблокований, `iosApp` ще не існує — той самий статус, що й M7).
+  Чесне обмеження: сам виклик `ContentResolver`/`ExifInterface` не
+  юніт-тестується напряму (немає дешевого фейка для `ContentResolver`,
+  той самий клас проблеми, що нативний SDK у M5) — але пайплайн, який він
+  живить (`clusterPhotosIntoEpisodes` і решта), повністю покритий тестами
+  на синтетичних `Photo`-списках, незалежно від способу захоплення.
+- **Немає UI/Orbit Container у M10** — Accept-критерії цього мілстоуна не
+  мають жодної UI-вимоги (Timeline UI — M12); `feature:diary` отримав
+  лише capture/processing-логіку.
+- **`Episode.descriptionAttempts: Int`** — нове поле, schema v4→v5,
+  `MIGRATION_4_5` (backfill 0 для існуючих рядків), окремий
+  migration-тест (`core:database`, hand-rolled v4-фікстура, той самий
+  підхід, що v3→v4 в M9).
 
 ---
 
