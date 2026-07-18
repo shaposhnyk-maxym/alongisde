@@ -118,7 +118,7 @@ class MigrationTest {
             .databaseBuilder<AlongsideDatabase>(name = dbFile.absolutePath)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
-            .addMigrations(MIGRATION_3_4)
+            .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
             .build()
 
     @Test
@@ -164,4 +164,110 @@ class MigrationTest {
                 database.close()
             }
         }
+
+    @Test
+    fun `migration 4 to 5 backfills descriptionAttempts to zero on existing episodes`() =
+        runTest {
+            val v4File = File.createTempFile("migration-test-v4", ".db")
+            v4File.delete()
+            createVersion4Database(v4File)
+            val database =
+                Room
+                    .databaseBuilder<AlongsideDatabase>(name = v4File.absolutePath)
+                    .setDriver(BundledSQLiteDriver())
+                    .setQueryCoroutineContext(Dispatchers.IO)
+                    .addMigrations(MIGRATION_4_5)
+                    .build()
+            try {
+                val episode = database.episodeDao().getById("episode-1")
+                assertEquals(0, episode?.episode?.descriptionAttempts)
+            } finally {
+                database.close()
+                v4File.delete()
+            }
+        }
+
+    private fun createVersion4Database(file: File) {
+        val connection = BundledSQLiteDriver().open(file.absolutePath)
+        try {
+            connection.createVersion4SyncableTables()
+            connection.createVersion4AuxiliaryTables()
+            connection.insertVersion4Row()
+            connection.execSQL("PRAGMA user_version = 4")
+        } finally {
+            connection.close()
+        }
+    }
+
+    private fun SQLiteConnection.createVersion4SyncableTables() {
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `trips` (`id` TEXT NOT NULL, `ownerId` TEXT NOT NULL, " +
+                "`memberId` TEXT, `inviteCode` TEXT NOT NULL, `startDate` TEXT NOT NULL, " +
+                "`endDate` TEXT NOT NULL, `syncStatus` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, " +
+                "`updatedAt` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))",
+        )
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `diary_entries` (`id` TEXT NOT NULL, `tripId` TEXT NOT NULL, " +
+                "`userId` TEXT NOT NULL, `date` TEXT NOT NULL, `syncStatus` TEXT NOT NULL, " +
+                "`createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))",
+        )
+        execSQL("CREATE INDEX IF NOT EXISTS `index_diary_entries_tripId` ON `diary_entries` (`tripId`)")
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `place_candidates` (`id` TEXT NOT NULL, `tripId` TEXT NOT NULL, " +
+                "`name` TEXT NOT NULL, `latitude` REAL NOT NULL, `longitude` REAL NOT NULL, `note` TEXT, " +
+                "`addedByUserId` TEXT NOT NULL, `ownerSwipe` TEXT, `memberSwipe` TEXT, " +
+                "`syncStatus` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, " +
+                "`updatedAt` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))",
+        )
+        execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_place_candidates_tripId` ON `place_candidates` (`tripId`)",
+        )
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `sync_operations` " +
+                "(`seq` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `opId` TEXT NOT NULL, " +
+                "`collectionPath` TEXT NOT NULL, `documentId` TEXT NOT NULL, `type` TEXT NOT NULL, " +
+                "`fieldsJson` TEXT NOT NULL, `attempts` INTEGER NOT NULL, `status` TEXT NOT NULL, " +
+                "`enqueuedAt` INTEGER NOT NULL)",
+        )
+        execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_sync_operations_opId` ON `sync_operations` (`opId`)",
+        )
+    }
+
+    private fun SQLiteConnection.createVersion4AuxiliaryTables() {
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `episodes` (`id` TEXT NOT NULL, `diaryEntryId` TEXT NOT NULL, " +
+                "`startTime` INTEGER NOT NULL, `endTime` INTEGER NOT NULL, `latitude` REAL NOT NULL, " +
+                "`longitude` REAL NOT NULL, `placeName` TEXT, `description` TEXT, PRIMARY KEY(`id`))",
+        )
+        execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_episodes_diaryEntryId` ON `episodes` (`diaryEntryId`)",
+        )
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `photos` (`id` TEXT NOT NULL, `episodeId` TEXT NOT NULL, " +
+                "`uri` TEXT NOT NULL, `takenAt` INTEGER NOT NULL, `latitude` REAL NOT NULL, " +
+                "`longitude` REAL NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`episodeId`) REFERENCES " +
+                "`episodes`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        )
+        execSQL("CREATE INDEX IF NOT EXISTS `index_photos_episodeId` ON `photos` (`episodeId`)")
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `push_tokens` (`userId` TEXT NOT NULL, `token` TEXT NOT NULL, " +
+                "`platform` TEXT NOT NULL, `syncStatus` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`userId`))",
+        )
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `auth_session` (`id` TEXT NOT NULL, `uid` TEXT NOT NULL, " +
+                "`email` TEXT, `displayName` TEXT, `photoUrl` TEXT, `idToken` TEXT NOT NULL, " +
+                "`refreshToken` TEXT, `expiresInSeconds` INTEGER NOT NULL, `issuedAt` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`id`))",
+        )
+    }
+
+    private fun SQLiteConnection.insertVersion4Row() {
+        execSQL(
+            "INSERT INTO episodes (id, diaryEntryId, startTime, endTime, latitude, longitude, " +
+                "placeName, description) VALUES ('episode-1', 'entry-1', 100, 200, 49.0, 24.0, " +
+                "'Rynok Square', 'Wandering the old town')",
+        )
+    }
 }

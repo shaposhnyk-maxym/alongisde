@@ -20,5 +20,6 @@ internal fun EpisodeWithPhotos.toDomain(): Episode =
         longitude = episode.longitude,
         placeName = episode.placeName,
         description = episode.description,
+        descriptionAttempts = episode.descriptionAttempts,
         photos = photos.map { it.toDomain() },
     )

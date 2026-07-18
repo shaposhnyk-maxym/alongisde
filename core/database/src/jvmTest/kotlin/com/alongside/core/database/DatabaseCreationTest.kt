@@ -148,6 +148,7 @@ class DatabaseCreationTest {
             longitude = 24.0297,
             placeName = "Rynok Square",
             description = "Wandering the old town",
+            descriptionAttempts = 0,
         )
 
     private fun photo(episodeId: String) =

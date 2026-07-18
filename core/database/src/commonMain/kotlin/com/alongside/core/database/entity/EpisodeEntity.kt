@@ -16,6 +16,7 @@ internal data class EpisodeEntity(
     val longitude: Double,
     val placeName: String?,
     val description: String?,
+    val descriptionAttempts: Int,
 )
 
 internal fun Episode.toEntity(): EpisodeEntity =
@@ -28,4 +29,5 @@ internal fun Episode.toEntity(): EpisodeEntity =
         longitude = longitude,
         placeName = placeName,
         description = description,
+        descriptionAttempts = descriptionAttempts,
     )

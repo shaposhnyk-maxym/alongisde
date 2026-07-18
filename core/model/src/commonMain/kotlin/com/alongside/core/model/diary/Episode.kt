@@ -11,5 +11,6 @@ public data class Episode(
     val longitude: Double,
     val placeName: String?,
     val description: String?,
+    val descriptionAttempts: Int,
     val photos: List<Photo>,
 )
