@@ -23,19 +23,22 @@ private class FakePlaceGeocodingClient(
     }
 }
 
-/** Fake [EpisodeVisionDescriptionClient] - scriptable, records the images/placeName it was called with. */
+/** Fake [EpisodeVisionDescriptionClient] - scriptable, records what it was called with. */
 private class FakeEpisodeVisionDescriptionClient(
     private val result: VisionDescriptionResult = VisionDescriptionResult.Generated("A wander through the old town."),
 ) : EpisodeVisionDescriptionClient {
     var lastImageCount: Int? = null
     var lastPlaceName: String? = null
+    var lastLanguageTag: String? = null
 
     override suspend fun describeEpisode(
         images: List<ByteArray>,
         placeName: String?,
+        languageTag: String,
     ): VisionDescriptionResult {
         lastImageCount = images.size
         lastPlaceName = placeName
+        lastLanguageTag = languageTag
         return result
     }
 }
@@ -68,7 +71,7 @@ class EpisodeProcessingPipelineTest {
                 )
             val photos = listOf(photo("p1", 0), photo("p2", 10))
 
-            val episodes = pipeline.process(diaryEntryId = "entry-1", photos = photos)
+            val episodes = pipeline.process(diaryEntryId = "entry-1", photos = photos, languageTag = "en")
 
             assertEquals(1, episodes.size)
             val episode = episodes.single()
@@ -94,7 +97,7 @@ class EpisodeProcessingPipelineTest {
                 )
             val photos = listOf(photo("p1", 0), photo("p2", 300))
 
-            val episodes = pipeline.process(diaryEntryId = "entry-1", photos = photos)
+            val episodes = pipeline.process(diaryEntryId = "entry-1", photos = photos, languageTag = "en")
 
             assertEquals(2, episodes.size)
         }
@@ -110,7 +113,7 @@ class EpisodeProcessingPipelineTest {
                     generateEpisodeId = { "episode-1" },
                 )
 
-            val episode = pipeline.process("entry-1", listOf(photo("p1", 0))).single()
+            val episode = pipeline.process("entry-1", listOf(photo("p1", 0)), "en").single()
 
             assertNull(episode.placeName)
             assertEquals("A wander through the old town.", episode.description)
@@ -128,7 +131,7 @@ class EpisodeProcessingPipelineTest {
                     generateEpisodeId = { "episode-1" },
                 )
 
-            val episode = pipeline.process("entry-1", listOf(photo("p1", 0))).single()
+            val episode = pipeline.process("entry-1", listOf(photo("p1", 0)), "en").single()
 
             assertNull(episode.description)
             assertEquals(1, episode.descriptionAttempts)
@@ -148,11 +151,28 @@ class EpisodeProcessingPipelineTest {
             // 6 photos in one cluster - representative selection caps at MAX_REPRESENTATIVE_PHOTOS (4).
             val photos = (0..5).map { photo("p$it", it) }
 
-            val episode = pipeline.process("entry-1", photos).single()
+            val episode = pipeline.process("entry-1", photos, "uk").single()
 
             assertEquals(MAX_REPRESENTATIVE_PHOTOS, vision.lastImageCount)
             assertEquals(photos, episode.photos)
             assertEquals("Rynok Square", vision.lastPlaceName)
+        }
+
+    @Test
+    fun `passes the given language tag through to the vision client`() =
+        runTest {
+            val vision = FakeEpisodeVisionDescriptionClient()
+            val pipeline =
+                EpisodeProcessingPipeline(
+                    geocodingClient = FakePlaceGeocodingClient(),
+                    visionDescriptionClient = vision,
+                    imageBytesLoader = { byteArrayOf(1) },
+                    generateEpisodeId = { "episode-1" },
+                )
+
+            pipeline.process("entry-1", listOf(photo("p1", 0)), languageTag = "uk")
+
+            assertEquals("uk", vision.lastLanguageTag)
         }
 
     @Test
@@ -166,6 +186,6 @@ class EpisodeProcessingPipelineTest {
                     generateEpisodeId = { "episode-1" },
                 )
 
-            assertEquals(emptyList(), pipeline.process("entry-1", emptyList()))
+            assertEquals(emptyList(), pipeline.process("entry-1", emptyList(), "en"))
         }
 }

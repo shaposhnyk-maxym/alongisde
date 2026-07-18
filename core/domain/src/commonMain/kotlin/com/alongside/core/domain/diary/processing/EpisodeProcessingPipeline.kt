@@ -23,11 +23,13 @@ public class EpisodeProcessingPipeline
         public suspend fun process(
             diaryEntryId: String,
             photos: List<Photo>,
-        ): List<Episode> = clusterPhotosIntoEpisodes(photos).map { cluster -> processCluster(diaryEntryId, cluster) }
+            languageTag: String,
+        ): List<Episode> = clusterPhotosIntoEpisodes(photos).map { processCluster(diaryEntryId, it, languageTag) }
 
         private suspend fun processCluster(
             diaryEntryId: String,
             cluster: List<Photo>,
+            languageTag: String,
         ): Episode {
             val centroidLatitude = cluster.map { it.latitude }.average()
             val centroidLongitude = cluster.map { it.longitude }.average()
@@ -41,7 +43,7 @@ public class EpisodeProcessingPipeline
             val representativePhotos = selectRepresentativePhotos(cluster)
             val images = representativePhotos.map { imageBytesLoader(it) }
             val description =
-                when (val result = visionDescriptionClient.describeEpisode(images, placeName)) {
+                when (val result = visionDescriptionClient.describeEpisode(images, placeName, languageTag)) {
                     is VisionDescriptionResult.Generated -> result.text
                     is VisionDescriptionResult.Failure -> null
                 }

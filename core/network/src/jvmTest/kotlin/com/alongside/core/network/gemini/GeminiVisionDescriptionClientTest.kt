@@ -22,7 +22,7 @@ class GeminiVisionDescriptionClientTest {
                 }
             val client = GeminiVisionDescriptionClient(api)
 
-            val result = client.describeEpisode(listOf(byteArrayOf(1, 2, 3)), placeName = "Rynok Square")
+            val result = client.describeEpisode(listOf(byteArrayOf(1, 2, 3)), placeName = "Rynok Square", languageTag = "en")
 
             assertEquals(VisionDescriptionResult.Generated("A wander through the old town."), result)
         }
@@ -38,11 +38,33 @@ class GeminiVisionDescriptionClientTest {
                 }
             val client = GeminiVisionDescriptionClient(api)
 
-            client.describeEpisode(listOf(byteArrayOf(1), byteArrayOf(2), byteArrayOf(3)), placeName = "Rynok Square")
+            client.describeEpisode(
+                listOf(byteArrayOf(1), byteArrayOf(2), byteArrayOf(3)),
+                placeName = "Rynok Square",
+                languageTag = "en",
+            )
 
             val body = capturedBody!!
             assertTrue(body.contains("Rynok Square"))
             assertEquals(3, Regex("inline_data").findAll(body).count())
+        }
+
+    @Test
+    fun `prompt carries the requested language tag and asks for a native, non-translated caption`() =
+        runBlocking {
+            var capturedBody: String? = null
+            val api =
+                testGeminiVisionApi { req ->
+                    capturedBody = (req.body as TextContent).text
+                    respondJson("""{"candidates": [{"content": {"parts": [{"text": "ok"}]}}]}""")
+                }
+            val client = GeminiVisionDescriptionClient(api)
+
+            client.describeEpisode(listOf(byteArrayOf(1)), placeName = null, languageTag = "uk")
+
+            val body = capturedBody!!
+            assertTrue(body.contains("BCP-47 tag 'uk'"))
+            assertTrue(body.contains("Native uk, not a translation"))
         }
 
     @Test
@@ -51,7 +73,7 @@ class GeminiVisionDescriptionClientTest {
             val api = testGeminiVisionApi { respondJson("""{"candidates": []}""") }
             val client = GeminiVisionDescriptionClient(api)
 
-            val result = client.describeEpisode(listOf(byteArrayOf(1)), placeName = null)
+            val result = client.describeEpisode(listOf(byteArrayOf(1)), placeName = null, languageTag = "en")
 
             assertIs<VisionDescriptionResult.Failure>(result)
         }
@@ -66,7 +88,7 @@ class GeminiVisionDescriptionClientTest {
                 }
             val client = GeminiVisionDescriptionClient(api)
 
-            val result = client.describeEpisode(listOf(byteArrayOf(1)), placeName = null)
+            val result = client.describeEpisode(listOf(byteArrayOf(1)), placeName = null, languageTag = "en")
 
             assertIs<VisionDescriptionResult.Failure>(result)
         }
