@@ -18,6 +18,10 @@ kotlin {
             implementation(libs.findLibrary("kotlinx-datetime").get())
             implementation(libs.findLibrary("kotlinx-serialization-json").get())
             implementation(libs.findLibrary("koin-core").get())
+            // Boundary types referenced by the DI module: HttpClient (FirestoreApi ctor)
+            // and RoomDatabase (AlongsideDatabase factory receivers).
+            implementation(libs.findLibrary("ktor-client-core").get())
+            implementation(libs.findLibrary("room-runtime").get())
         }
         jvmTest.dependencies {
             implementation(libs.findLibrary("room-runtime").get())

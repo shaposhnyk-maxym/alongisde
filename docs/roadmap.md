@@ -543,20 +543,69 @@ Episode+Photo, PlaceCandidate).
 
 ---
 
-### M9 — Data layer & offline sync
+### M9 — Data layer & offline sync ✅ done
 `data` — Repository-реалізації, що зводять `core:database` +
 `core:network`, sync-queue, conflict-resolution.
 
 **Accept:**
-- Інтеграційний тест повного циклу: write офлайн (тільки в Room) →
+- [x] Інтеграційний тест повного циклу: write офлайн (тільки в Room) →
   імітація появи мережі → sync-queue обробляє чергу → дані з'являються
   віддалено (перевіряється через фейковий мережевий клієнт, що фіксує
-  виклики)
-- Тест конфлікт-резолюшну: два "конкурентні" запити на один запис —
+  виклики) — `OfflineSyncIntegrationTest` (`data/src/jvmTest`, 2):
+  реальні in-memory Room + `SyncOperationStore` + `SyncingTripRepository`
+  + `SyncCoordinator`/`SyncQueueProcessor`, мережа —
+  `RecordingSyncNetworkClient`; окремий сценарій sync-під-час-офлайну
+  (операція лишається RETRY, після появи мережі — SYNCED)
+- [x] Тест конфлікт-резолюшну: два "конкурентні" запити на один запис —
   результат детерміністичний (last-write-wins за timestamp), перевірено
-  явним тестом з контрольованими часовими мітками
-- Тест часткового збою черги: N операцій в черзі, K з них падають —
-  решта обробляються, збійні лишаються в черзі з позначкою retry
+  явним тестом з контрольованими часовими мітками —
+  `ResolveConflictTest` (4: local newer / remote newer / tie→LOCAL /
+  no-remote→LOCAL) + `SyncCoordinatorTest` (LWW в обидва боки на
+  контрольованому `FixedClock`, remote-переміг → застосовується в Room
+  як SYNCED без push, local-переміг → push і remote не застосовується)
+- [x] Тест часткового збою черги: N операцій в черзі, K з них падають —
+  решта обробляються, збійні лишаються в черзі з позначкою retry —
+  `SyncCoordinatorTest`: 3 ops / середня падає → 2 синкнулись і
+  прибрані зі store, збійна лишилась зі `status = RETRY` та
+  персистентним лічильником attempts, її рядок — `FAILED`; наступний
+  `sync()` ретраїть і відновлює до SYNCED
+
+**Відхилення від початкового плану:**
+- **`SyncQueue`/`SyncQueueProcessor` (M3) не змінювались** — персистентність
+  живе в новій таблиці `sync_operations` (schema v4) за suspend-інтерфейсом
+  `SyncOperationStore` (core:database); `SyncCoordinator` (data) на кожен
+  `sync()` матеріалізує store у тимчасову `InMemorySyncQueue`, ганяє
+  незмінений процесор і застосовує результат назад. core:database не бачить
+  `FirestoreValue` — поля операції зберігаються як `fieldsJson`
+  (`SyncOperationCodec` у data).
+- **`updatedAt: Instant` додано в Trip/DiaryEntry/PlaceCandidate**
+  (узгоджено з користувачем) — LWW-мітка модифікації; міграція v3→v4
+  (перша реальна `Migration` проєкту) бекфілить її з `createdAt`.
+  LWW — клієнтські timestamps (`TimestampValue` у полях документа), не
+  серверний `updateTime`; tie → LOCAL.
+- **Скоуп репозиторіїв: тільки Trip** (`SyncingTripRepository` +
+  Firestore-пейрінг) — Accept-критерії повністю доводяться на Trip, це
+  єдина сутність з живим споживачем. Інфраструктура
+  (coordinator/codec/binding) entity-agnostic; DiaryEntry → M11,
+  PlaceCandidate → matcher-мілстоуни, PushToken → M17.
+- **Pairing став реальним** (узгоджено з користувачем, виконує обіцянку
+  M8): `FirestoreApi.runQuery` (structured query: EQUAL, OR-composite,
+  limit) + `FirestorePairingTripDataSource` — Room як source of truth,
+  invite-код шукається в remote з фолбеком на локальний кеш (офлайн
+  createTrip працює), `observeByUserId` полить remote (~5s, поки є
+  підписник) — власник бачить приєднання партнера; realtime listen
+  свідомо відкладено. Koin-біндінг `InMemoryPairingTripDataSource`
+  замінено на `dataModule`.
+- **`FirestoreTokenProvider` — досі null-seam (M5)**: реальні записи в
+  Firestore пройдуть лише з відкритими security rules; підключення
+  `idToken` з `AuthSessionCache` (з рефрешем) — окрема задача.
+- **Poison ops**: non-retryable збої теж лишаються RETRY (обмежені
+  `MaxAttemptsRetryPolicy` per-run); паркування/дроп — відкладено.
+  Без op-коалесингу і без LWW для DELETE (DELETE пушиться без
+  preflight).
+- **Без connectivity-listener** — `sync()` викликається явно і
+  best-effort при `save()` пейрінгу; авто-тригер за появою мережі /
+  foreground — пізніший мілстоун.
 
 ---
 

@@ -16,6 +16,7 @@ val versionCatalog = extensions.getByType<org.gradle.api.artifacts.VersionCatalo
 
 dependencies {
     implementation(projects.app)
+    implementation(projects.data)
     implementation(projects.feature.auth)
     implementation(projects.feature.onboarding)
     implementation(projects.feature.pairing)
