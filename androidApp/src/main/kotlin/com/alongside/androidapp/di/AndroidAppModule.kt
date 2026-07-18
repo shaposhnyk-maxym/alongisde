@@ -7,6 +7,11 @@ import com.alongside.core.database.getDatabaseBuilder
 import com.alongside.core.database.getRoomDatabase
 import com.alongside.core.domain.auth.AuthSessionCache
 import com.alongside.core.domain.auth.AuthSessionRepository
+import com.alongside.core.domain.pairing.DefaultPairingRepository
+import com.alongside.core.domain.pairing.InMemoryPairingTripDataSource
+import com.alongside.core.domain.pairing.InviteCodeGenerator
+import com.alongside.core.domain.pairing.PairingRepository
+import com.alongside.core.domain.pairing.PairingTripDataSource
 import com.alongside.core.network.auth.FirebaseAuthApi
 import com.alongside.core.network.auth.FirebaseAuthConfig
 import com.alongside.core.network.auth.FirebaseAuthSessionRepository
@@ -29,4 +34,9 @@ public fun androidAppModule(
     single<AuthSessionRepository> { FirebaseAuthSessionRepository(get()) }
     single { getRoomDatabase(getDatabaseBuilder(context)) }
     single<AuthSessionCache> { get<AlongsideDatabase>().authSessionCache() }
+    single { InviteCodeGenerator() }
+    // In-memory until M9's data module provides the Room/Firestore-backed data source -
+    // pairing state doesn't survive a restart and can't be seen across devices yet.
+    single<PairingTripDataSource> { InMemoryPairingTripDataSource() }
+    single<PairingRepository> { DefaultPairingRepository(get(), get()) }
 }

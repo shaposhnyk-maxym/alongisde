@@ -18,6 +18,7 @@ dependencies {
     implementation(projects.app)
     implementation(projects.feature.auth)
     implementation(projects.feature.onboarding)
+    implementation(projects.feature.pairing)
     implementation(projects.core.network)
     implementation(projects.core.database)
     implementation(projects.core.domain)
