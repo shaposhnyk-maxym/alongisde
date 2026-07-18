@@ -686,6 +686,18 @@ Places геокодинг, Gemini vision-опис.
   опційно, iPhone за замовчуванням) — але наскрізний виклик
   `AndroidExifPhotoReader.readOne()` проти цього файлу ще не запущений
   (той самий блокер: немає entry point/UI).
+- **`GeocodeResult.preferredPlaceName()` пріоритет розширено** — реальний
+  виклик Google Geocoding API (2026-07-19, ключ з `local.properties`,
+  координати обох тестових епізодів) показав: `point_of_interest`/
+  `premise` майже ніколи не зустрічаються як тип окремого
+  `address_component` (навіть коли результат В ЦІЛОМУ — заклад), тож
+  алгоритм падав аж до `locality` — обидва тестові епізоди (різні
+  вулиці, ~4.2км одна від одної, те саме місто) отримували однакову
+  назву "Arezzo". Додано `route`/`neighborhood` у пріоритет (між
+  `sublocality_level_1` і `locality`) — тепер відрізняються за назвою
+  вулиці/району. `GeocodeResultTest.kt` — 6 тестів на всю пріоритетну
+  логіку (раніше перевірялась лише побіжно, одним фікстур-кейсом у
+  `GooglePlacesGeocodingClientTest`).
 - **Немає UI/Orbit Container у M10** — Accept-критерії цього мілстоуна не
   мають жодної UI-вимоги (Timeline UI — M12); `feature:diary` отримав
   лише capture/processing-логіку.
