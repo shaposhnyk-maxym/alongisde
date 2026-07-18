@@ -675,6 +675,17 @@ Places геокодинг, Gemini vision-опис.
   той самий клас проблеми, що нативний SDK у M5) — але пайплайн, який він
   живить (`clusterPhotosIntoEpisodes` і решта), повністю покритий тестами
   на синтетичних `Photo`-списках, незалежно від способу захоплення.
+  **Формат фото не обмежений JPEG**: `androidx.exifinterface` (не
+  платформний `android.media.ExifInterface`) читає EXIF з JPEG, PNG,
+  WebP, HEIF/HEIC, AVIF і купи RAW-форматів — жодного JPEG-хардкоду в
+  коді, `ExifInterface(stream)` формат-агностичний. Перевірено емпірично
+  (2026-07-19): реальний JPEG сконвертовано в HEIC (`sips`), GPS +
+  `DateTimeOriginal` пережили конвертацію 1:1, файл запушено на пристрій
+  — MediaStore проіндексував як `image/heic` з коректним `datetaken`.
+  Компоненти (бібліотека + MediaStore) сумісні з HEIC/HEIF (Samsung
+  опційно, iPhone за замовчуванням) — але наскрізний виклик
+  `AndroidExifPhotoReader.readOne()` проти цього файлу ще не запущений
+  (той самий блокер: немає entry point/UI).
 - **Немає UI/Orbit Container у M10** — Accept-критерії цього мілстоуна не
   мають жодної UI-вимоги (Timeline UI — M12); `feature:diary` отримав
   лише capture/processing-логіку.
