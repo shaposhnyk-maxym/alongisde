@@ -56,8 +56,12 @@ public class FirebaseAuthApi(
         } catch (e: CancellationException) {
             throw e
         } catch (e: HttpRequestTimeoutException) {
+            println("FirebaseAuthApi: request timed out before a response arrived - ${e.message}")
             throw FirebaseAuthException.NetworkTimeout(e)
         } catch (e: Exception) {
+            // Unlike throwIfError's HTTP-level failures, this branch fires when no response was
+            // ever received (DNS, TLS, missing INTERNET permission, ...) - previously silent.
+            println("FirebaseAuthApi: request failed before a response arrived - ${e::class.simpleName}: ${e.message}")
             throw FirebaseAuthException.Unknown(e)
         }
 

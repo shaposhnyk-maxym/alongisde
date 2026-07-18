@@ -44,9 +44,15 @@ public class FirestorePairingTripDataSource(
 
     override fun observeByUserId(userId: String): Flow<Trip?> =
         channelFlow {
+            println("FirestorePairingTripDataSource: observeByUserId($userId) subscribed")
             val poller =
                 launch {
                     while (isActive) {
+                        println("FirestorePairingTripDataSource: poll tick for $userId")
+                        // Push before pull: operations parked in the durable queue (a write
+                        // that 403'd or happened offline) have no other trigger than save() -
+                        // the poll tick is what drains them once connectivity/auth is back.
+                        pushPendingSync()
                         refreshFromRemote(userId)
                         delay(pollInterval)
                     }
@@ -57,18 +63,32 @@ public class FirestorePairingTripDataSource(
 
     override suspend fun save(trip: Trip) {
         trips.upsert(trip)
+        pushPendingSync()
+    }
+
+    private suspend fun pushPendingSync() {
         try {
-            syncCoordinator.sync()
-        } catch (_: FirestoreException) {
-            // Best-effort push; the operation is durably queued for the next sync.
+            val result = syncCoordinator.sync()
+            println("FirestorePairingTripDataSource: sync() -> succeeded=${result.succeeded.size} failed=${result.failed.size}")
+        } catch (e: FirestoreException) {
+            println("FirestorePairingTripDataSource: sync() threw ${e::class.simpleName}: ${e.message}")
+        } catch (e: Throwable) {
+            println("FirestorePairingTripDataSource: sync() threw UNEXPECTED ${e::class.simpleName}: ${e.message}")
+            throw e
         }
     }
 
     private suspend fun refreshFromRemote(userId: String) {
         try {
             remote.findTripByUserId(userId)?.also { cacheRemote(it) }
-        } catch (_: FirestoreException) {
-            // Poll again next tick; the local flow keeps emitting meanwhile.
+        } catch (e: FirestoreException) {
+            val detail =
+                when (e) {
+                    is FirestoreException.ClientError -> "code=${e.code} status=${e.status} message=${e.message}"
+                    is FirestoreException.ServerError -> "code=${e.code} status=${e.status} message=${e.message}"
+                    else -> e.message.toString()
+                }
+            println("FirestorePairingTripDataSource: refreshFromRemote threw ${e::class.simpleName}: $detail")
         }
     }
 

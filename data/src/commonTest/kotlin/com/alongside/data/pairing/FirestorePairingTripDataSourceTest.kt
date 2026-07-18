@@ -129,6 +129,24 @@ class FirestorePairingTripDataSourceTest {
         }
 
     @Test
+    fun `observeByUserId drains operations parked in the durable queue on each poll tick`() =
+        runTest {
+            // A write whose push never happened (e.g. it 403'd before auth was wired):
+            // upsert enqueues durably but only save()/the poller actually push.
+            syncingTrips.upsert(testTrip(id = "trip-1", ownerId = "owner-1"))
+            assertEquals(1, store.loadAll().size)
+
+            val emissions = mutableListOf<Trip?>()
+            val collector = launch { dataSource.observeByUserId("owner-1").collect { emissions += it } }
+            runCurrent()
+
+            assertEquals(listOf("trip-1"), networkClient.pushed.map { it.documentId })
+            assertTrue(store.loadAll().isEmpty())
+            assertEquals(SyncStatus.SYNCED, local.getById("trip-1")?.syncStatus)
+            collector.cancel()
+        }
+
+    @Test
     fun `polling failures keep the local flow alive`() =
         runTest {
             val created = testTrip(id = "trip-1", ownerId = "owner-1")

@@ -32,14 +32,17 @@ public class SessionFirestoreTokenProvider(
 
     override suspend fun currentToken(): String? =
         mutex.withLock {
-            val session = cache.get() ?: return@withLock null
+            val session = cache.get()
+            println("SessionFirestoreTokenProvider: session=${session != null} expired=${session?.isExpired(clock.now())}")
+            if (session == null) return@withLock null
             if (!session.isExpired(clock.now())) return@withLock session.idToken
             val refreshToken = session.refreshToken ?: return@withLock null
             try {
                 val refreshed = session.refreshedWith(refresher.refresh(refreshToken))
                 cache.save(refreshed)
                 refreshed.idToken
-            } catch (_: FirebaseAuthException) {
+            } catch (e: FirebaseAuthException) {
+                println("SessionFirestoreTokenProvider: refresh failed - ${e::class.simpleName}: ${e.message}")
                 null
             }
         }

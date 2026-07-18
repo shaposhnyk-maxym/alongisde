@@ -28,7 +28,17 @@ public fun HttpClientConfig<*>.configureFirestoreHttpClient(
         connectTimeoutMillis = requestTimeoutMillis
         socketTimeoutMillis = requestTimeoutMillis
     }
+    println("configureFirestoreHttpClient: enableLogging=$enableLogging")
     if (enableLogging) {
-        install(Logging) { level = LogLevel.INFO }
+        install(Logging) {
+            level = LogLevel.ALL
+            logger =
+                object : io.ktor.client.plugins.logging.Logger {
+                    override fun log(message: String) {
+                        println("KtorLog: $message")
+                    }
+                }
+        }
+        println("configureFirestoreHttpClient: Logging plugin installed")
     }
 }
