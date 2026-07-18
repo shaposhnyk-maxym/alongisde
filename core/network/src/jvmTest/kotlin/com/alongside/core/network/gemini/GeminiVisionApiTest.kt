@@ -45,10 +45,10 @@ class GeminiVisionApiTest {
 
             api.generateContent(request)
 
-            assertEquals(
-                "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=test-api-key",
-                capturedUrl,
-            )
+            val expectedUrl =
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent" +
+                    "?key=test-api-key"
+            assertEquals(expectedUrl, capturedUrl)
             assertEquals(HttpMethod.Post, capturedMethod)
             assertTrue(capturedContentType!!.startsWith("application/json"))
         }
@@ -96,7 +96,10 @@ class GeminiVisionApiTest {
     @Test
     fun `HTTP 5xx throws ServerError`() =
         runBlocking<Unit> {
-            val api = testGeminiVisionApi { respondJson("""{"error": {"message": "overloaded"}}""", HttpStatusCode.ServiceUnavailable) }
+            val api =
+                testGeminiVisionApi {
+                    respondJson("""{"error": {"message": "overloaded"}}""", HttpStatusCode.ServiceUnavailable)
+                }
 
             assertFailsWith<GeminiException.ServerError> {
                 api.generateContent(request)
