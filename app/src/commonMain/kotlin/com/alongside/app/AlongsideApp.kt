@@ -30,6 +30,9 @@ import com.alongside.feature.onboarding.PermissionController
 import com.alongside.feature.onboarding.presentation.OnboardingContainer
 import com.alongside.feature.onboarding.presentation.OnboardingScreen
 import com.alongside.feature.onboarding.presentation.OnboardingSideEffect
+import com.alongside.feature.pairing.presentation.PairingContainer
+import com.alongside.feature.pairing.presentation.PairingScreen
+import com.alongside.feature.pairing.presentation.PairingSideEffect
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
@@ -105,12 +108,11 @@ public fun AlongsideApp(
                     OnboardingScreen(container)
                 }
                 entry<Pairing> {
-                    PlaceholderScreen(
-                        title = "Every trip needs two",
-                        note = "Create a trip or join your partner's - feature:pairing lands in M7.",
-                        actionLabel = "Continue to Home",
-                        onAction = { backStack.resetTo(Home) },
-                    )
+                    val container = koinViewModel<PairingContainer>()
+                    container.collectSideEffect { effect ->
+                        if (effect is PairingSideEffect.Paired) backStack.resetTo(Home)
+                    }
+                    PairingScreen(container)
                 }
                 entry<Home> {
                     MainTabScreen(tab = MainTab.HOME, backStack = backStack) {

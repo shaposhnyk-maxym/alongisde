@@ -19,6 +19,7 @@ kotlin {
             implementation(projects.core.ui)
             implementation(projects.feature.auth)
             implementation(projects.feature.onboarding)
+            implementation(projects.feature.pairing)
             implementation(libs.findLibrary("navigation3-runtime").get())
             implementation(libs.findLibrary("orbit-core").get())
             implementation(libs.findLibrary("orbit-viewmodel").get())

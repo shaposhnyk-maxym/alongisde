@@ -13,6 +13,7 @@ kotlin {
         commonMain.dependencies {
             api(projects.core.model)
             implementation(libs.findLibrary("kotlinx-coroutines-core").get())
+            implementation(libs.findLibrary("kotlinx-datetime").get())
         }
     }
 }
