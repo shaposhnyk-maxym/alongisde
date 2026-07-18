@@ -1,6 +1,7 @@
 package com.alongside.core.network.auth
 
 import com.alongside.core.network.auth.model.FirebaseAuthErrorResponse
+import com.alongside.core.network.auth.model.FirebaseRefreshTokenResponse
 import com.alongside.core.network.auth.model.FirebaseSignInRequest
 import com.alongside.core.network.auth.model.FirebaseSignInResponse
 import com.alongside.core.network.firestore.model.firestoreJson
@@ -17,16 +18,27 @@ import io.ktor.http.contentType
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.decodeFromString
 
-/** Ktor-based client for Identity Toolkit's `accounts:signInWithIdp` REST endpoint. */
+/** Ktor-based client for Identity Toolkit's `accounts:signInWithIdp` and Secure Token's refresh endpoints. */
 public class FirebaseAuthApi(
     private val httpClient: HttpClient,
     private val config: FirebaseAuthConfig,
 ) {
     public suspend fun signInWithGoogleIdToken(googleIdToken: String): FirebaseSignInResponse {
         val response =
-            rawRequest {
+            rawRequest(config.signInWithIdpUrl) {
                 contentType(ContentType.Application.Json)
                 setBody(FirebaseSignInRequest.forGoogleIdToken(googleIdToken))
+            }
+        throwIfError(response)
+        return parseBody(response)
+    }
+
+    /** Exchanges a stored refresh token for a fresh idToken (Secure Token API, form-encoded). */
+    public suspend fun refreshIdToken(refreshToken: String): FirebaseRefreshTokenResponse {
+        val response =
+            rawRequest(config.secureTokenUrl) {
+                contentType(ContentType.Application.FormUrlEncoded)
+                setBody("grant_type=refresh_token&refresh_token=$refreshToken")
             }
         throwIfError(response)
         return parseBody(response)
@@ -35,9 +47,12 @@ public class FirebaseAuthApi(
     // Catching Exception broadly and re-throwing as a typed FirebaseAuthException is the point of
     // this boundary function; CancellationException is excluded so cancellation still propagates.
     @Suppress("TooGenericExceptionCaught")
-    private suspend fun rawRequest(block: HttpRequestBuilder.() -> Unit): HttpResponse =
+    private suspend fun rawRequest(
+        url: String,
+        block: HttpRequestBuilder.() -> Unit,
+    ): HttpResponse =
         try {
-            httpClient.post(config.signInWithIdpUrl, block)
+            httpClient.post(url, block)
         } catch (e: CancellationException) {
             throw e
         } catch (e: HttpRequestTimeoutException) {
@@ -53,7 +68,7 @@ public class FirebaseAuthApi(
         val message = detail?.message ?: response.status.description
         val status = detail?.status ?: response.status.toString()
         println(
-            "FirebaseAuthApi: signInWithIdp failed - HTTP ${response.status.value}, " +
+            "FirebaseAuthApi: auth request failed - HTTP ${response.status.value}, " +
                 "code=$code, status=$status, message=$message",
         )
         throw when {
