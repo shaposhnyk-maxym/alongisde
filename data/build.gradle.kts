@@ -22,6 +22,8 @@ kotlin {
         jvmTest.dependencies {
             implementation(libs.findLibrary("room-runtime").get())
             implementation(libs.findLibrary("sqlite-bundled").get())
+            implementation(libs.findLibrary("ktor-client-core").get())
+            implementation(libs.findLibrary("ktor-client-mock").get())
         }
     }
 }
