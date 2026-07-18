@@ -66,10 +66,18 @@ public class FirestorePairingTripDataSource(
         pushPendingSync()
     }
 
+    // catch(Throwable) is deliberate here, not an oversight: this is a poller's per-tick sync
+    // call, and an unexpected (non-FirestoreException) failure must still be logged with a clear
+    // "UNEXPECTED" marker before it's rethrown - swallowing it silently would make the poller die
+    // without a trace, and narrowing the catch would lose that rethrow-after-logging behavior.
+    @Suppress("TooGenericExceptionCaught")
     private suspend fun pushPendingSync() {
         try {
             val result = syncCoordinator.sync()
-            println("FirestorePairingTripDataSource: sync() -> succeeded=${result.succeeded.size} failed=${result.failed.size}")
+            println(
+                "FirestorePairingTripDataSource: sync() -> " +
+                    "succeeded=${result.succeeded.size} failed=${result.failed.size}",
+            )
         } catch (e: FirestoreException) {
             println("FirestorePairingTripDataSource: sync() threw ${e::class.simpleName}: ${e.message}")
         } catch (e: Throwable) {

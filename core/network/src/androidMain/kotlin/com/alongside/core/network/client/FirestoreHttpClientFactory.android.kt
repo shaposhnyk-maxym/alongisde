@@ -13,7 +13,10 @@ public fun createFirestoreHttpClient(): HttpClient =
                         val request = chain.request()
                         val authHeader = request.header("Authorization")
                         println("OkHttpLog: ${request.method} ${request.url}")
-                        println("OkHttpLog: Authorization header = ${authHeader ?: "MISSING"} (length=${authHeader?.length})")
+                        println(
+                            "OkHttpLog: Authorization header = ${authHeader ?: "MISSING"} " +
+                                "(length=${authHeader?.length})",
+                        )
                         val requestBody = request.body
                         if (requestBody != null) {
                             val buffer = okio.Buffer()
