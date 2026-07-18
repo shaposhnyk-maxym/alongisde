@@ -46,6 +46,7 @@ class DiaryEntryRepositoryImplTest {
         date = LocalDate(2026, 7, 16),
         syncStatus = SyncStatus.PENDING,
         createdAt = Instant.fromEpochMilliseconds(1_752_600_000_000),
+        updatedAt = Instant.fromEpochMilliseconds(1_752_600_000_000),
     )
 
     @Test

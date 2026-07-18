@@ -54,6 +54,7 @@ class PlaceCandidateDaoTest {
         memberSwipe = memberSwipe,
         syncStatus = SyncStatus.PENDING,
         createdAt = Instant.fromEpochMilliseconds(1_752_600_000_000),
+        updatedAt = Instant.fromEpochMilliseconds(1_752_600_000_000),
     )
 
     @Test

@@ -12,6 +12,7 @@ import com.alongside.core.database.dao.DiaryEntryDao
 import com.alongside.core.database.dao.EpisodeDao
 import com.alongside.core.database.dao.PlaceCandidateDao
 import com.alongside.core.database.dao.PushTokenDao
+import com.alongside.core.database.dao.SyncOperationDao
 import com.alongside.core.database.dao.TripDao
 import com.alongside.core.database.entity.AuthSessionEntity
 import com.alongside.core.database.entity.DiaryEntryEntity
@@ -19,9 +20,17 @@ import com.alongside.core.database.entity.EpisodeEntity
 import com.alongside.core.database.entity.PhotoEntity
 import com.alongside.core.database.entity.PlaceCandidateEntity
 import com.alongside.core.database.entity.PushTokenEntity
+import com.alongside.core.database.entity.SyncOperationEntity
 import com.alongside.core.database.entity.TripEntity
+import com.alongside.core.database.migration.MIGRATION_3_4
 import com.alongside.core.database.repository.AuthSessionCacheImpl
+import com.alongside.core.database.repository.RoomPairingTripDataSource
+import com.alongside.core.database.repository.SyncOperationStoreImpl
+import com.alongside.core.database.repository.TripRepositoryImpl
+import com.alongside.core.database.sync.SyncOperationStore
 import com.alongside.core.domain.auth.AuthSessionCache
+import com.alongside.core.domain.pairing.PairingTripDataSource
+import com.alongside.core.domain.trip.TripRepository
 import kotlinx.coroutines.Dispatchers
 
 internal const val DATABASE_FILE_NAME = "alongside.db"
@@ -35,8 +44,9 @@ internal const val DATABASE_FILE_NAME = "alongside.db"
         PhotoEntity::class,
         PushTokenEntity::class,
         AuthSessionEntity::class,
+        SyncOperationEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 @TypeConverters(AlongsideTypeConverters::class)
@@ -53,6 +63,8 @@ public abstract class AlongsideDatabase : RoomDatabase() {
     internal abstract fun pushTokenDao(): PushTokenDao
 
     internal abstract fun authSessionDao(): AuthSessionDao
+
+    internal abstract fun syncOperationDao(): SyncOperationDao
 }
 
 @Suppress("NO_ACTUAL_FOR_EXPECT")
@@ -67,7 +79,16 @@ public fun getRoomDatabase(builder: RoomDatabase.Builder<AlongsideDatabase>): Al
     builder
         .setDriver(BundledSQLiteDriver())
         .setQueryCoroutineContext(Dispatchers.Default)
+        .addMigrations(MIGRATION_3_4)
         .build()
 
 /** Factory rather than a public [AuthSessionCacheImpl] - keeps the Room-backed impl an internal detail. */
 public fun AlongsideDatabase.authSessionCache(): AuthSessionCache = AuthSessionCacheImpl(this)
+
+/** Room-backed local [TripRepository] - the `data` module wraps it with sync-queue enqueueing. */
+public fun AlongsideDatabase.tripRepository(): TripRepository = TripRepositoryImpl(this)
+
+/** Local (Room) side of pairing lookups - the `data` module composes it with the Firestore side. */
+public fun AlongsideDatabase.pairingTripLocalDataSource(): PairingTripDataSource = RoomPairingTripDataSource(this)
+
+public fun AlongsideDatabase.syncOperationStore(): SyncOperationStore = SyncOperationStoreImpl(this)

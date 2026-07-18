@@ -23,6 +23,7 @@ private val previewTrip =
         endDate = LocalDate(2026, 8, 1),
         syncStatus = SyncStatus.PENDING,
         createdAt = Instant.fromEpochMilliseconds(0),
+        updatedAt = Instant.fromEpochMilliseconds(0),
     )
 
 @Composable

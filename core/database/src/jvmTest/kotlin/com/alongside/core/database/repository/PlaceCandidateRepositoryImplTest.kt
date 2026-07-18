@@ -51,6 +51,7 @@ class PlaceCandidateRepositoryImplTest {
         memberSwipe = null,
         syncStatus = SyncStatus.PENDING,
         createdAt = Instant.fromEpochMilliseconds(1_752_600_000_000),
+        updatedAt = Instant.fromEpochMilliseconds(1_752_600_000_000),
     )
 
     @Test

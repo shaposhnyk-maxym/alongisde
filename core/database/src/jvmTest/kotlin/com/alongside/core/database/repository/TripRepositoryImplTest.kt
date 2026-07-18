@@ -46,6 +46,7 @@ class TripRepositoryImplTest {
             endDate = LocalDate(2026, 7, 23),
             syncStatus = SyncStatus.PENDING,
             createdAt = Instant.fromEpochMilliseconds(1_752_600_000_000),
+            updatedAt = Instant.fromEpochMilliseconds(1_752_600_000_000),
         )
 
     @Test

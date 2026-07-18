@@ -1,5 +1,6 @@
 package com.alongside.core.database.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.alongside.core.model.SyncStatus
@@ -17,6 +18,9 @@ internal data class TripEntity(
     val endDate: LocalDate,
     val syncStatus: SyncStatus,
     val createdAt: Instant,
+    // defaultValue keeps the fresh CREATE TABLE shape identical to what
+    // MIGRATION_3_4's ALTER TABLE ... DEFAULT 0 leaves behind.
+    @ColumnInfo(defaultValue = "0") val updatedAt: Instant,
 )
 
 internal fun TripEntity.toDomain(): Trip =
@@ -29,6 +33,7 @@ internal fun TripEntity.toDomain(): Trip =
         endDate = endDate,
         syncStatus = syncStatus,
         createdAt = createdAt,
+        updatedAt = updatedAt,
     )
 
 internal fun Trip.toEntity(): TripEntity =
@@ -41,4 +46,5 @@ internal fun Trip.toEntity(): TripEntity =
         endDate = endDate,
         syncStatus = syncStatus,
         createdAt = createdAt,
+        updatedAt = updatedAt,
     )

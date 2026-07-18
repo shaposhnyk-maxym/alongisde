@@ -18,6 +18,12 @@ internal interface TripDao {
     @Query("SELECT * FROM trips WHERE id = :id")
     fun observeById(id: String): Flow<TripEntity?>
 
+    @Query("SELECT * FROM trips WHERE inviteCode = :code LIMIT 1")
+    suspend fun getByInviteCode(code: String): TripEntity?
+
+    @Query("SELECT * FROM trips WHERE ownerId = :userId OR memberId = :userId LIMIT 1")
+    fun observeByUserId(userId: String): Flow<TripEntity?>
+
     @Query("DELETE FROM trips WHERE id = :id")
     suspend fun delete(id: String)
 }

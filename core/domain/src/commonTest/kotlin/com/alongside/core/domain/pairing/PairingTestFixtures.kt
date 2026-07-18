@@ -22,4 +22,5 @@ internal fun pairingTestTrip(
         endDate = endDate,
         syncStatus = SyncStatus.PENDING,
         createdAt = Instant.fromEpochMilliseconds(0),
+        updatedAt = Instant.fromEpochMilliseconds(0),
     )

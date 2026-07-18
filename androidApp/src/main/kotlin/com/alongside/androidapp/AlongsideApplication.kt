@@ -2,6 +2,7 @@ package com.alongside.androidapp
 
 import android.app.Application
 import com.alongside.androidapp.di.androidAppModule
+import com.alongside.data.di.dataModule
 import com.alongside.feature.auth.di.authFeatureModule
 import com.alongside.feature.onboarding.di.onboardingFeatureModule
 import com.alongside.feature.pairing.di.pairingFeatureModule
@@ -14,7 +15,12 @@ class AlongsideApplication : Application() {
         startKoin {
             androidContext(this@AlongsideApplication)
             modules(
-                androidAppModule(this@AlongsideApplication, getString(R.string.google_api_key)),
+                androidAppModule(
+                    this@AlongsideApplication,
+                    getString(R.string.google_api_key),
+                    getString(R.string.project_id),
+                ),
+                dataModule,
                 authFeatureModule,
                 onboardingFeatureModule,
                 pairingFeatureModule,
