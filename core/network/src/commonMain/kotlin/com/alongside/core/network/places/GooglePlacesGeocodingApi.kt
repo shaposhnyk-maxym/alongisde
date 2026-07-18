@@ -2,7 +2,9 @@ package com.alongside.core.network.places
 
 import com.alongside.core.network.firestore.model.firestoreJson
 import com.alongside.core.network.places.model.GeocodeResponse
+import com.alongside.core.network.places.model.GooglePlacesErrorResponse
 import io.ktor.client.HttpClient
+import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.get
@@ -47,17 +49,32 @@ public class GooglePlacesGeocodingApi(
             throw GooglePlacesException.Unknown(e)
         }
 
-    private fun throwIfError(response: HttpResponse) {
+    private suspend fun throwIfError(response: HttpResponse) {
         if (response.status.value in SUCCESS_RANGE) return
+        val detail = errorDetailOrNull(response)
+        val httpStatus = response.status.value
+        val message = detail?.message ?: response.status.description
         println(
-            "GooglePlacesGeocodingApi: request failed - HTTP ${response.status.value} ${response.status.description}",
+            "GooglePlacesGeocodingApi: request failed - HTTP $httpStatus, status=${detail?.status}, message=$message",
         )
-        throw if (response.status.value in CLIENT_ERROR_RANGE) {
-            GooglePlacesException.ClientError(response.status.value, response.status.description)
+        throw if (httpStatus in CLIENT_ERROR_RANGE) {
+            GooglePlacesException.ClientError(httpStatus, message)
         } else {
-            GooglePlacesException.ServerError(response.status.value, response.status.description)
+            GooglePlacesException.ServerError(httpStatus, message)
         }
     }
+
+    // Best-effort: if the error body itself doesn't parse, throwIfError falls back to the raw
+    // HTTP status description - losing this particular exception is intentional, not a bug.
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    private suspend fun errorDetailOrNull(response: HttpResponse) =
+        try {
+            response.body<GooglePlacesErrorResponse>().error
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
 
     @Suppress("TooGenericExceptionCaught")
     private suspend inline fun <reified T> parseBody(response: HttpResponse): T {

@@ -93,6 +93,21 @@ class GooglePlacesGeocodingApiTest {
         }
 
     @Test
+    fun `HTTP error with the standard Google error envelope surfaces its message, not the generic HTTP reason`() =
+        runBlocking<Unit> {
+            val errorJson =
+                """{"error": {"code": 403, "message": "API key not authorized", """ +
+                    """"status": "PERMISSION_DENIED"}}"""
+            val api = testGooglePlacesGeocodingApi { respondJson(errorJson, HttpStatusCode.Forbidden) }
+
+            val exception =
+                assertFailsWith<GooglePlacesException.ClientError> {
+                    api.reverseGeocode(0.0, 0.0)
+                }
+            assertEquals("API key not authorized", exception.message)
+        }
+
+    @Test
     fun `malformed body throws MalformedResponse`() =
         runBlocking<Unit> {
             val api = testGooglePlacesGeocodingApi { respondJson("not json at all") }

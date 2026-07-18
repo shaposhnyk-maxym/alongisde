@@ -1,9 +1,11 @@
 package com.alongside.core.network.gemini
 
 import com.alongside.core.network.firestore.model.firestoreJson
+import com.alongside.core.network.gemini.model.GeminiErrorResponse
 import com.alongside.core.network.gemini.model.GenerateContentRequest
 import com.alongside.core.network.gemini.model.GenerateContentResponse
 import io.ktor.client.HttpClient
+import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.post
@@ -49,15 +51,30 @@ public class GeminiVisionApi(
             throw GeminiException.Unknown(e)
         }
 
-    private fun throwIfError(response: HttpResponse) {
+    private suspend fun throwIfError(response: HttpResponse) {
         if (response.status.value in SUCCESS_RANGE) return
-        println("GeminiVisionApi: request failed - HTTP ${response.status.value} ${response.status.description}")
-        throw if (response.status.value in CLIENT_ERROR_RANGE) {
-            GeminiException.ClientError(response.status.value, response.status.description)
+        val detail = errorDetailOrNull(response)
+        val httpStatus = response.status.value
+        val message = detail?.message ?: response.status.description
+        println("GeminiVisionApi: request failed - HTTP $httpStatus, status=${detail?.status}, message=$message")
+        throw if (httpStatus in CLIENT_ERROR_RANGE) {
+            GeminiException.ClientError(httpStatus, message)
         } else {
-            GeminiException.ServerError(response.status.value, response.status.description)
+            GeminiException.ServerError(httpStatus, message)
         }
     }
+
+    // Best-effort: if the error body itself doesn't parse, throwIfError falls back to the raw
+    // HTTP status description - losing this particular exception is intentional, not a bug.
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    private suspend fun errorDetailOrNull(response: HttpResponse) =
+        try {
+            response.body<GeminiErrorResponse>().error
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
 
     @Suppress("TooGenericExceptionCaught")
     private suspend inline fun <reified T> parseBody(response: HttpResponse): T {

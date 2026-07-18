@@ -46,7 +46,7 @@ class GeminiVisionApiTest {
             api.generateContent(request)
 
             val expectedUrl =
-                "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent" +
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent" +
                     "?key=test-api-key"
             assertEquals(expectedUrl, capturedUrl)
             assertEquals(HttpMethod.Post, capturedMethod)
@@ -81,11 +81,46 @@ class GeminiVisionApiTest {
         }
 
     @Test
+    fun `parsing tolerates real-world response fields not modeled in our DTOs`() =
+        runBlocking {
+            // Trimmed excerpt of a real gemini-flash-latest (gemini-3.5-flash) response captured
+            // during M10 manual testing - thoughtSignature/usageMetadata/role/modelVersion/
+            // responseId aren't in our DTOs; ignoreUnknownKeys must tolerate all of them.
+            val realResponseJson =
+                """
+                {
+                  "candidates": [
+                    {
+                      "content": {
+                        "parts": [{"text": "A warm afternoon together.", "thoughtSignature": "abc123=="}],
+                        "role": "model"
+                      },
+                      "finishReason": "STOP",
+                      "index": 0
+                    }
+                  ],
+                  "usageMetadata": {"promptTokenCount": 4319, "candidatesTokenCount": 104, "totalTokenCount": 5268},
+                  "modelVersion": "gemini-3.5-flash",
+                  "responseId": "_flbaqajE9_qnsEPj-_-uA8"
+                }
+                """.trimIndent()
+            val api = testGeminiVisionApi { respondJson(realResponseJson) }
+
+            val response = api.generateContent(request)
+
+            val content = response.candidates.single().content
+            assertEquals("A warm afternoon together.", content?.parts?.single()?.text)
+        }
+
+    @Test
     fun `HTTP 4xx throws ClientError`() =
         runBlocking<Unit> {
             val api =
                 testGeminiVisionApi {
-                    respondJson("""{"error": {"message": "invalid api key"}}""", HttpStatusCode.BadRequest)
+                    respondJson(
+                        """{"error": {"code": 400, "message": "invalid api key", "status": "INVALID_ARGUMENT"}}""",
+                        HttpStatusCode.BadRequest,
+                    )
                 }
 
             assertFailsWith<GeminiException.ClientError> {
@@ -98,12 +133,43 @@ class GeminiVisionApiTest {
         runBlocking<Unit> {
             val api =
                 testGeminiVisionApi {
-                    respondJson("""{"error": {"message": "overloaded"}}""", HttpStatusCode.ServiceUnavailable)
+                    respondJson(
+                        """{"error": {"code": 503, "message": "overloaded", "status": "UNAVAILABLE"}}""",
+                        HttpStatusCode.ServiceUnavailable,
+                    )
                 }
 
             assertFailsWith<GeminiException.ServerError> {
                 api.generateContent(request)
             }
+        }
+
+    @Test
+    fun `HTTP error surfaces the real error body message, not the generic HTTP reason`() =
+        runBlocking<Unit> {
+            // The exact shape returned by a real 429 seen during M10 manual testing (billing exhausted).
+            val errorJson =
+                """{"error": {"code": 429, "message": "Your prepayment credits are depleted.", """ +
+                    """"status": "RESOURCE_EXHAUSTED"}}"""
+            val api = testGeminiVisionApi { respondJson(errorJson, HttpStatusCode.TooManyRequests) }
+
+            val exception =
+                assertFailsWith<GeminiException.ClientError> {
+                    api.generateContent(request)
+                }
+            assertEquals("Your prepayment credits are depleted.", exception.message)
+        }
+
+    @Test
+    fun `HTTP error with a body that doesn't match the error envelope falls back to the HTTP reason`() =
+        runBlocking<Unit> {
+            val api = testGeminiVisionApi { respondJson("""{"unexpected": "shape"}""", HttpStatusCode.BadRequest) }
+
+            val exception =
+                assertFailsWith<GeminiException.ClientError> {
+                    api.generateContent(request)
+                }
+            assertEquals(HttpStatusCode.BadRequest.description, exception.message)
         }
 
     @Test
