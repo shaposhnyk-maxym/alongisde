@@ -5,6 +5,9 @@ import com.alongside.core.network.firestore.model.FirestoreErrorResponse
 import com.alongside.core.network.firestore.model.FirestoreListDocumentsResponse
 import com.alongside.core.network.firestore.model.FirestoreValue
 import com.alongside.core.network.firestore.model.FirestoreWriteRequest
+import com.alongside.core.network.firestore.model.RunQueryRequest
+import com.alongside.core.network.firestore.model.RunQueryResponseElement
+import com.alongside.core.network.firestore.model.StructuredQuery
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpRequestTimeoutException
@@ -54,6 +57,19 @@ public class FirestoreApi(
             }
         throwIfError(response)
         return parseBody(response)
+    }
+
+    /** Runs [structuredQuery] against the database root, returning matched documents in response order. */
+    public suspend fun runQuery(structuredQuery: StructuredQuery): List<FirestoreDocument> {
+        val response =
+            rawRequest {
+                method = HttpMethod.Post
+                url("${config.documentsBaseUrl}:runQuery")
+                contentType(ContentType.Application.Json)
+                setBody(RunQueryRequest(structuredQuery))
+            }
+        throwIfError(response)
+        return parseBody<List<RunQueryResponseElement>>(response).mapNotNull { it.document }
     }
 
     public suspend fun upsertDocument(
