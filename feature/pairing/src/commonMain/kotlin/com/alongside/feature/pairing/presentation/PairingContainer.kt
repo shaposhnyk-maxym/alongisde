@@ -40,8 +40,11 @@ public class PairingContainer(
     // The single source of "we are paired": both the owner waiting for the partner and the
     // joiner submitting a code end up here when the stored trip gains its second person.
     private suspend fun Syntax<PairingState, PairingSideEffect>.observeActiveTrip() {
-        val uid = currentUid() ?: return
+        val uid = currentUid()
+        println("PairingContainer: observeActiveTrip starting, uid=$uid")
+        if (uid == null) return
         pairingRepository.observeActiveTrip(uid).collect { trip ->
+            println("PairingContainer: observeActiveTrip emitted trip=${trip?.id} memberId=${trip?.memberId}")
             when {
                 trip == null -> Unit
                 trip.memberId != null -> postSideEffect(PairingSideEffect.Paired)

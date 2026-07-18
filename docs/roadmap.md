@@ -596,9 +596,15 @@ Episode+Photo, PlaceCandidate).
   підписник) — власник бачить приєднання партнера; realtime listen
   свідомо відкладено. Koin-біндінг `InMemoryPairingTripDataSource`
   замінено на `dataModule`.
-- **`FirestoreTokenProvider` — досі null-seam (M5)**: реальні записи в
-  Firestore пройдуть лише з відкритими security rules; підключення
-  `idToken` з `AuthSessionCache` (з рефрешем) — окрема задача.
+- **`FirestoreTokenProvider` — закритий follow-up-гілкою**
+  `feat/firestore-auth-token` (виявлено мануальним крос-девайс smoke:
+  create/join падав з 403, бо всі запити йшли неавтентифікованими):
+  `SessionFirestoreTokenProvider` віддає кешований `idToken` і рефрешить
+  прострочений через securetoken.googleapis.com
+  (`FirebaseAuthApi.refreshIdToken`); `trips` read у
+  `firebase/firestore.rules` відкрито для будь-якого залогіненого
+  (інакше joiner не може виконати runQuery по inviteCode; посилення
+  через inviteCodes-lookup-колекцію — свідомий борг, TODO в rules).
 - **Poison ops**: non-retryable збої теж лишаються RETRY (обмежені
   `MaxAttemptsRetryPolicy` per-run); паркування/дроп — відкладено.
   Без op-коалесингу і без LWW для DELETE (DELETE пушиться без

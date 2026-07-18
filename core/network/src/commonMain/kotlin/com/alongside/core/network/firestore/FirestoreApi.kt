@@ -105,6 +105,7 @@ public class FirestoreApi(
     @Suppress("TooGenericExceptionCaught", "ThrowsCount")
     private suspend fun rawRequest(block: HttpRequestBuilder.() -> Unit): HttpResponse {
         val token = tokenProvider.currentToken()
+        println("FirestoreApi: token present=${token != null} length=${token?.length}")
         return try {
             httpClient.request {
                 block()
@@ -115,8 +116,13 @@ public class FirestoreApi(
         } catch (e: CancellationException) {
             throw e
         } catch (e: HttpRequestTimeoutException) {
+            println("FirestoreApi: request timed out before a response arrived - ${e.message}")
             throw FirestoreException.NetworkTimeout(e)
         } catch (e: Exception) {
+            // Unlike throwIfError's HTTP-level failures, this branch fires when no response was
+            // ever received (DNS, TLS, missing INTERNET permission, ...) - it was previously
+            // silent, which made exactly that class of failure impossible to diagnose from logs.
+            println("FirestoreApi: request failed before a response arrived - ${e::class.simpleName}: ${e.message}")
             throw FirestoreException.Unknown(e)
         }
     }

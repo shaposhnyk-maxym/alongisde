@@ -36,8 +36,12 @@ service cloud.firestore {
     }
 
     match /trips/{tripId} {
-      allow read: if isSignedIn() &&
-        (resource.data.ownerId == request.auth.uid || resource.data.memberId == request.auth.uid);
+      // Read is open to any signed-in user: M9's pairing flow needs a joiner (not yet a
+      // member) to runQuery trips by inviteCode, and the poller queries by ownerId/memberId.
+      // Rules can't express "readable only by someone who knows the invite code" for a query,
+      // and for a two-person app the enumeration tradeoff is acceptable. TODO(hardening):
+      // an inviteCodes/{code} lookup collection + get-by-id would close it - deliberate debt.
+      allow read: if isSignedIn();
 
       allow create: if isSignedIn() &&
         request.resource.data.ownerId == request.auth.uid &&
@@ -45,9 +49,8 @@ service cloud.firestore {
 
       // Two allowed shapes for update: (a) the owner or already-paired member editing their own
       // trip, or (b) an unpaired second user joining via invite code - claiming an empty
-      // memberId slot without changing ownerId/inviteCode. The join case is a provisional
-      // reading of the not-yet-designed M8 (Pairing) flow - revisit once M8 defines how the
-      // invite-code lookup actually works.
+      // memberId slot without changing ownerId/inviteCode. Matches the M9 pairing flow
+      // (invite-code lookup via runQuery, then a full-document PATCH claiming memberId).
       allow update: if isSignedIn() && (
         resource.data.ownerId == request.auth.uid || resource.data.memberId == request.auth.uid ||
         (

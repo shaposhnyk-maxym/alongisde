@@ -8,7 +8,6 @@ import com.alongside.core.database.tripRepository
 import com.alongside.core.domain.pairing.PairingTripDataSource
 import com.alongside.core.domain.trip.TripRepository
 import com.alongside.core.network.firestore.FirestoreApi
-import com.alongside.core.network.firestore.FirestoreTokenProvider
 import com.alongside.core.network.queue.FirestoreSyncNetworkClient
 import com.alongside.core.network.queue.SyncNetworkClient
 import com.alongside.core.network.queue.SyncQueueProcessor
@@ -26,14 +25,12 @@ import org.koin.dsl.module
 
 /**
  * The data layer's bindings. Expects the assembling app to provide: the Ktor `HttpClient`,
- * `FirestoreConfig`, and `AlongsideDatabase`. The plain Room-backed repositories are built
- * inline from database factories and deliberately not bound - `TripRepository` must resolve
- * to the syncing decorator everywhere outside this module.
+ * `FirestoreConfig`, `FirestoreTokenProvider`, and `AlongsideDatabase`. The plain Room-backed
+ * repositories are built inline from database factories and deliberately not bound -
+ * `TripRepository` must resolve to the syncing decorator everywhere outside this module.
  */
 public val dataModule: Module =
     module {
-        // Auth token wiring is still the M5 seam: unauthenticated until it's connected.
-        single { FirestoreTokenProvider { null } }
         single { FirestoreApi(get(), get(), get()) }
         single<SyncNetworkClient> { FirestoreSyncNetworkClient(get()) }
         single { SyncQueueProcessor(get()) }

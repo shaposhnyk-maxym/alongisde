@@ -62,7 +62,14 @@ public class SyncCoordinator(
                     PreflightOutcome.REMOTE_WON
                 }
             }
-        } catch (_: FirestoreException) {
+        } catch (e: FirestoreException) {
+            val detail =
+                when (e) {
+                    is FirestoreException.ClientError -> "code=${e.code} status=${e.status} message=${e.message}"
+                    is FirestoreException.ServerError -> "code=${e.code} status=${e.status} message=${e.message}"
+                    else -> e.message.toString()
+                }
+            println("SyncCoordinator: preflight read threw ${e::class.simpleName}: $detail")
             PreflightOutcome.UNREACHABLE
         }
     }
