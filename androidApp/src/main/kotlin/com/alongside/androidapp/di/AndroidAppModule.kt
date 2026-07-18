@@ -13,8 +13,11 @@ import com.alongside.core.domain.pairing.PairingRepository
 import com.alongside.core.network.auth.FirebaseAuthApi
 import com.alongside.core.network.auth.FirebaseAuthConfig
 import com.alongside.core.network.auth.FirebaseAuthSessionRepository
+import com.alongside.core.network.auth.SessionFirestoreTokenProvider
+import com.alongside.core.network.auth.asIdTokenRefresher
 import com.alongside.core.network.client.createFirestoreHttpClient
 import com.alongside.core.network.firestore.FirestoreConfig
+import com.alongside.core.network.firestore.FirestoreTokenProvider
 import org.koin.dsl.module
 
 /**
@@ -35,6 +38,9 @@ public fun androidAppModule(
     single<AuthSessionRepository> { FirebaseAuthSessionRepository(get()) }
     single { getRoomDatabase(getDatabaseBuilder(context)) }
     single<AuthSessionCache> { get<AlongsideDatabase>().authSessionCache() }
+    single<FirestoreTokenProvider> {
+        SessionFirestoreTokenProvider(get(), get<FirebaseAuthApi>().asIdTokenRefresher())
+    }
     single { InviteCodeGenerator() }
     // PairingTripDataSource comes from dataModule (Room + Firestore) since M9.
     single<PairingRepository> { DefaultPairingRepository(get(), get()) }
