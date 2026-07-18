@@ -698,6 +698,25 @@ Places геокодинг, Gemini vision-опис.
   вулиці/району. `GeocodeResultTest.kt` — 6 тестів на всю пріоритетну
   логіку (раніше перевірялась лише побіжно, одним фікстур-кейсом у
   `GooglePlacesGeocodingClientTest`).
+- **Gemini vision-опис протестовано наскрізно реальним викликом**
+  (2026-07-19): 4 представницьких фото епізоду 1 (відібрані вручну за
+  тим самим алгоритмом, що `selectRepresentativePhotos`) + промпт у
+  точному форматі `GeminiVisionDescriptionClient` → реальний
+  `gemini-flash-latest`. Результат — саме "емоційний абзац, не сухий
+  опис", як вимагає концепт-документ, і природно підхопив
+  `placeName`-підказку з промпту. Дорогою знайдено й виправлено 2 реальні
+  проблеми (окремі коміти): (1) дефолтна модель `gemini-2.0-flash` мала
+  нульову free-tier квоту на реальному ключі — замінено на
+  `gemini-flash-latest`; (2) `GeminiVisionApi`/`GooglePlacesGeocodingApi`
+  не парсили JSON error envelope на HTTP 4xx/5xx, губили реальне
+  повідомлення (напр. "Your prepayment credits are depleted..." замість
+  generic "Too Many Requests") — виправлено за тим самим патерном, що
+  `FirebaseAuthApi` вже використовував.
+  **Білінг-нюанс, не пов'язаний з кодом**: проєкт, спільний з Firebase
+  (`alongside-b05f2`), автоматично стає Gemini API "Tier 1" (вимагає
+  prepay-баланс) сам факт наявності білінг-акаунта на проєкті — Free
+  Tier практично недоступний, поки білінг лишається підключеним.
+  Робочий ключ узято з окремого, не пов'язаного з Firebase проєкту.
 - **Немає UI/Orbit Container у M10** — Accept-критерії цього мілстоуна не
   мають жодної UI-вимоги (Timeline UI — M12); `feature:diary` отримав
   лише capture/processing-логіку.
