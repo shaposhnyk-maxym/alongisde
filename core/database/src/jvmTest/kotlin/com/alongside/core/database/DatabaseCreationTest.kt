@@ -149,6 +149,8 @@ class DatabaseCreationTest {
             placeName = "Rynok Square",
             description = "Wandering the old town",
             descriptionAttempts = 0,
+            syncStatus = SyncStatus.PENDING,
+            updatedAt = createdAt,
         )
 
     private fun photo(episodeId: String) =

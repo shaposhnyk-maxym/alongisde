@@ -1,7 +1,9 @@
 package com.alongside.core.domain.diary.processing
 
+import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.diary.Episode
 import com.alongside.core.model.diary.Photo
+import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -19,6 +21,7 @@ public class EpisodeProcessingPipeline
         private val visionDescriptionClient: EpisodeVisionDescriptionClient,
         private val imageBytesLoader: suspend (Photo) -> ByteArray,
         private val generateEpisodeId: () -> String = { Uuid.random().toString() },
+        private val clock: Clock = Clock.System,
     ) {
         public suspend fun process(
             diaryEntryId: String,
@@ -59,6 +62,8 @@ public class EpisodeProcessingPipeline
                 description = description,
                 descriptionAttempts = 1,
                 photos = cluster,
+                syncStatus = SyncStatus.PENDING,
+                updatedAt = clock.now(),
             )
         }
     }

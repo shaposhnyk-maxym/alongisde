@@ -798,19 +798,77 @@ capture, як є в M6 для photo/notification) — тобто GPS все од
 
 ---
 
-### M11 — Diary: symmetric unlock & sync integration
+### M11 — Diary: symmetric unlock & sync integration ✅ done
 `feature:diary` (частина 2) — логіка розблокування дня, інтеграція з
 data-layer.
 
 **Accept:**
-- Юніт-тести `DayUnlockState`: усі комбінації станів обох учасників
-  (жоден не готовий / один готовий / обидва готові), включно з
-  проміжним станом "дані є, але ще не засинкані"
-- Тест умови тригера пуша (обидва DiaryEntry цієї дати мають
-  `syncStatus == Synced`) — саме умова, без реального виклику FCM
-  (той — в M17)
-- Інтеграційний тест: DiaryEntry проходить повний шлях capture →
-  processing (M10) → sync (M9) → unlock-стан оновлюється коректно
+- [x] Юніт-тести `DayUnlockState`: усі комбінації станів обох учасників
+      (жоден не готовий / один готовий / обидва готові), включно з
+      проміжним станом "дані є, але ще не засинкані" —
+      `DayUnlockStateTest` (9: повна 3×3 матриця `DiaryDayStatus` —
+      NOT_READY/PENDING_SYNC/READY — через `resolveDayUnlockState`) +
+      `DiaryDayStatusTest` (5: мапінг `DiaryEntry?` → `DiaryDayStatus`
+      по всіх 4 значеннях `SyncStatus` і `null`)
+- [x] Тест умови тригера пуша (обидва DiaryEntry цієї дати мають
+      `syncStatus == Synced`) — саме умова, без реального виклику FCM
+      (той — в M17) — `PartnerReadyPushTriggerTest` (7),
+      `shouldTriggerPartnerReadyPush(own, partner)` в `core:domain`
+- [x] Інтеграційний тест: DiaryEntry проходить повний шлях capture →
+      processing (M10) → sync (M9) → unlock-стан оновлюється коректно —
+      `DiaryOfflineSyncIntegrationTest` (`data/src/jvmTest`): реальні
+      in-memory Room + `EpisodeProcessingPipeline` (фейкові
+      geocoding/vision клієнти) → `SyncingDiaryEntryRepository`/
+      `SyncingEpisodeRepository` → `SyncCoordinator` з обома
+      bindings (Diary + Episode) → `resolveDayUnlockState` LOCKED до
+      сінку, UNLOCKED і `shouldTriggerPartnerReadyPush == true` після
+
+**Відхилення від початкового плану (узгоджено з користувачем перед
+реалізацією):**
+- **Скоуп розширено на `Episode`-сінк, не лише `DiaryEntry`** —
+  буквальні Accept-критерії перевіряють умову розблокування/пуша лише
+  на `DiaryEntry.syncStatus`, але без синку `Episode` розблокований
+  день не мав би реального контенту (фото/назва місця/Gemini-опис —
+  усе на `Episode`, не на `DiaryEntry`) на пристрої партнера. M9
+  залишив `SyncCoordinator`/`SyncEntityBinding` entity-agnostic саме
+  для такого розширення (пошук binding'а по `collectionPath`), тож це
+  механічне повторення патерну Trip, не новий дизайн. Сама умова
+  розблокування/пуша лишається прив'язаною тільки до
+  `DiaryEntry.syncStatus`, як і вимагають Accept-критерії — `Episode`-
+  синк тільки робить контент фізично доступним.
+- **`Episode` отримав `syncStatus`/`updatedAt`** (яких не було взагалі,
+  на відміну від Trip/DiaryEntry, що мали `syncStatus` з M1/M2 і лише
+  `updatedAt` з M9) — нова міграція `MIGRATION_5_6` (schema v5→v6):
+  `syncStatus` бекфілиться як `PENDING` (чесно — локальні епізоди до
+  M11 ще не пушились), `updatedAt` бекфілиться з `endTime` (немає
+  `createdAt` на Episode, на відміну від Trip/DiaryEntry, звідки M9
+  бекфілив). `EpisodeProcessingPipeline` отримав `clock`-параметр
+  (дефолт `Clock.System`, той самий патерн, що `SyncingTripRepository`)
+  для проставлення цих полів при створенні епізоду.
+- **`Episode.photos` синкається як embedded-масив, не окрема
+  колекція** — на відміну від Room, де `Photo` живе в окремій
+  FK+cascade таблиці (M2), у Firestore немає `photos`-колекції
+  (задокументовано коментарем у `firebase/firestore.rules` ще з M9) —
+  `EpisodeFirestoreMapper` кодує `photos` як `ArrayValue` з `MapValue`
+  на кожне фото.
+- **`DiaryDayStatus` — 3 стани, не 2** (`NOT_READY`/`PENDING_SYNC`/
+  `READY`, було `NOT_READY`/`READY` з M1) — `PENDING_SYNC` покриває
+  одразу `PENDING`/`SYNCING`/`FAILED` з `SyncStatus`: з погляду правила
+  розблокування "ще не з'явилось на пристрої партнера" — це один і той
+  самий стан, деталізація тут не потрібна.
+- **`isDayUnlocked` (M1) перейменовано/замінено на
+  `resolveDayUnlockState`**, що повертає новий `DayUnlockState`
+  (`LOCKED`/`UNLOCKED`) замість `Boolean` — жодних викликів поза його
+  власними тестами не існувало (Timeline UI, який його реально
+  споживатиме, — M12), тож заміна на місці без backward-compat шва.
+- **Немає нового UI/Orbit Container** (той самий підхід, що в M10) —
+  Accept-критерії M11 суто про domain-логіку й data-layer; `feature:diary`
+  так і не отримав `presentation/`-пакету — це M12.
+- **`firestore.rules` не змінювались** — правила для `diaryEntries` й
+  `episodes` вже існували з M9 (закладені саме під цей мілстоун,
+  включно з коментарем "Revisit when M11 ... lands"), включно з
+  усвідомленим боргом (симетричний unlock не форситься на
+  Firestore-рівні, лишається client/domain-layer concern).
 
 ---
 

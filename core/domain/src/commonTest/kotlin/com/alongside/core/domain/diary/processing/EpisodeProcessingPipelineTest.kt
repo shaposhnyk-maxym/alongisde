@@ -1,10 +1,12 @@
 package com.alongside.core.domain.diary.processing
 
+import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.diary.Photo
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 
@@ -43,6 +45,12 @@ private class FakeEpisodeVisionDescriptionClient(
     }
 }
 
+private val FIXED_NOW = Instant.fromEpochMilliseconds(1_752_700_000_000)
+
+private object FixedClock : Clock {
+    override fun now(): Instant = FIXED_NOW
+}
+
 class EpisodeProcessingPipelineTest {
     private val baseTime = Instant.fromEpochMilliseconds(1_752_600_000_000)
 
@@ -68,6 +76,7 @@ class EpisodeProcessingPipelineTest {
                     visionDescriptionClient = vision,
                     imageBytesLoader = { byteArrayOf(1) },
                     generateEpisodeId = { "episode-1" },
+                    clock = FixedClock,
                 )
             val photos = listOf(photo("p1", 0), photo("p2", 10))
 
@@ -82,6 +91,8 @@ class EpisodeProcessingPipelineTest {
             assertEquals(1, episode.descriptionAttempts)
             assertEquals(photos, episode.photos)
             assertEquals(1, geocoding.queries.size)
+            assertEquals(SyncStatus.PENDING, episode.syncStatus)
+            assertEquals(FIXED_NOW, episode.updatedAt)
         }
 
     @Test

@@ -37,3 +37,18 @@ internal val MIGRATION_4_5: Migration =
             connection.execSQL("ALTER TABLE `episodes` ADD COLUMN `descriptionAttempts` INTEGER NOT NULL DEFAULT 0")
         }
     }
+
+/**
+ * v5 -> v6 (M11): syncStatus + updatedAt on episodes, so Episode can join Trip/DiaryEntry in the
+ * sync-queue pipeline. Episode had no createdAt to backfill updatedAt from (unlike M9's trio) -
+ * endTime is the closest existing timestamp. Pre-M11 local episodes haven't been pushed to
+ * Firestore yet, so PENDING is the honest starting syncStatus, not a placeholder to overwrite.
+ */
+internal val MIGRATION_5_6: Migration =
+    object : Migration(5, 6) {
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL("ALTER TABLE `episodes` ADD COLUMN `syncStatus` TEXT NOT NULL DEFAULT 'PENDING'")
+            connection.execSQL("ALTER TABLE `episodes` ADD COLUMN `updatedAt` INTEGER NOT NULL DEFAULT 0")
+            connection.execSQL("UPDATE `episodes` SET `updatedAt` = `endTime`")
+        }
+    }

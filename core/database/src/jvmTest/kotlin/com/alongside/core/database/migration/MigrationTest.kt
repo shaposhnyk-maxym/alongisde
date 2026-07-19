@@ -118,7 +118,7 @@ class MigrationTest {
             .databaseBuilder<AlongsideDatabase>(name = dbFile.absolutePath)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
-            .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
+            .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
             .build()
 
     @Test
@@ -176,7 +176,7 @@ class MigrationTest {
                     .databaseBuilder<AlongsideDatabase>(name = v4File.absolutePath)
                     .setDriver(BundledSQLiteDriver())
                     .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(MIGRATION_4_5)
+                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6)
                     .build()
             try {
                 val episode = database.episodeDao().getById("episode-1")
@@ -186,6 +186,79 @@ class MigrationTest {
                 v4File.delete()
             }
         }
+
+    @Test
+    fun `migration 5 to 6 backfills syncStatus PENDING and updatedAt from endTime on existing episodes`() =
+        runTest {
+            val v5File = File.createTempFile("migration-test-v5", ".db")
+            v5File.delete()
+            createVersion5Database(v5File)
+            val database =
+                Room
+                    .databaseBuilder<AlongsideDatabase>(name = v5File.absolutePath)
+                    .setDriver(BundledSQLiteDriver())
+                    .setQueryCoroutineContext(Dispatchers.IO)
+                    .addMigrations(MIGRATION_5_6)
+                    .build()
+            try {
+                val episode = database.episodeDao().getById("episode-1")
+                assertEquals("PENDING", episode?.episode?.syncStatus?.name)
+                assertEquals(Instant.fromEpochMilliseconds(200), episode?.episode?.updatedAt)
+            } finally {
+                database.close()
+                v5File.delete()
+            }
+        }
+
+    private fun createVersion5Database(file: File) {
+        val connection = BundledSQLiteDriver().open(file.absolutePath)
+        try {
+            connection.createVersion4SyncableTables()
+            connection.createVersion5AuxiliaryTables()
+            connection.insertVersion5Row()
+            connection.execSQL("PRAGMA user_version = 5")
+        } finally {
+            connection.close()
+        }
+    }
+
+    private fun SQLiteConnection.createVersion5AuxiliaryTables() {
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `episodes` (`id` TEXT NOT NULL, `diaryEntryId` TEXT NOT NULL, " +
+                "`startTime` INTEGER NOT NULL, `endTime` INTEGER NOT NULL, `latitude` REAL NOT NULL, " +
+                "`longitude` REAL NOT NULL, `placeName` TEXT, `description` TEXT, " +
+                "`descriptionAttempts` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        )
+        execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_episodes_diaryEntryId` ON `episodes` (`diaryEntryId`)",
+        )
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `photos` (`id` TEXT NOT NULL, `episodeId` TEXT NOT NULL, " +
+                "`uri` TEXT NOT NULL, `takenAt` INTEGER NOT NULL, `latitude` REAL NOT NULL, " +
+                "`longitude` REAL NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`episodeId`) REFERENCES " +
+                "`episodes`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        )
+        execSQL("CREATE INDEX IF NOT EXISTS `index_photos_episodeId` ON `photos` (`episodeId`)")
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `push_tokens` (`userId` TEXT NOT NULL, `token` TEXT NOT NULL, " +
+                "`platform` TEXT NOT NULL, `syncStatus` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`userId`))",
+        )
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `auth_session` (`id` TEXT NOT NULL, `uid` TEXT NOT NULL, " +
+                "`email` TEXT, `displayName` TEXT, `photoUrl` TEXT, `idToken` TEXT NOT NULL, " +
+                "`refreshToken` TEXT, `expiresInSeconds` INTEGER NOT NULL, `issuedAt` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`id`))",
+        )
+    }
+
+    private fun SQLiteConnection.insertVersion5Row() {
+        execSQL(
+            "INSERT INTO episodes (id, diaryEntryId, startTime, endTime, latitude, longitude, " +
+                "placeName, description, descriptionAttempts) VALUES ('episode-1', 'entry-1', 100, 200, " +
+                "49.0, 24.0, 'Rynok Square', 'Wandering the old town', 0)",
+        )
+    }
 
     private fun createVersion4Database(file: File) {
         val connection = BundledSQLiteDriver().open(file.absolutePath)

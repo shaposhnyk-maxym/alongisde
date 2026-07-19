@@ -6,6 +6,7 @@ import com.alongside.core.database.AlongsideDatabase
 import com.alongside.core.database.entity.EpisodeEntity
 import com.alongside.core.database.entity.EpisodeWithPhotos
 import com.alongside.core.database.entity.PhotoEntity
+import com.alongside.core.model.SyncStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
@@ -50,6 +51,8 @@ class EpisodeDaoTest {
         placeName = "Rynok Square",
         description = "Wandering the old town",
         descriptionAttempts = 0,
+        syncStatus = SyncStatus.PENDING,
+        updatedAt = Instant.fromEpochMilliseconds(1_752_607_200_000),
     )
 
     private fun photoEntity(
