@@ -1,16 +1,24 @@
 package com.alongside.data.di
 
 import com.alongside.core.database.AlongsideDatabase
+import com.alongside.core.database.diaryEntryRepository
+import com.alongside.core.database.episodeRepository
 import com.alongside.core.database.pairingTripLocalDataSource
 import com.alongside.core.database.sync.SyncOperationStore
 import com.alongside.core.database.syncOperationStore
 import com.alongside.core.database.tripRepository
+import com.alongside.core.domain.diary.DiaryEntryRepository
+import com.alongside.core.domain.diary.EpisodeRepository
 import com.alongside.core.domain.pairing.PairingTripDataSource
 import com.alongside.core.domain.trip.TripRepository
 import com.alongside.core.network.firestore.FirestoreApi
 import com.alongside.core.network.queue.FirestoreSyncNetworkClient
 import com.alongside.core.network.queue.SyncNetworkClient
 import com.alongside.core.network.queue.SyncQueueProcessor
+import com.alongside.data.diary.DiaryEntrySyncEntityBinding
+import com.alongside.data.diary.SyncingDiaryEntryRepository
+import com.alongside.data.episode.EpisodeSyncEntityBinding
+import com.alongside.data.episode.SyncingEpisodeRepository
 import com.alongside.data.pairing.FirestorePairingRemoteDataSource
 import com.alongside.data.pairing.FirestorePairingTripDataSource
 import com.alongside.data.pairing.PairingRemoteDataSource
@@ -39,13 +47,21 @@ public val dataModule: Module =
         single<TripRepository> {
             SyncingTripRepository(local = get<AlongsideDatabase>().tripRepository(), store = get())
         }
+        single<DiaryEntryRepository> {
+            SyncingDiaryEntryRepository(local = get<AlongsideDatabase>().diaryEntryRepository(), store = get())
+        }
+        single<EpisodeRepository> {
+            SyncingEpisodeRepository(local = get<AlongsideDatabase>().episodeRepository(), store = get())
+        }
         single<SyncEntityBinding> { TripSyncEntityBinding(get<AlongsideDatabase>().tripRepository()) }
+        single<SyncEntityBinding> { DiaryEntrySyncEntityBinding(get<AlongsideDatabase>().diaryEntryRepository()) }
+        single<SyncEntityBinding> { EpisodeSyncEntityBinding(get<AlongsideDatabase>().episodeRepository()) }
         single {
             SyncCoordinator(
                 store = get(),
                 processor = get(),
                 remoteReader = get(),
-                bindings = listOf(get<SyncEntityBinding>()),
+                bindings = getAll<SyncEntityBinding>(),
             )
         }
         single<PairingRemoteDataSource> { FirestorePairingRemoteDataSource(get()) }
