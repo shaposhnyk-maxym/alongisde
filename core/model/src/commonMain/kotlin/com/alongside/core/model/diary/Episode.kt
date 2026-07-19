@@ -1,5 +1,6 @@
 package com.alongside.core.model.diary
 
+import com.alongside.core.model.SyncStatus
 import kotlin.time.Instant
 
 public data class Episode(
@@ -13,4 +14,6 @@ public data class Episode(
     val description: String?,
     val descriptionAttempts: Int,
     val photos: List<Photo>,
+    val syncStatus: SyncStatus,
+    val updatedAt: Instant,
 )

@@ -24,12 +24,17 @@ import com.alongside.core.database.entity.SyncOperationEntity
 import com.alongside.core.database.entity.TripEntity
 import com.alongside.core.database.migration.MIGRATION_3_4
 import com.alongside.core.database.migration.MIGRATION_4_5
+import com.alongside.core.database.migration.MIGRATION_5_6
 import com.alongside.core.database.repository.AuthSessionCacheImpl
+import com.alongside.core.database.repository.DiaryEntryRepositoryImpl
+import com.alongside.core.database.repository.EpisodeRepositoryImpl
 import com.alongside.core.database.repository.RoomPairingTripDataSource
 import com.alongside.core.database.repository.SyncOperationStoreImpl
 import com.alongside.core.database.repository.TripRepositoryImpl
 import com.alongside.core.database.sync.SyncOperationStore
 import com.alongside.core.domain.auth.AuthSessionCache
+import com.alongside.core.domain.diary.DiaryEntryRepository
+import com.alongside.core.domain.diary.EpisodeRepository
 import com.alongside.core.domain.pairing.PairingTripDataSource
 import com.alongside.core.domain.trip.TripRepository
 import kotlinx.coroutines.Dispatchers
@@ -47,7 +52,7 @@ internal const val DATABASE_FILE_NAME = "alongside.db"
         AuthSessionEntity::class,
         SyncOperationEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 @TypeConverters(AlongsideTypeConverters::class)
@@ -80,7 +85,7 @@ public fun getRoomDatabase(builder: RoomDatabase.Builder<AlongsideDatabase>): Al
     builder
         .setDriver(BundledSQLiteDriver())
         .setQueryCoroutineContext(Dispatchers.Default)
-        .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
+        .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
         .build()
 
 /** Factory rather than a public [AuthSessionCacheImpl] - keeps the Room-backed impl an internal detail. */
@@ -88,6 +93,12 @@ public fun AlongsideDatabase.authSessionCache(): AuthSessionCache = AuthSessionC
 
 /** Room-backed local [TripRepository] - the `data` module wraps it with sync-queue enqueueing. */
 public fun AlongsideDatabase.tripRepository(): TripRepository = TripRepositoryImpl(this)
+
+/** Room-backed local [DiaryEntryRepository] - the `data` module wraps it with sync-queue enqueueing. */
+public fun AlongsideDatabase.diaryEntryRepository(): DiaryEntryRepository = DiaryEntryRepositoryImpl(this)
+
+/** Room-backed local [EpisodeRepository] - the `data` module wraps it with sync-queue enqueueing. */
+public fun AlongsideDatabase.episodeRepository(): EpisodeRepository = EpisodeRepositoryImpl(this)
 
 /** Local (Room) side of pairing lookups - the `data` module composes it with the Firestore side. */
 public fun AlongsideDatabase.pairingTripLocalDataSource(): PairingTripDataSource = RoomPairingTripDataSource(this)

@@ -3,6 +3,7 @@ package com.alongside.core.database.repository
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.alongside.core.database.AlongsideDatabase
+import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.diary.Episode
 import com.alongside.core.model.diary.Photo
 import kotlinx.coroutines.Dispatchers
@@ -59,6 +60,8 @@ class EpisodeRepositoryImplTest {
         description = "Wandering the old town",
         descriptionAttempts = 0,
         photos = photos,
+        syncStatus = SyncStatus.PENDING,
+        updatedAt = Instant.fromEpochMilliseconds(1_752_607_200_000),
     )
 
     @Test
