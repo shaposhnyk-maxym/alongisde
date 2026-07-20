@@ -11,6 +11,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.seconds
 
 // runBlocking, not runTest: runTest's virtual-time scheduler falsely times out
 // Ktor HttpTimeout against MockEngine (see the M3 note in docs/roadmap.md).
@@ -180,5 +181,117 @@ class GeminiVisionApiTest {
             assertFailsWith<GeminiException.MalformedResponse> {
                 api.generateContent(request)
             }
+        }
+
+    // --- Retry on transient (5xx) failures ---
+
+    @Test
+    fun `retries a 503 and succeeds once the server recovers`() =
+        runBlocking {
+            var callCount = 0
+            val api =
+                testGeminiVisionApi {
+                    callCount++
+                    if (callCount == 1) {
+                        respondJson(
+                            """{"error": {"code": 503, "message": "overloaded", "status": "UNAVAILABLE"}}""",
+                            HttpStatusCode.ServiceUnavailable,
+                        )
+                    } else {
+                        respondJson(okResponseJson)
+                    }
+                }
+
+            val response = api.generateContent(request)
+
+            assertEquals(2, callCount)
+            assertEquals(
+                "A warm afternoon wandering the old town together.",
+                response.candidates
+                    .single()
+                    .content
+                    ?.parts
+                    ?.single()
+                    ?.text,
+            )
+        }
+
+    @Test
+    fun `gives up after maxAttempts of persistent 503s and throws ServerError`() =
+        runBlocking<Unit> {
+            var callCount = 0
+            val api =
+                testGeminiVisionApi(maxAttempts = 3) {
+                    callCount++
+                    respondJson(
+                        """{"error": {"code": 503, "message": "overloaded", "status": "UNAVAILABLE"}}""",
+                        HttpStatusCode.ServiceUnavailable,
+                    )
+                }
+
+            assertFailsWith<GeminiException.ServerError> {
+                api.generateContent(request)
+            }
+            assertEquals(3, callCount)
+        }
+
+    @Test
+    fun `sleeps between retries with an increasing backoff`() =
+        runBlocking {
+            var callCount = 0
+            val sleptDurations = mutableListOf<kotlin.time.Duration>()
+            val api =
+                testGeminiVisionApi(maxAttempts = 3, sleep = { sleptDurations += it }) {
+                    callCount++
+                    if (callCount < 3) {
+                        respondJson(
+                            """{"error": {"code": 503, "message": "overloaded", "status": "UNAVAILABLE"}}""",
+                            HttpStatusCode.ServiceUnavailable,
+                        )
+                    } else {
+                        respondJson(okResponseJson)
+                    }
+                }
+
+            api.generateContent(request)
+
+            assertEquals(2, sleptDurations.size)
+            assertTrue(sleptDurations[0] >= 1.seconds)
+            assertTrue(sleptDurations[1] >= 2.seconds)
+        }
+
+    @Test
+    fun `does not retry a 4xx client error`() =
+        runBlocking<Unit> {
+            var callCount = 0
+            val api =
+                testGeminiVisionApi {
+                    callCount++
+                    respondJson(
+                        """{"error": {"code": 400, "message": "invalid api key", "status": "INVALID_ARGUMENT"}}""",
+                        HttpStatusCode.BadRequest,
+                    )
+                }
+
+            assertFailsWith<GeminiException.ClientError> {
+                api.generateContent(request)
+            }
+            assertEquals(1, callCount)
+        }
+
+    @Test
+    fun `does not retry a malformed response`() =
+        runBlocking<Unit> {
+            var callCount = 0
+            val api =
+                testGeminiVisionApi {
+                    callCount++
+                    respondJson("not json at all")
+                }
+
+            assertFailsWith<GeminiException.MalformedResponse> {
+                api.generateContent(request)
+            }
+            assertEquals(1, callCount)
         }
 }

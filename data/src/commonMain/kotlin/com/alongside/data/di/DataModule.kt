@@ -7,6 +7,7 @@ import com.alongside.core.database.pairingTripLocalDataSource
 import com.alongside.core.database.sync.SyncOperationStore
 import com.alongside.core.database.syncOperationStore
 import com.alongside.core.database.tripRepository
+import com.alongside.core.domain.diary.DiaryContentPuller
 import com.alongside.core.domain.diary.DiaryEntryRepository
 import com.alongside.core.domain.diary.EpisodeRepository
 import com.alongside.core.domain.pairing.PairingTripDataSource
@@ -16,6 +17,7 @@ import com.alongside.core.network.queue.FirestoreSyncNetworkClient
 import com.alongside.core.network.queue.SyncNetworkClient
 import com.alongside.core.network.queue.SyncQueueProcessor
 import com.alongside.data.diary.DiaryEntrySyncEntityBinding
+import com.alongside.data.diary.FirestoreDiaryContentPuller
 import com.alongside.data.diary.SyncingDiaryEntryRepository
 import com.alongside.data.episode.EpisodeSyncEntityBinding
 import com.alongside.data.episode.SyncingEpisodeRepository
@@ -29,6 +31,7 @@ import com.alongside.data.sync.SyncEntityBinding
 import com.alongside.data.trip.SyncingTripRepository
 import com.alongside.data.trip.TripSyncEntityBinding
 import org.koin.core.module.Module
+import org.koin.dsl.bind
 import org.koin.dsl.module
 
 /**
@@ -53,9 +56,26 @@ public val dataModule: Module =
         single<EpisodeRepository> {
             SyncingEpisodeRepository(local = get<AlongsideDatabase>().episodeRepository(), store = get())
         }
-        single<SyncEntityBinding> { TripSyncEntityBinding(get<AlongsideDatabase>().tripRepository()) }
-        single<SyncEntityBinding> { DiaryEntrySyncEntityBinding(get<AlongsideDatabase>().diaryEntryRepository()) }
-        single<SyncEntityBinding> { EpisodeSyncEntityBinding(get<AlongsideDatabase>().episodeRepository()) }
+        single<DiaryContentPuller> {
+            FirestoreDiaryContentPuller(
+                api = get(),
+                localDiaryEntryRepository = get<AlongsideDatabase>().diaryEntryRepository(),
+                localEpisodeRepository = get<AlongsideDatabase>().episodeRepository(),
+            )
+        }
+        // bind SyncEntityBinding::class, not single<SyncEntityBinding> { ... } - three
+        // registrations of the exact same type with no qualifier silently overwrite each other in
+        // Koin's registry (only the last-declared survives getAll<SyncEntityBinding>()); binding
+        // the interface as a SECONDARY type on each concrete single keeps them each individually
+        // addressable, so getAll correctly aggregates all three. Confirmed the hard way - this
+        // was previously written as single<SyncEntityBinding> { ... } x3, silently leaving only
+        // EpisodeSyncEntityBinding (the last one) in SyncCoordinator's bindings, so Trip/DiaryEntry
+        // never got their local syncStatus flipped to SYNCED after a successful push.
+        single { TripSyncEntityBinding(get<AlongsideDatabase>().tripRepository()) } bind SyncEntityBinding::class
+        single {
+            DiaryEntrySyncEntityBinding(get<AlongsideDatabase>().diaryEntryRepository())
+        } bind SyncEntityBinding::class
+        single { EpisodeSyncEntityBinding(get<AlongsideDatabase>().episodeRepository()) } bind SyncEntityBinding::class
         single {
             SyncCoordinator(
                 store = get(),

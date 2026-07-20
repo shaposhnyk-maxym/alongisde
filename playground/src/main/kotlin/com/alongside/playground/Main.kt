@@ -6,7 +6,10 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,14 +17,26 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -45,6 +60,8 @@ import com.alongside.core.ui.component.OverlineLabelTone
 import com.alongside.core.ui.component.PagerDots
 import com.alongside.core.ui.component.PaperCard
 import com.alongside.core.ui.component.StorySegmentProgress
+import com.alongside.core.ui.component.rememberZoomableState
+import com.alongside.core.ui.component.zoomable
 import com.alongside.core.ui.theme.AlongsideSpacing
 import com.alongside.core.ui.theme.AlongsideTheme
 import com.alongside.core.ui.theme.alongsideColors
@@ -86,6 +103,7 @@ private fun PlaygroundContent() {
                 MatcherSection()
                 StatusSection()
                 AnimationsSection()
+                PhotoGallerySection()
             }
         }
     }
@@ -276,6 +294,88 @@ private fun AnimationsSection() {
                 }
             }
         }
+    }
+}
+
+private val GalleryPhotoColors =
+    listOf(
+        Brush.linearGradient(listOf(Color(0xFFE2764A), Color(0xFF8A3A1F))),
+        Brush.linearGradient(listOf(Color(0xFF4A7CE2), Color(0xFF1F3A8A))),
+        Brush.linearGradient(listOf(Color(0xFF4AE28A), Color(0xFF1F8A4A))),
+        Brush.linearGradient(listOf(Color(0xFFE2C94A), Color(0xFF8A7A1F))),
+        Brush.linearGradient(listOf(Color(0xFFB04AE2), Color(0xFF5A1F8A))),
+    )
+
+/**
+ * Gallery UI iteration playground (docs/roadmap.md M12.9): normal-size thumbnails in a lazy
+ * horizontal grid, tap one to open a fullscreen pinch/double-tap-zoomable, swipeable viewer -
+ * exercises [zoomable]/[rememberZoomableState] from core:ui directly with plain colored content
+ * (no Coil network setup needed here) so the gesture/layout feel can be tuned live via hot reload
+ * before wiring the real thing (AsyncPhotoTile/FullscreenPhotoViewer) into feature:diary.
+ */
+@Composable
+private fun PhotoGallerySection() {
+    var openIndex by remember { mutableStateOf<Int?>(null) }
+
+    Section(title = "Photo gallery") {
+        LazyHorizontalGrid(
+            rows = GridCells.Fixed(2),
+            modifier = Modifier.size(360.dp, 200.dp),
+            horizontalArrangement = Arrangement.spacedBy(AlongsideSpacing.xs),
+            verticalArrangement = Arrangement.spacedBy(AlongsideSpacing.xs),
+        ) {
+            items(GalleryPhotoColors.size) { index ->
+                Box(
+                    modifier =
+                        Modifier
+                            .size(96.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(GalleryPhotoColors[index])
+                            .clickable { openIndex = index },
+                )
+            }
+        }
+    }
+
+    val index = openIndex
+    if (index != null) {
+        Window(onCloseRequest = { openIndex = null }, title = "Fullscreen viewer") {
+            GalleryFullscreenDemo(initialIndex = index, onDismissRequest = { openIndex = null })
+        }
+    }
+}
+
+@Composable
+private fun GalleryFullscreenDemo(
+    initialIndex: Int,
+    onDismissRequest: () -> Unit,
+) {
+    val pagerState = rememberPagerState(initialPage = initialIndex, pageCount = { GalleryPhotoColors.size })
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+            val zoomState = rememberZoomableState()
+            val isCurrentPage = page == pagerState.currentPage
+            if (!isCurrentPage && zoomState.scale != 1f) zoomState.reset()
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(GalleryPhotoColors[page])
+                        .then(if (isCurrentPage) Modifier.zoomable(zoomState) else Modifier),
+            )
+        }
+        CircleIconButton(
+            onClick = onDismissRequest,
+            contentDescription = "Close",
+            modifier = Modifier.align(Alignment.TopEnd).padding(AlongsideSpacing.lg),
+        ) {
+            Text("✕")
+        }
+        PagerDots(
+            pageCount = GalleryPhotoColors.size,
+            selectedPage = pagerState.currentPage,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = AlongsideSpacing.xxl),
+        )
     }
 }
 

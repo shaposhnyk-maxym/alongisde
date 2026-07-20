@@ -62,6 +62,7 @@ public object EpisodeFirestoreMapper {
                     "takenAt" to FirestoreValue.TimestampValue(takenAt.toString()),
                     "latitude" to FirestoreValue.DoubleValue(latitude),
                     "longitude" to FirestoreValue.DoubleValue(longitude),
+                    "remoteUrl" to (remoteUrl?.let { FirestoreValue.StringValue(it) } ?: FirestoreValue.NullValue),
                 ),
             ),
         )
@@ -74,6 +75,7 @@ public object EpisodeFirestoreMapper {
             takenAt = Instant.parse(fields.requireTimestamp("takenAt")),
             latitude = fields.requireDouble("latitude"),
             longitude = fields.requireDouble("longitude"),
+            remoteUrl = (fields["remoteUrl"] as? FirestoreValue.StringValue)?.value,
         )
     }
 

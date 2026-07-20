@@ -18,6 +18,7 @@ internal data class DiaryEntryEntity(
     val syncStatus: SyncStatus,
     val createdAt: Instant,
     @ColumnInfo(defaultValue = "0") val updatedAt: Instant,
+    val closedAt: Instant? = null,
 )
 
 internal fun DiaryEntryEntity.toDomain(): DiaryEntry =
@@ -29,6 +30,7 @@ internal fun DiaryEntryEntity.toDomain(): DiaryEntry =
         syncStatus = syncStatus,
         createdAt = createdAt,
         updatedAt = updatedAt,
+        closedAt = closedAt,
     )
 
 internal fun DiaryEntry.toEntity(): DiaryEntryEntity =
@@ -40,4 +42,5 @@ internal fun DiaryEntry.toEntity(): DiaryEntryEntity =
         syncStatus = syncStatus,
         createdAt = createdAt,
         updatedAt = updatedAt,
+        closedAt = closedAt,
     )

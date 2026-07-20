@@ -25,6 +25,9 @@ import com.alongside.core.database.entity.TripEntity
 import com.alongside.core.database.migration.MIGRATION_3_4
 import com.alongside.core.database.migration.MIGRATION_4_5
 import com.alongside.core.database.migration.MIGRATION_5_6
+import com.alongside.core.database.migration.MIGRATION_6_7
+import com.alongside.core.database.migration.MIGRATION_7_8
+import com.alongside.core.database.migration.MIGRATION_8_9
 import com.alongside.core.database.repository.AuthSessionCacheImpl
 import com.alongside.core.database.repository.DiaryEntryRepositoryImpl
 import com.alongside.core.database.repository.EpisodeRepositoryImpl
@@ -52,7 +55,7 @@ internal const val DATABASE_FILE_NAME = "alongside.db"
         AuthSessionEntity::class,
         SyncOperationEntity::class,
     ],
-    version = 6,
+    version = 9,
     exportSchema = true,
 )
 @TypeConverters(AlongsideTypeConverters::class)
@@ -85,7 +88,7 @@ public fun getRoomDatabase(builder: RoomDatabase.Builder<AlongsideDatabase>): Al
     builder
         .setDriver(BundledSQLiteDriver())
         .setQueryCoroutineContext(Dispatchers.Default)
-        .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+        .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
         .build()
 
 /** Factory rather than a public [AuthSessionCacheImpl] - keeps the Room-backed impl an internal detail. */

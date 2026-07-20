@@ -10,11 +10,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -34,6 +37,7 @@ import com.alongside.core.ui.component.OverlineLabelTone
 import com.alongside.core.ui.component.PaperCard
 import com.alongside.core.ui.theme.AlongsideSpacing
 import com.alongside.core.ui.theme.alongsideColors
+import kotlinx.datetime.LocalDate
 
 private const val CARD_REVEAL_DELAY_MILLIS = 100L
 private val StepScreenTopPadding = AlongsideSpacing.xxl
@@ -105,6 +109,67 @@ internal fun ChoiceStep(
             onClick = onStartJoinFlow,
             modifier = Modifier.fillMaxWidth(),
             enabled = !isCreating,
+        )
+    }
+}
+
+// ─── Create · pick the trip's dates ────────────────────────────────────────────
+
+@Composable
+internal fun PickDatesStep(
+    startDate: LocalDate,
+    endDate: LocalDate,
+    onDatesChange: (LocalDate, LocalDate) -> Unit,
+    onConfirm: () -> Unit,
+    onBackToChoice: () -> Unit,
+) {
+    val pickerState =
+        rememberDateRangePickerState(
+            initialSelectedStartDateMillis = startDate.toUtcEpochMillis(),
+            initialSelectedEndDateMillis = endDate.toUtcEpochMillis(),
+        )
+
+    LaunchedEffect(pickerState.selectedStartDateMillis, pickerState.selectedEndDateMillis) {
+        val newStart = pickerState.selectedStartDateMillis?.toLocalDateFromUtcEpochMillis() ?: return@LaunchedEffect
+        val newEnd = pickerState.selectedEndDateMillis?.toLocalDateFromUtcEpochMillis() ?: return@LaunchedEffect
+        val unchanged = newStart == startDate && newEnd == endDate
+        if (!unchanged) onDatesChange(newStart, newEnd)
+    }
+
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .navigationBarsPadding()
+                .padding(
+                    start = AlongsideSpacing.lg,
+                    end = AlongsideSpacing.lg,
+                    top = StepScreenTopPadding,
+                    bottom = AlongsideSpacing.lg,
+                ),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        OverlineLabel(text = "Trip dates", tone = OverlineLabelTone.Accent)
+        Spacer(Modifier.height(AlongsideSpacing.lg))
+        DateRangePicker(
+            state = pickerState,
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .testTag("pairing-date-range-picker"),
+            showModeToggle = false,
+        )
+        Spacer(Modifier.height(AlongsideSpacing.md))
+        AlongsidePrimaryButton(
+            text = "Confirm Dates",
+            onClick = onConfirm,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = endDate >= startDate,
+        )
+        Spacer(Modifier.height(AlongsideSpacing.md))
+        AlongsideTextButton(
+            text = "Back",
+            onClick = onBackToChoice,
         )
     }
 }

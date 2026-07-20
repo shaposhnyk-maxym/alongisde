@@ -24,6 +24,9 @@ private const val CURSOR_BLINK_MILLIS = 500L
 /**
  * Reveals [text] one character at a time, [charDelayMillis] apart, then calls [onComplete].
  * With [showCursor] a blinking `_` trails the text — the diary's typewriter voice.
+ * [initiallyRevealed] shows the full text already typed on the first frame - previews/screenshots
+ * use it so goldens capture the finished layout instead of the blank pre-type frame (same pattern
+ * as [FadeUpReveal]).
  */
 @Composable
 public fun TypewriterText(
@@ -32,13 +35,18 @@ public fun TypewriterText(
     charDelayMillis: Long = 40L,
     style: TextStyle = LocalTextStyle.current,
     showCursor: Boolean = false,
+    initiallyRevealed: Boolean = false,
     onComplete: () -> Unit = {},
 ) {
-    var visibleCharCount by remember(text) { mutableIntStateOf(0) }
+    var visibleCharCount by remember(text) { mutableIntStateOf(if (initiallyRevealed) text.length else 0) }
     var cursorVisible by remember { mutableStateOf(true) }
     val currentOnComplete by rememberUpdatedState(onComplete)
 
-    LaunchedEffect(text, charDelayMillis) {
+    LaunchedEffect(text, charDelayMillis, initiallyRevealed) {
+        if (initiallyRevealed) {
+            currentOnComplete()
+            return@LaunchedEffect
+        }
         visibleCharCount = 0
         for (count in 1..text.length) {
             delay(charDelayMillis)

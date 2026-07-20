@@ -22,6 +22,8 @@ public object DiaryEntryFirestoreMapper {
             "date" to FirestoreValue.StringValue(entry.date.toString()),
             "createdAt" to FirestoreValue.TimestampValue(entry.createdAt.toString()),
             "updatedAt" to FirestoreValue.TimestampValue(entry.updatedAt.toString()),
+            "closedAt" to
+                (entry.closedAt?.let { FirestoreValue.TimestampValue(it.toString()) } ?: FirestoreValue.NullValue),
         )
 
     public fun fromDocument(document: FirestoreDocument): DiaryEntry {
@@ -34,6 +36,7 @@ public object DiaryEntryFirestoreMapper {
             syncStatus = SyncStatus.SYNCED,
             createdAt = Instant.parse(fields.requireTimestamp("createdAt")),
             updatedAt = Instant.parse(fields.requireTimestamp("updatedAt")),
+            closedAt = (fields["closedAt"] as? FirestoreValue.TimestampValue)?.value?.let { Instant.parse(it) },
         )
     }
 

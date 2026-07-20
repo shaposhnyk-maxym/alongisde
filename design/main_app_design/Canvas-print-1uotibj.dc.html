@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style data-omelette-print-defaults>
+@media print {
+  @page { margin: 0.5in; }
+  h1, h2, h3, h4, h5, h6 { break-after: avoid; }
+  figure, table, pre, blockquote, img, svg, tr, [class~="card" i] { break-inside: avoid; }
+  img, svg { max-width: 100%; }
+  p { orphans: 3; widows: 3; }
+}
+</style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: oklch(0.17 0.02 260); }
+  ::selection { background: oklch(0.68 0.15 45 / 0.35); }
+</style>
+</helmet>
+
+<div style="width:max-content;min-height:100vh;box-sizing:border-box;padding:96px 120px 160px;background-image:radial-gradient(oklch(0.24 0.02 260) 1px, transparent 1px);background-size:28px 28px;display:flex;flex-direction:column;gap:96px;font-family:'Manrope',sans-serif;">
+
+  <div style="display:flex;flex-direction:column;gap:8px;">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Alongside — mobile app</span>
+    <span style="font-family:'Newsreader',serif;font-size:38px;font-weight:500;color:oklch(0.96 0.01 85);">Main app, settings &amp; recap</span>
+    <span style="font-size:15px;color:oklch(0.72 0.02 260);max-width:640px;line-height:1.5;">Five bottom-nav destinations, Settings reached by icon, and the Stories-style recap triggered when a trip ends. Continues from the auth-gate board.</span>
+  </div>
+
+  <!-- ================= GROUP: MAIN APP ================= -->
+  <div style="display:flex;flex-direction:column;gap:32px;">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:0.16em;text-transform:uppercase;color:oklch(0.96 0.01 85);border-bottom:1px solid oklch(0.33 0.02 260);padding-bottom:10px;width:fit-content;">04 · Main app (bottom nav)</span>
+    <div style="display:flex;gap:56px;align-items:flex-start;flex-wrap:wrap;">
+
+      <!-- Home -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 13</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Home</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;box-sizing:border-box;padding:76px 22px 90px;display:flex;flex-direction:column;gap:22px;overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-family:'Newsreader',serif;font-style:italic;font-size:22px;color:oklch(0.97 0.01 85);">Alongside</span>
+              <div style="width:34px;height:34px;border-radius:50%;background:oklch(0.24 0.02 260);display:flex;align-items:center;justify-content:center;">
+                <div style="width:14px;height:14px;border-radius:50%;border:2px solid oklch(0.75 0.02 260);"></div>
+              </div>
+            </div>
+            <div style="background:oklch(0.23 0.02 260);border-radius:22px;padding:22px;display:flex;flex-direction:column;align-items:center;gap:10px;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.12em;color:oklch(0.72 0.02 260);text-transform:uppercase;">Trip day</span>
+              <div style="display:flex;gap:6px;">
+                <div style="width:38px;height:52px;border-radius:9px;background:oklch(0.28 0.02 260);position:relative;display:flex;align-items:center;justify-content:center;"><div style="position:absolute;left:0;right:0;top:50%;height:1px;background:oklch(0.14 0.01 260);"></div><span style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:600;color:oklch(0.68 0.15 45);">4</span></div>
+                <div style="width:38px;height:52px;border-radius:9px;background:oklch(0.28 0.02 260);position:relative;display:flex;align-items:center;justify-content:center;"><div style="position:absolute;left:0;right:0;top:50%;height:1px;background:oklch(0.14 0.01 260);"></div><span style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:600;color:oklch(0.68 0.15 45);">/7</span></div>
+              </div>
+              <span style="font-size:12.5px;color:oklch(0.7 0.02 260);">together since day 1 · Vinnytsia</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <span style="font-size:13px;color:oklch(0.72 0.02 260);text-transform:uppercase;letter-spacing:0.06em;">Today</span>
+              <div style="background:oklch(0.97 0.012 85);border-radius:18px;padding:16px;display:flex;gap:12px;align-items:center;">
+                <image-slot id="home-today-photo" shape="rounded" radius="12" placeholder="day photo" style="width:56px;height:56px;flex-shrink:0;"></image-slot>
+                <div style="display:flex;flex-direction:column;gap:2px;">
+                  <span style="font-size:15.5px;font-weight:600;color:oklch(0.22 0.02 60);">Day 4 · Vinnytsia</span>
+                  <span style="font-size:12.5px;color:oklch(0.48 0.02 60);">Both added photos — tap to open</span>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <span style="font-size:13px;color:oklch(0.72 0.02 260);text-transform:uppercase;letter-spacing:0.06em;">New matches</span>
+              <div style="display:flex;gap:10px;">
+                <div style="flex:1;background:oklch(0.23 0.02 260);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;">
+                  <image-slot id="home-match-1" shape="rounded" radius="10" placeholder="place" style="width:100%;height:64px;"></image-slot>
+                  <span style="font-size:12.5px;color:oklch(0.9 0.01 85);">Cafe Kyiv</span>
+                </div>
+                <div style="flex:1;background:oklch(0.23 0.02 260);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;">
+                  <image-slot id="home-match-2" shape="rounded" radius="10" placeholder="place" style="width:100%;height:64px;"></image-slot>
+                  <span style="font-size:12.5px;color:oklch(0.9 0.01 85);">Old Town</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- Timeline locked -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 14</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Timeline — locked day</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;box-sizing:border-box;padding:76px 0 90px;display:flex;flex-direction:column;gap:18px;overflow:hidden;">
+            <span style="font-family:'Newsreader',serif;font-size:22px;color:oklch(0.97 0.01 85);padding:0 22px;">Timeline</span>
+            <div style="display:flex;align-items:center;gap:14px;padding:0 8px;">
+              <div style="width:64px;flex-shrink:0;height:280px;background:oklch(0.23 0.02 260);border-radius:20px;opacity:0.4;transform:scale(0.9);"></div>
+              <div style="flex:1;height:340px;background:oklch(0.23 0.02 260);border-radius:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;">
+                <div style="width:46px;height:46px;border-radius:50%;border:2.5px dashed oklch(0.68 0.15 45);"></div>
+                <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.95 0.01 85);">Day 5 isn't ready yet</span>
+                <span style="font-size:12.5px;color:oklch(0.7 0.02 260);line-height:1.6;">Your partner is still out taking photos.<br/>You'll both see it the moment you're both done.</span>
+              </div>
+              <div style="width:64px;flex-shrink:0;height:280px;background:oklch(0.23 0.02 260);border-radius:20px;opacity:0.4;transform:scale(0.9);"></div>
+            </div>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- Timeline unlocked -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 15</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Timeline — unlocked day</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;box-sizing:border-box;padding:76px 22px 90px;display:flex;flex-direction:column;gap:16px;overflow:hidden;">
+            <div style="display:flex;flex-direction:column;gap:2px;">
+              <span style="font-family:'Newsreader',serif;font-size:24px;color:oklch(0.97 0.01 85);">Day 4 · Vinnytsia</span>
+              <span style="font-size:12.5px;color:oklch(0.7 0.02 260);">Ukraine · together</span>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <image-slot id="timeline-photo-1" shape="rounded" radius="14" placeholder="your photo" style="flex:1;height:150px;"></image-slot>
+              <image-slot id="timeline-photo-2" shape="rounded" radius="14" placeholder="their photo" style="flex:1;height:150px;"></image-slot>
+            </div>
+            <div style="background:oklch(0.23 0.02 260);border-radius:18px;padding:18px;flex:1;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:14.5px;color:oklch(0.9 0.01 85);line-height:1.7;">We wandered into the old quarter and found a courtyard full of cats and lemonade. Felt like the whole city slowed down just for us._</span>
+            </div>
+            <div style="display:flex;justify-content:center;gap:6px;">
+              <div style="width:6px;height:6px;border-radius:50%;background:oklch(0.4 0.02 260);"></div>
+              <div style="width:6px;height:6px;border-radius:50%;background:oklch(0.4 0.02 260);"></div>
+              <div style="width:6px;height:6px;border-radius:50%;background:oklch(0.4 0.02 260);"></div>
+              <div style="width:16px;height:6px;border-radius:3px;background:oklch(0.68 0.15 45);"></div>
+              <div style="width:6px;height:6px;border-radius:50%;background:oklch(0.4 0.02 260);"></div>
+            </div>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- Places -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 16</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Places</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;box-sizing:border-box;padding:76px 22px 90px;display:flex;flex-direction:column;gap:16px;overflow:hidden;">
+            <span style="font-family:'Newsreader',serif;font-size:24px;color:oklch(0.97 0.01 85);">Places</span>
+            <div style="background:oklch(0.68 0.15 45 / 0.15);border:1px solid oklch(0.68 0.15 45 / 0.4);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;">
+              <div style="width:22px;height:22px;border-radius:50%;background:oklch(0.68 0.15 45);flex-shrink:0;"></div>
+              <span style="font-size:12.5px;color:oklch(0.95 0.01 85);">Added "Rynok Square" from Google Maps</span>
+            </div>
+            <sc-for list="{{ placeGroups }}" as="grp" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <span style="font-size:12.5px;color:oklch(0.7 0.02 260);text-transform:uppercase;letter-spacing:0.06em;">{{ grp.city }}</span>
+                <sc-for list="{{ grp.items }}" as="p" hint-placeholder-count="2">
+                  <div style="background:oklch(0.97 0.012 85);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+                    <image-slot id="places-{{ p.id }}" shape="rounded" radius="9" placeholder="place" style="width:40px;height:40px;flex-shrink:0;"></image-slot>
+                    <span style="font-size:14.5px;color:oklch(0.22 0.02 60);">{{ p.name }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- Matcher -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 17</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Matcher</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;box-sizing:border-box;padding:76px 22px 60px;display:flex;flex-direction:column;gap:16px;overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-family:'Newsreader',serif;font-size:24px;color:oklch(0.97 0.01 85);">Matcher</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:oklch(0.7 0.02 260);">14 left</span>
+            </div>
+            <div style="position:relative;flex:1;">
+              <div style="position:absolute;inset:16px 8px;background:oklch(0.23 0.02 260);border-radius:22px;transform:rotate(3deg);"></div>
+              <div style="position:absolute;inset:16px 8px;background:oklch(0.23 0.02 260);border-radius:22px;transform:rotate(-2deg);"></div>
+              <div style="position:absolute;inset:8px;background:oklch(0.97 0.012 85);border-radius:22px;overflow:hidden;display:flex;flex-direction:column;">
+                <image-slot id="matcher-card-photo" shape="rect" placeholder="place photo" style="flex:1;"></image-slot>
+                <div style="padding:16px;display:flex;flex-direction:column;gap:2px;">
+                  <span style="font-size:18px;font-weight:600;color:oklch(0.22 0.02 60);">Rynok Square</span>
+                  <span style="font-size:12.5px;color:oklch(0.48 0.02 60);">Lviv, Ukraine</span>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:center;gap:26px;">
+              <div style="width:56px;height:56px;border-radius:50%;background:oklch(0.23 0.02 260);display:flex;align-items:center;justify-content:center;"><div style="width:20px;height:20px;position:relative;"><div style="position:absolute;width:100%;height:2.5px;background:oklch(0.75 0.02 260);top:50%;transform:translateY(-50%) rotate(45deg);"></div><div style="position:absolute;width:100%;height:2.5px;background:oklch(0.75 0.02 260);top:50%;transform:translateY(-50%) rotate(-45deg);"></div></div></div>
+              <div style="width:64px;height:64px;border-radius:50%;background:oklch(0.68 0.15 45);display:flex;align-items:center;justify-content:center;"><div style="width:22px;height:22px;border-radius:50% 50% 50% 0;background:#fff;transform:rotate(-45deg);"></div></div>
+            </div>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- Match list -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 18</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Match List</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;box-sizing:border-box;padding:76px 22px 90px;display:flex;flex-direction:column;gap:16px;overflow:hidden;">
+            <span style="font-family:'Newsreader',serif;font-size:24px;color:oklch(0.97 0.01 85);">Our Matches</span>
+            <sc-for list="{{ matches }}" as="m" hint-placeholder-count="3">
+              <div style="background:oklch(0.97 0.012 85);border-radius:16px;padding:12px;display:flex;align-items:center;gap:12px;margin-bottom:4px;">
+                <image-slot id="match-{{ m.id }}" shape="rounded" radius="10" placeholder="place" style="width:52px;height:52px;flex-shrink:0;"></image-slot>
+                <div style="display:flex;flex-direction:column;gap:2px;flex:1;">
+                  <span style="font-size:15px;font-weight:600;color:oklch(0.22 0.02 60);">{{ m.name }}</span>
+                  <span style="font-size:12px;color:oklch(0.48 0.02 60);">{{ m.city }}</span>
+                </div>
+                <div style="width:26px;height:26px;border-radius:50%;background:oklch(0.68 0.15 45);flex-shrink:0;"></div>
+              </div>
+            </sc-for>
+          </div>
+        </x-import>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= GROUP: SETTINGS & DEBUG ================= -->
+  <div style="display:flex;flex-direction:column;gap:32px;">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:0.16em;text-transform:uppercase;color:oklch(0.96 0.01 85);border-bottom:1px solid oklch(0.33 0.02 260);padding-bottom:10px;width:fit-content;">05 · Settings &amp; debug</span>
+    <div style="display:flex;gap:56px;align-items:flex-start;">
+
+      <!-- Settings -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 19</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Settings (owner view)</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" title="Settings" hint-size="402,874">
+          <div style="display:flex;flex-direction:column;gap:22px;padding:8px 0 24px;">
+            <div>
+              <span style="display:block;padding:4px 32px 6px;font-size:13px;color:oklch(0.4 0.02 60 / 0.6);text-transform:uppercase;">Profile</span>
+              <div style="background:#fff;border-radius:26px;margin:0 16px;overflow:hidden;">
+                <div style="display:flex;align-items:center;min-height:52px;padding:0 16px;font-size:17px;">Account &amp; permissions</div>
+              </div>
+            </div>
+            <div>
+              <span style="display:block;padding:4px 32px 6px;font-size:13px;color:oklch(0.4 0.02 60 / 0.6);text-transform:uppercase;">Notifications</span>
+              <div style="background:#fff;border-radius:26px;margin:0 16px;overflow:hidden;">
+                <div style="display:flex;align-items:center;min-height:52px;padding:0 16px;font-size:17px;">Push notifications</div>
+              </div>
+            </div>
+            <div>
+              <span style="display:block;padding:4px 32px 6px;font-size:13px;color:oklch(0.4 0.02 60 / 0.6);text-transform:uppercase;">Trip</span>
+              <div style="background:#fff;border-radius:26px;margin:0 16px;overflow:hidden;">
+                <div style="display:flex;align-items:center;min-height:52px;padding:0 16px;font-size:17px;color:oklch(0.6 0.13 45);border-bottom:0.5px solid rgba(60,60,67,0.12);">Leave Trip</div>
+                <div style="display:flex;align-items:center;min-height:52px;padding:0 16px;font-size:17px;color:oklch(0.55 0.2 25);">Delete Trip <span style="margin-left:auto;font-size:11px;font-family:'JetBrains Mono',monospace;color:oklch(0.55 0.02 60);text-transform:uppercase;">owner only</span></div>
+              </div>
+            </div>
+            <span style="text-align:center;font-size:12px;color:oklch(0.55 0.02 60);">Alongside v1.0.0 (42)</span>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- Debug menu -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 20 · dev-only</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Debug Menu</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;box-sizing:border-box;padding:76px 22px 90px;display:flex;flex-direction:column;gap:16px;overflow:hidden;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:14px solid oklch(0.68 0.15 45);"></div>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:oklch(0.68 0.15 45);letter-spacing:0.08em;">DEV BUILD — NOT SHIPPED</span>
+            </div>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:20px;color:oklch(0.96 0.01 85);">Debug Menu</span>
+            <div style="display:flex;flex-direction:column;gap:1px;background:oklch(0.33 0.02 260);border-radius:14px;overflow:hidden;">
+              <div style="background:oklch(0.23 0.02 260);padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:14px;color:oklch(0.9 0.01 85);">force_delete_all_trips()</div>
+              <div style="background:oklch(0.23 0.02 260);padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:14px;color:oklch(0.9 0.01 85);">clear_local_cache()</div>
+              <div style="background:oklch(0.23 0.02 260);padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:14px;color:oklch(0.9 0.01 85);">force_onboarding_replay()</div>
+              <div style="background:oklch(0.23 0.02 260);padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:14px;color:oklch(0.9 0.01 85);">simulate_symmetric_unlock()</div>
+            </div>
+            <span style="font-size:12px;color:oklch(0.6 0.02 260);line-height:1.6;">Reached via 5 taps on the version number in Settings. Excluded from release builds.</span>
+          </div>
+        </x-import>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= GROUP: RECAP ================= -->
+  <div style="display:flex;flex-direction:column;gap:32px;">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:0.16em;text-transform:uppercase;color:oklch(0.96 0.01 85);border-bottom:1px solid oklch(0.33 0.02 260);padding-bottom:10px;width:fit-content;">06 · Recap (Stories format)</span>
+    <div style="display:flex;gap:56px;align-items:flex-start;">
+
+      <!-- Recap intro -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 21 · Slide 1</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Recap — Intro</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;box-sizing:border-box;padding:70px 20px 30px;display:flex;flex-direction:column;gap:20px;">
+            <div style="display:flex;gap:4px;">
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.68 0.15 45);"></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.4 0.02 260);"></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.4 0.02 260);"></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.4 0.02 260);"></div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;">
+              <span style="font-family:'Newsreader',serif;font-style:italic;font-size:30px;color:oklch(0.98 0.01 85);line-height:1.25;">Your trip,<br/>together</span>
+              <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start;">
+                <sc-for list="{{ route }}" as="city" hint-placeholder-count="7">
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="width:7px;height:7px;border-radius:50%;background:oklch(0.68 0.15 45);"></div>
+                    <span style="font-size:14px;color:oklch(0.88 0.015 85);">{{ city }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- Recap parallel lives -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 22 · Slide 2</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Recap — Before Kyiv (pre-trip)</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;position:relative;">
+            <div style="position:absolute;inset:0;display:flex;">
+              <image-slot id="recap-parallel-a" shape="rect" placeholder="you, before the trip" style="flex:1;"></image-slot>
+              <image-slot id="recap-parallel-b" shape="rect" placeholder="them, before the trip" style="flex:1;"></image-slot>
+            </div>
+            <div style="position:absolute;left:50%;top:0;bottom:0;width:2px;background:oklch(0.17 0.02 260);"></div>
+            <div style="position:absolute;left:20px;right:20px;top:70px;display:flex;gap:4px;">
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.9 0.01 85/0.4);"></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.68 0.15 45);"></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.9 0.01 85/0.4);"></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.9 0.01 85/0.4);"></div>
+            </div>
+            <div style="position:absolute;left:16px;right:16px;bottom:44px;display:flex;flex-direction:column;gap:4px;text-align:center;">
+              <span style="font-family:'Newsreader',serif;font-style:italic;font-size:20px;color:#fff;">Weeks apart, before Kyiv</span>
+              <span style="font-size:13px;color:oklch(0.85 0.015 85);">The last night before you were finally in the same city</span>
+            </div>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- Recap day slide -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 23 · Slide 3</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Recap — Day highlight</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;position:relative;">
+            <image-slot id="recap-day-photo" shape="rect" placeholder="day collage" style="position:absolute;inset:0;"></image-slot>
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg, oklch(0.1 0.01 260/0.5) 0%, transparent 30%, transparent 70%, oklch(0.1 0.01 260/0.85) 100%);"></div>
+            <div style="position:absolute;left:20px;right:20px;top:70px;display:flex;gap:4px;">
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.9 0.01 85/0.4);"></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.9 0.01 85/0.4);"></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.68 0.15 45);"></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.9 0.01 85/0.4);"></div>
+            </div>
+            <div style="position:absolute;left:22px;right:22px;bottom:40px;display:flex;flex-direction:column;gap:6px;">
+              <span style="font-family:'Newsreader',serif;font-size:26px;color:#fff;">Day 3 · Ternopil</span>
+              <span style="font-size:14px;color:oklch(0.9 0.01 85);line-height:1.5;">"Lake at sunset, then the best cherry dumplings of the whole trip."</span>
+            </div>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- Recap final -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 24 · Final slide</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Recap — Back home</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;box-sizing:border-box;padding:70px 20px 40px;display:flex;flex-direction:column;gap:20px;">
+            <div style="display:flex;gap:4px;">
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.68 0.15 45);"></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.68 0.15 45);"></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.68 0.15 45);"></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.68 0.15 45);"></div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;">
+              <div style="width:96px;height:96px;border-radius:9999px;background:oklch(0.23 0.02 260);display:flex;align-items:center;justify-content:center;">
+                <span style="font-family:'JetBrains Mono',monospace;font-size:44px;font-weight:600;color:oklch(0.68 0.15 45);">7</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;">
+                <span style="font-family:'Newsreader',serif;font-size:26px;color:#fff;">Days together.</span>
+                <span style="font-size:14.5px;color:oklch(0.85 0.015 85);">Home again, already counting down to the next one.</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:-6px;">
+                <div style="width:26px;height:26px;border-radius:50%;background:oklch(0.68 0.15 45);"></div>
+                <div style="width:26px;height:26px;border-radius:50%;background:oklch(0.9 0.01 85);margin-left:-8px;"></div>
+              </div>
+            </div>
+          </div>
+        </x-import>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      placeGroups: [
+        { city: 'Lviv', items: [{ id: 'lv1', name: 'Rynok Square' }, { id: 'lv2', name: 'Lviv Coffee Mine' }] },
+        { city: 'Vinnytsia', items: [{ id: 'vn1', name: 'Roshen Fountain' }] },
+      ],
+      matches: [
+        { id: 'm1', name: 'Rynok Square', city: 'Lviv, Ukraine' },
+        { id: 'm2', name: 'Cafe Kyiv', city: 'Kyiv, Ukraine' },
+        { id: 'm3', name: 'Central Park', city: 'Chișinău, Moldova' },
+      ],
+      route: ['Rzeszów', 'Lviv', 'Ternopil', 'Vinnytsia', 'Zhmerynka', 'Kyiv', 'Chișinău'],
+    };
+  }
+}
+</script>
+<script>
+(async () => {
+  if (!document.title || !document.title.trim()) document.title = "Canvas";
+  // rAF raced with a short timeout: inside a cross-origin iframe (PrintMode),
+  // rAF can be throttled or paused even while the tab is focused, which would
+  // hang the scroll loop and never reach print(). Same pattern as
+  // buildExportSettleScript (export/shared.ts).
+  var raf = function () {
+    return Promise.race([
+      new Promise(function (r) { requestAnimationFrame(r); }),
+      new Promise(function (r) { setTimeout(r, 50); }),
+    ]);
+  };
+  var t0 = performance.now();
+  var mark = function (phase) {
+    var ms = Math.round(performance.now() - t0);
+    console.info('[autoprint]', phase, ms + 'ms');
+    try { parent.postMessage({ __omelette_autoprint: { phase: phase, ms: ms } }, '*'); } catch (e) {}
+  };
+  mark('start');
+  // Prepend so page-supplied @page / break rules (deck-stage's margin:0,
+  // author CSS) keep source-order precedence over the baseline.
+  const baseCss = document.createElement('style');
+  baseCss.textContent = "@media print {\n  figure, table { break-inside: avoid; }\n  *, *::before, *::after {\n    print-color-adjust: exact; -webkit-print-color-adjust: exact;\n    backdrop-filter: none !important; -webkit-backdrop-filter: none !important;\n    animation-delay: -99s !important; animation-duration: .001s !important;\n    animation-iteration-count: 1 !important; animation-fill-mode: both !important;\n    animation-play-state: running !important; transition-duration: 0s !important;\n  }\n}";
+  document.head.prepend(baseCss);
+  if (document.readyState === 'loading') {
+    await new Promise((r) => document.addEventListener('DOMContentLoaded', r, { once: true }));
+  }
+  let ds = document.querySelector('deck-stage');
+  // whenDefined never resolves when nothing registers the element, so only
+  // await it when a <deck-stage> tag exists (and race a timeout regardless).
+  if (ds && !customElements.get('deck-stage')) {
+    try {
+      await Promise.race([
+        customElements.whenDefined('deck-stage'),
+        new Promise((r) => setTimeout(r, 3000)),
+      ]);
+    } catch (e) {}
+    ds = document.querySelector('deck-stage');
+  }
+  // dc-runtime assigns window.DCLogic at init and mounts into #dc-root on
+  // DOMContentLoaded; settle on that subtree so React has rendered before
+  // print(). Non-DC pages fall through to weighing body.
+  const isDc = !ds && 'DCLogic' in window;
+  const settleRoot = ds || (isDc ? document.getElementById('dc-root') : null) || document.body;
+  if (settleRoot) {
+    // Weigh only content children — skip script/style/template so inline
+    // Babel/CSS doesn't register as stable "content" before the framework
+    // has mounted anything.
+    const MEDIA = 'img,svg,canvas,video,picture,iframe,embed,object';
+    const weigh = () => {
+      let text = 0, media = 0;
+      for (const c of settleRoot.children) {
+        const t = c.tagName;
+        if (t === 'SCRIPT' || t === 'STYLE' || t === 'TEMPLATE') continue;
+        text += (c.textContent || '').trim().length;
+        media += c.querySelectorAll(MEDIA).length + (c.matches(MEDIA) ? 1 : 0);
+      }
+      return text + media * 100;
+    };
+    // "Non-zero and stable" alone is not sufficient to mean rendered: generic
+    // body can carry a static shell while async main content is pending, and
+    // #dc-root can carry the root DC's static text while child refs are still
+    // .sc-placeholder boxes. Gate generic on readyState 'complete', and never
+    // accept stability while a dc-runtime placeholder is present.
+    const isGeneric = settleRoot === document.body;
+    // A placeholder whose fetch failed (.sc-placeholder-error inside) keeps
+    // .sc-placeholder forever — don't wait on it. JS loop, not :has(), so an
+    // engine without :has() support can't throw out of the while and skip
+    // print() entirely.
+    var pendingPlaceholders = function () {
+      var all = settleRoot.querySelectorAll('.sc-placeholder'), n = 0;
+      for (var i = 0; i < all.length; i++)
+        if (!all[i].querySelector('.sc-placeholder-error')) n++;
+      return n;
+    };
+    const deadline = Date.now() + 15000;
+    let last = -1, stable = 0;
+    while (Date.now() < deadline) {
+      const n = weigh();
+      const ready =
+        (!isGeneric || document.readyState === 'complete') &&
+        pendingPlaceholders() === 0;
+      if (n > 0 && n === last && ready) { if (++stable >= 2) break; } else { stable = 0; }
+      last = n;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+  }
+  mark('settle-done' + (settleRoot ? ' (errs=' + settleRoot.querySelectorAll('.sc-placeholder-error').length + ' pending=' + pendingPlaceholders() + ')' : ''));
+  // Project support.js may predate runtime default-seeding; push via bridge.
+  if (isDc && window.__dcSetProps && window.__dcRootName) {
+    try {
+      const dpEl = document.querySelector('script[data-dc-script]');
+      const meta = JSON.parse((dpEl && dpEl.getAttribute('data-props')) || '{}');
+      const bag = {};
+      for (const k in meta)
+        if (k[0] !== '$' && meta[k] && meta[k].default !== undefined)
+          bag[k] = meta[k].default;
+      if (Object.keys(bag).length) {
+        window.__dcSetProps(window.__dcRootName(), bag);
+        await new Promise((r) => setTimeout(r, 50));
+      }
+    } catch (e) {}
+  }
+  // Reveal content gated on scroll or visibility before printing. Lazy <img>,
+  // IntersectionObserver fade-ins, and collapsed <details> don't render while
+  // off-screen, so a long page would print with them blank or closed. Open
+  // every <details>, force native-lazy images eager, and scroll the document
+  // through its full height to trip lazy-load + IO; then wait (bounded) for the
+  // newly-triggered images. Inert for deck-stage (slides aren't scroll-gated).
+  try {
+    for (const d of document.querySelectorAll('details')) d.open = true;
+    for (const img of document.querySelectorAll('img[loading="lazy"]'))
+      img.loading = 'eager';
+    const scroller = document.scrollingElement || document.documentElement;
+    const full = Math.max(scroller.scrollHeight, document.body.scrollHeight);
+    const step = window.innerHeight || 800;
+    var scrollDeadline = Date.now() + 4000;
+    for (let y = 0; y <= full && Date.now() < scrollDeadline; y += step) {
+      window.scrollTo(0, y);
+      await raf();
+    }
+    window.scrollTo(0, 0);
+    await Promise.race([
+      Promise.all(
+        [...document.images].map((img) =>
+          img.complete
+            ? null
+            : new Promise((res) => {
+                img.addEventListener('load', res, { once: true });
+                img.addEventListener('error', res, { once: true });
+              })
+        )
+      ),
+      new Promise((r) => setTimeout(r, 4000)),
+    ]);
+  } catch (e) {}
+  mark('scroll-done');
+  try { await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 3000))]); } catch (e) {}
+  mark('fonts-done');
+  // Jump every animation to its end state so print() never captures a slide
+  // mid-entrance. Ordering matters: the 0s-transition style must be live
+  // BEFORE data-deck-active is set so attribute-keyed transitions don't
+  // start a (now-0s) run from the pre-active base.
+  const st = document.createElement('style');
+  st.textContent = '*,*::before,*::after{animation-delay:-99s !important;animation-duration:.001s !important;animation-iteration-count:1 !important;animation-fill-mode:both !important;animation-play-state:running !important;transition-duration:0s !important}';
+  document.head.appendChild(st);
+  for (const d of document.querySelectorAll('deck-stage')) {
+    for (const c of d.children) {
+      const t = c.tagName;
+      if (t === 'SCRIPT' || t === 'STYLE' || t === 'TEMPLATE') continue;
+      c.setAttribute('data-deck-active', '');
+    }
+  }
+  // Re-append deck-stage's @page last so no author @page can add a margin and
+  // spill each full-bleed slide onto two sheets. Backstop for old copies.
+  if (ds) {
+    let pg = document.getElementById('deck-stage-print-page');
+    if (!pg) {
+      pg = document.createElement('style');
+      pg.textContent = '@page{size:' + (+ds.getAttribute('width') || 1920) +
+        'px ' + (+ds.getAttribute('height') || 1080) + 'px;margin:0}';
+    }
+    document.body.appendChild(pg);
+  }
+  try {
+    const sweep = () => {
+      for (const a of document.getAnimations()) {
+        try { a.finish(); } catch (e) {
+          try { a.currentTime = (a.effect && a.effect.getComputedTiming().duration) || 0; a.pause(); } catch (e2) {}
+        }
+      }
+    };
+    sweep();
+    await raf();
+    sweep();
+    await raf();
+  } catch (e) {}
+  // A document that owns its print CSS (the doc-page starter injects the
+  // meta at runtime; hand-rolled print designs author it) gets no automatic
+  // page geometry and keeps its forced breaks: strip the injected default
+  // @page — write time cannot see a runtime-injected meta — skip the frame
+  // override below, and skip the fakepage-flattening further down. What
+  // still applies: the print baseline and break-hygiene defaults (no @page
+  // in either; low specificity, so the document's own print CSS wins) and
+  // the break-inside relaxation on >page elements (avoid on those cannot
+  // be honored whoever authored it).
+  var ownsPrint = !!document.querySelector('meta[name="omelette-owns-print" i]');
+  if (ownsPrint) {
+    var dst = document.querySelector('style[data-omelette-print-defaults]');
+    if (dst && dst.textContent) {
+      dst.textContent = dst.textContent.replace(/@page\b[^{}]*\{[^}]*\}/, '');
+    }
+  }
+  // Size the PDF page to the rendered design unless the file opted into
+  // standard paper via @page{size:letter|A4|…} or declared print ownership
+  // via the meta above. Decks own their own @page.
+  // Wrappers (body, …) lose padding+margin so the frame sits at (0,0); the
+  // frame itself loses only margin — its padding is INSIDE the measured
+  // rect and must stay, or content shifts and leaves a gap at bottom/right.
+  var __m = null;
+  try { __m = (() => {
+  var STAMP = true;
+  var docEl = document.documentElement;
+  var doc = { width: docEl.scrollWidth, height: docEl.scrollHeight };
+  // Name-presence check, case-insensitive — the same contract as the
+  // instant-PDF path's runtime check in deck-stage-export.ts. The name is
+  // a string literal here because that file interpolates this script into
+  // its print script, so importing a shared constant from it would be a
+  // cycle; measure.test.ts pins the literal so the two cannot drift apart
+  // silently.
+  var ownsPrint = !!document.querySelector('meta[name="omelette-owns-print" i]');
+
+  var ds = document.querySelector('deck-stage');
+  if (ds) {
+    var dw = Number(ds.getAttribute('width')) || 1920;
+    var dh = Number(ds.getAttribute('height')) || 1080;
+    var n = typeof ds.length === 'number' ? ds.length : ds.children.length;
+    var idx = typeof ds.index === 'number' ? ds.index : 0;
+    var frames = [];
+    for (var i = 0; i < n; i++) frames.push({ left: 0, top: 0, width: dw, height: dh });
+    return { kind: 'deck', source: 'declared', doc: doc, frames: frames,
+      authored: frames.map(function(){return{width:true,height:true}}),
+      deck: { width: dw, height: dh, slideCount: n, index: idx },
+      signals: { paperPage: false, pxPage: false, ownsPrint: ownsPrint } };
+  }
+
+  // Declared kind: a doc-page tag names the kind outright, so no signal
+  // heuristics run (like the deck branch above, signals report false —
+  // they describe inferred classifications only). The tag alone is not
+  // trusted: the element must have upgraded (shadowRoot present), so a
+  // leftover tag whose script was deleted falls through to the heuristics
+  // that handle plain markup.
+  var stageSx = window.scrollX || 0, stageSy = window.scrollY || 0;
+  var dp = document.querySelector('doc-page');
+  if (dp && dp.shadowRoot) {
+    // Crop to the sheet, not the host — the desk around it is screen-only
+    // chrome that must not land in PNG exports.
+    var sheet = dp.shadowRoot.querySelector('.sheet');
+    var sr = (sheet || dp).getBoundingClientRect();
+    return { kind: 'paper-doc', source: 'declared', doc: doc,
+      frames: [{ left: sr.left + stageSx, top: sr.top + stageSy,
+        width: sr.width, height: sr.height }],
+      authored: [{ width: false, height: false }],
+      signals: { paperPage: false, pxPage: false, ownsPrint: ownsPrint } };
+  }
+  var paperPage = false, pxPage = false;
+  var eachRule = function (fn) {
+    for (var s = 0; s < document.styleSheets.length; s++) {
+      var rs; try { rs = document.styleSheets[s].cssRules; } catch (e) { continue; }
+      for (var r = 0; r < rs.length; r++) {
+        fn(rs[r]);
+        if (rs[r].cssRules) for (var n = 0; n < rs[r].cssRules.length; n++) fn(rs[r].cssRules[n]);
+      }
+    }
+  };
+  eachRule(function (r) {
+    if (r.type !== 6) return;
+    var m = /\bsize\s*:\s*([^;}]+)/i.exec(r.cssText || '');
+    if (!m) return;
+    if (/\b(letter|a[3-5]|legal|ledger)\b/i.test(m[1])) paperPage = true;
+    if (/\d+(?:\.\d+)?px\b/i.test(m[1])) pxPage = true;
+  });
+  var signals = { paperPage: paperPage, pxPage: pxPage, ownsPrint: ownsPrint };
+
+  var pxVal = function (v) {
+    var m = /^(\d+(?:\.\d+)?)px$/.exec(v || ''); return m ? +m[1] : 0;
+  };
+  var authoredPx = function (el, prop) {
+    if (pxVal(el.style[prop])) return true;
+    var attr = el.getAttribute(prop);
+    if (attr && /^\d+$/.test(attr)) return true;
+    var hit = false;
+    eachRule(function (r) {
+      if (hit || r.type !== 1 || !r.style) return;
+      try { if (el.matches(r.selectorText) && pxVal(r.style[prop])) hit = true; } catch (e) {}
+    });
+    return hit;
+  };
+
+  var el = document.body, rootPxW = false;
+  for (;;) {
+    var kids = [];
+    for (var c = 0; c < el.children.length; c++) {
+      var t = el.children[c].tagName;
+      if (t !== 'SCRIPT' && t !== 'STYLE' && t !== 'TEMPLATE') kids.push(el.children[c]);
+    }
+    if (kids.length !== 1 || !(kids[0] instanceof HTMLElement)) break;
+    if (STAMP) el.setAttribute('data-om-frame-wrap', '');
+    el = kids[0];
+    rootPxW = authoredPx(el, 'width');
+    if (rootPxW) break;
+  }
+  if (!rootPxW) rootPxW = authoredPx(el, 'width');
+
+  // @page{size:letter} alone is a flowing doc; with a px-width root it's a
+  // fixed sheet pretending to be paper — fall through and size to render.
+  if (paperPage && !rootPxW) {
+    return { kind: 'paper-doc', source: 'inferred', doc: doc, signals: signals,
+      frames: [{ left: 0, top: 0, width: doc.width, height: doc.height }],
+      authored: [{ width: false, height: false }] };
+  }
+
+  var sx = window.scrollX || 0, sy = window.scrollY || 0;
+  var rectOf = function (e) {
+    var r = e.getBoundingClientRect();
+    var oy; try { oy = getComputedStyle(e).overflowY; } catch (err) {}
+    var h = oy === 'visible' ? Math.max(r.height, e.scrollHeight || 0) : r.height;
+    return { left: r.left + sx, top: r.top + sy, width: r.width, height: h };
+  };
+
+  // Multi-frame: off unless the page opts in via data-om-multi-frame on the
+  // stop element — the explicit opt-in is what guards against card grids
+  // and pricing tables that match the geometry but aren't separate
+  // canvases. Two ways to name the frames, explicit first:
+  // 1. Descendants marked data-om-frame-export (the social-frames starter
+  //    marks each asset frame; shells/panels around them are presentation,
+  //    so nesting is expected). Document order.
+  // 2. Fallback, no marked descendants: direct children with an authored px
+  //    width AND height (the original geometry heuristic).
+  // Frames may be different sizes (a gallery mixes 1080×1920 stories with
+  // 728×90 banners); data-om-frame-label rides along for export filenames.
+  if (el.hasAttribute('data-om-multi-frame')) {
+    var visOk = function (e) {
+      var cs; try { cs = getComputedStyle(e); } catch (err) { return false; }
+      return cs.display !== 'none' && cs.visibility !== 'hidden' && cs.position !== 'fixed';
+    };
+    // A frame's crop is its VISUAL box — never the scrollHeight-inflated
+    // rect that rectOf computes for page roots. Shadow-DOM hover controls
+    // (image-slot's Replace bar parks 29px below its host) and similar
+    // escaping UI contribute scrollable overflow to the frame, and the
+    // inflated height both squashes the nominal-size resize and drags
+    // content below the frame into the crop. Zoom-independent; bit every
+    // slot-bearing frame.
+    var frameRectOf = function (e) {
+      var r = e.getBoundingClientRect();
+      return { left: r.left + sx, top: r.top + sy, width: r.width, height: r.height };
+    };
+    var pushCand = function (list, e) {
+      if (!visOk(e)) return;
+      var rc = frameRectOf(e);
+      if (rc.width < 2 || rc.height < 2) return;
+      var lbl = e.getAttribute('data-om-frame-label');
+      if (lbl) rc.label = lbl;
+      list.push(rc);
+    };
+    var cands = [];
+    var marked = el.querySelectorAll('[data-om-frame-export]');
+    if (marked.length) {
+      for (var mk = 0; mk < marked.length; mk++) pushCand(cands, marked[mk]);
+    } else {
+      for (var k = 0; k < el.children.length; k++) {
+        var ch = el.children[k];
+        if (!authoredPx(ch, 'width') || !authoredPx(ch, 'height')) continue;
+        pushCand(cands, ch);
+      }
+    }
+    if (cands.length >= 2) {
+      return { kind: 'multi-frame', source: 'inferred', doc: doc, signals: signals,
+        frames: cands, authored: cands.map(function(){return{width:true,height:true}}) };
+    }
+  }
+
+  if (STAMP) el.setAttribute('data-om-frame', '');
+  return { kind: 'single-canvas', source: 'inferred', doc: doc, signals: signals,
+    frames: [rectOf(el)],
+    authored: [{ width: rootPxW, height: authoredPx(el, 'height') }] };
+})(); } catch (e) {}
+  var frame = null;
+  if (!ownsPrint && __m && __m.kind === 'single-canvas') {
+    var f = __m.frames && __m.frames[0];
+    if (f && f.width >= 200 && f.height >= 200) {
+      frame = f;
+      var fst = document.createElement('style');
+      fst.textContent = '@media print{@page{size:' + Math.ceil(f.width) + 'px ' +
+        Math.ceil(f.height) + 'px;margin:0}' +
+        'html,body,[data-om-frame-wrap]{padding:0!important;margin:0!important;background:none!important}' +
+        '[data-om-frame]{margin:0!important}}';
+      document.body.appendChild(fst);
+    }
+  }
+  // Relax break-inside on oversized elements. An element taller than a
+  // printable page can't honor break-inside: avoid — browsers either overflow
+  // it or push it whole to the next page, leaving a blank gap, then break it
+  // anyway at an arbitrary point. After the final layout (content revealed,
+  // animations jumped), find elements taller than a page that still compute
+  // break-inside: avoid and reset them to auto, so the browser breaks them at
+  // their children's boundaries instead (children keep their own avoid). PAGE_PX
+  // is a conservative portrait estimate at 96 CSS px/in — Letter/A4 usable
+  // height minus our 0.5in margins — so only clearly-oversized elements are
+  // touched and under-page elements still stay whole. Skipped for decks (slides
+  // are sized to the page) and for fixed-size canvases (frame set, or an author
+  // px-based @page) — runs as before for flowing docs on letter/A4.
+  try {
+    if (!ds && !frame && !(__m && __m.signals && __m.signals.pxPage)) {
+      const PAGE_PX = 1024;
+      // Our print defaults add a real @page margin only when the source has
+      // no @page of its own; computed style can't tell us (it reports screen
+      // media), so read the injected rule directly.
+      const defaults = document.querySelector('style[data-omelette-print-defaults]');
+      const pageInset = /@page\s*\{[^}]*margin/.test(defaults ? defaults.textContent || '' : '');
+      const SEL = 'section,article,figure,table,pre,blockquote,[class~="card" i],[class~="page" i],[class~="sheet" i]';
+      for (const el of document.body.querySelectorAll(SEL)) {
+        if (el instanceof HTMLElement && el.offsetHeight > PAGE_PX) {
+          el.setAttribute('data-om-oversized', '');
+          // Fake-paged docs simulate sheets with over-tall break-after:page
+          // boxes; honoring the break spills half-blank pages and ends a
+          // colored box mid-sheet. Flow them, and (only when we own the page
+          // inset) drop the redundant padding/background via the rule below.
+          const cs = getComputedStyle(el);
+          // An owns-print doc's forced breaks are intentional sheet
+          // boundaries, never fake-paged simulation — don't strip them.
+          // The break-inside relaxation above still applies: avoid on a
+          // >page element is impossible to honor whoever authored it.
+          if (
+            !ownsPrint &&
+            (cs.breakAfter === 'page' || cs.pageBreakAfter === 'always')
+          ) {
+            el.setAttribute('data-om-fakepage', '');
+          }
+        }
+      }
+      const ost = document.createElement('style');
+      ost.textContent = '@media print{' +
+        '[data-om-oversized]{break-inside:auto !important;page-break-inside:auto !important}' +
+        '[data-om-fakepage]{break-after:auto !important;page-break-after:auto !important}' +
+        (pageInset ? '[data-om-fakepage]{padding:0 !important;background:none !important}' : '') +
+        '}';
+      document.head.appendChild(ost);
+    }
+  } catch (e) {}
+  // macOS Preview renders Skia-PDF Luminosity soft-masks as opaque grey boxes;
+  // swap the CSS that triggers them for Preview-safe forms.
+  try {
+    for (const el of document.body.querySelectorAll('*')) {
+      const cs = getComputedStyle(el);
+
+      if (cs.boxShadow !== 'none' && cs.filter === 'none') {
+        const outs = [], kept = [];
+        for (const s of cs.boxShadow.split(/,(?![^(]*[)])/)) {
+          const t = s.trim();
+          const m = t.match(/^(rgba?[(][^)]+[)]) (-?[0-9.]+px) (-?[0-9.]+px) ([0-9.]+px) -?[0-9.]+px$/);
+          if (m && parseFloat(m[4]) > 0) outs.push('drop-shadow(' + m[2] + ' ' + m[3] + ' ' + m[4] + ' ' + m[1] + ')');
+          else kept.push(t);
+        }
+        if (outs.length) {
+          el.style.setProperty('filter', outs.join(' '), 'important');
+          el.style.setProperty('box-shadow', kept.join(', ') || 'none', 'important');
+        }
+      }
+
+      const mask = cs.maskImage && cs.maskImage !== 'none' ? cs.maskImage : cs.webkitMaskImage;
+      if (mask && mask !== 'none' && cs.filter === 'none') el.style.setProperty('filter', 'opacity(1)', 'important');
+    }
+  } catch (e) {}
+  mark('print-calling');
+  setTimeout(() => { try { window.print(); } catch (e) {} }, 200);
+})();
+</script>
+</body>
+</html>

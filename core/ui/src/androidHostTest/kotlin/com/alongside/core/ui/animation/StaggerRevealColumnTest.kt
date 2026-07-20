@@ -46,4 +46,19 @@ class StaggerRevealColumnTest {
             composeTestRule.onNodeWithTag("stagger-item-$index").assertIsDisplayed()
         }
     }
+
+    @Test
+    fun `initiallyRevealed shows every item on the very first frame`() {
+        composeTestRule.mainClock.autoAdvance = false
+
+        composeTestRule.setContent {
+            StaggerRevealColumn(itemCount = 4, staggerDelayMillis = 80L, initiallyRevealed = true) { index ->
+                Text("Item $index")
+            }
+        }
+
+        for (index in 0 until 4) {
+            composeTestRule.onNodeWithTag("stagger-item-$index").assertIsDisplayed()
+        }
+    }
 }

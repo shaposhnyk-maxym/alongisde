@@ -1,0 +1,19 @@
+rules_version = '2';
+
+// Object layout: photos/{photoId} (flat - see FirebaseStorageConfig.objectPath). Photo ids are
+// UUIDs with no embedded owner/trip reference, so per-owner path-based rules aren't expressible
+// without changing the object path convention. Matches firestore.rules' documented debt (the
+// trips-collection "read open to any authenticated user" TODO) - same tradeoff, same rationale:
+// two-person app, enumeration risk accepted for now. TODO(hardening): revisit if the object path
+// convention changes to embed tripId/ownerId.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /photos/{photoId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

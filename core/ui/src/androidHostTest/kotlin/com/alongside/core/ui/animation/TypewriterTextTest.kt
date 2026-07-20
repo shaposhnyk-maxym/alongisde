@@ -91,6 +91,17 @@ class TypewriterTextTest {
     }
 
     @Test
+    fun `initiallyRevealed shows the full text on the very first frame`() {
+        composeTestRule.mainClock.autoAdvance = false
+
+        composeTestRule.setContent {
+            TypewriterText(text = fullText, charDelayMillis = 20L, initiallyRevealed = true)
+        }
+
+        composeTestRule.onNodeWithText(fullText).assertExists()
+    }
+
+    @Test
     fun `onComplete fires once the full text is revealed`() {
         composeTestRule.mainClock.autoAdvance = false
         var completed = false

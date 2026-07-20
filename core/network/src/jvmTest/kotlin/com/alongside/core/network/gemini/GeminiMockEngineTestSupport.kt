@@ -23,9 +23,16 @@ internal fun MockRequestHandleScope.respondJson(
 
 internal fun testGeminiVisionApi(
     requestTimeoutMillis: Long = 15_000L,
+    maxAttempts: Int = 4,
+    sleep: suspend (kotlin.time.Duration) -> Unit = {},
     handler: suspend MockRequestHandleScope.(request: HttpRequestData) -> HttpResponseData,
 ): GeminiVisionApi {
     val engine = MockEngine { request -> handler(request) }
     val httpClient = HttpClient(engine) { configureFirestoreHttpClient(requestTimeoutMillis = requestTimeoutMillis) }
-    return GeminiVisionApi(httpClient, GeminiConfig(apiKey = "test-api-key"))
+    return GeminiVisionApi(
+        httpClient,
+        GeminiConfig(apiKey = "test-api-key"),
+        maxAttempts = maxAttempts,
+        sleep = sleep,
+    )
 }

@@ -67,7 +67,13 @@ service cloud.firestore {
     }
 
     match /diaryEntries/{diaryEntryId} {
-      allow read: if isSignedIn() && isTripMember(resource.data.tripId);
+      // resource == null (document doesn't exist yet) must be allowed explicitly: the
+      // sync-queue's preflight conflict check (SyncCoordinator) does a GET before every
+      // FIRST push of a new document, and dereferencing resource.data on a nonexistent
+      // document fails the rule closed - Firestore returns PERMISSION_DENIED instead of a
+      // clean "not found", which SyncCoordinator was treating as "unreachable, retry
+      // forever", so brand-new diary entries never actually reached Firestore at all.
+      allow read: if isSignedIn() && (resource == null || isTripMember(resource.data.tripId));
 
       allow create: if isSignedIn() &&
         request.resource.data.userId == request.auth.uid &&
@@ -81,7 +87,10 @@ service cloud.firestore {
         return get(/databases/$(database)/documents/diaryEntries/$(diaryEntryId)).data;
       }
 
-      allow read: if isSignedIn() && isTripMember(parentDiaryEntry(resource.data.diaryEntryId).tripId);
+      // Same resource == null reasoning as diaryEntries' read rule - the preflight GET on a
+      // brand-new episode must not fail closed just because it doesn't exist yet.
+      allow read: if isSignedIn() &&
+        (resource == null || isTripMember(parentDiaryEntry(resource.data.diaryEntryId).tripId));
 
       allow create: if isSignedIn() &&
         parentDiaryEntry(request.resource.data.diaryEntryId).userId == request.auth.uid;
@@ -91,7 +100,8 @@ service cloud.firestore {
     }
 
     match /placeCandidates/{placeId} {
-      allow read: if isSignedIn() && isTripMember(resource.data.tripId);
+      // Same resource == null reasoning as diaryEntries' read rule.
+      allow read: if isSignedIn() && (resource == null || isTripMember(resource.data.tripId));
 
       allow create: if isSignedIn() &&
         request.resource.data.addedByUserId == request.auth.uid &&

@@ -11,6 +11,7 @@ internal fun testPhoto(
     takenAt: Instant = Instant.fromEpochMilliseconds(1_752_600_000_000),
     latitude: Double = 49.8397,
     longitude: Double = 24.0297,
+    remoteUrl: String? = null,
 ): Photo =
     Photo(
         id = id,
@@ -18,6 +19,7 @@ internal fun testPhoto(
         takenAt = takenAt,
         latitude = latitude,
         longitude = longitude,
+        remoteUrl = remoteUrl,
     )
 
 internal fun testEpisode(

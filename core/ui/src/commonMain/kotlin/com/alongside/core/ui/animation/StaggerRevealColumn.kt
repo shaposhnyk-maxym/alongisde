@@ -23,19 +23,23 @@ import kotlinx.coroutines.delay
 /**
  * Reveals `itemCount` items one at a time, [staggerDelayMillis] apart, each mounting via
  * [AnimatedVisibility] (not just an alpha fade) so its final "revealed" state is directly
- * queryable in tests.
+ * queryable in tests. [initiallyRevealed] renders every item already revealed on the first frame
+ * - previews/screenshots use it so goldens capture the finished layout instead of the blank
+ * pre-reveal frame (same pattern as [FadeUpReveal]).
  */
 @Composable
 public fun StaggerRevealColumn(
     itemCount: Int,
     modifier: Modifier = Modifier,
     staggerDelayMillis: Long = 80L,
+    initiallyRevealed: Boolean = false,
     itemTestTag: (Int) -> String = { "stagger-item-$it" },
     content: @Composable (index: Int) -> Unit,
 ) {
-    var revealedCount by remember(itemCount) { mutableIntStateOf(0) }
+    var revealedCount by remember(itemCount) { mutableIntStateOf(if (initiallyRevealed) itemCount else 0) }
 
-    LaunchedEffect(itemCount, staggerDelayMillis) {
+    LaunchedEffect(itemCount, staggerDelayMillis, initiallyRevealed) {
+        if (initiallyRevealed) return@LaunchedEffect
         revealedCount = 0
         repeat(itemCount) {
             delay(staggerDelayMillis)

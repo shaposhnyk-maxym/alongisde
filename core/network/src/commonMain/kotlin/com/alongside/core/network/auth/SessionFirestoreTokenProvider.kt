@@ -5,6 +5,7 @@ import com.alongside.core.domain.auth.isExpired
 import com.alongside.core.model.auth.AuthSession
 import com.alongside.core.network.auth.model.FirebaseRefreshTokenResponse
 import com.alongside.core.network.firestore.FirestoreTokenProvider
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.time.Clock
@@ -32,11 +33,7 @@ public class SessionFirestoreTokenProvider(
 
     override suspend fun currentToken(): String? =
         mutex.withLock {
-            val session = cache.get()
-            println(
-                "SessionFirestoreTokenProvider: session=${session != null} " +
-                    "expired=${session?.isExpired(clock.now())}",
-            )
+            val session = cachedSessionOrNull()
             if (session == null) return@withLock null
             if (!session.isExpired(clock.now())) return@withLock session.idToken
             val refreshToken = session.refreshToken ?: return@withLock null
@@ -48,6 +45,25 @@ public class SessionFirestoreTokenProvider(
                 println("SessionFirestoreTokenProvider: refresh failed - ${e::class.simpleName}: ${e.message}")
                 null
             }
+        }
+
+    // The backing cache (Room-backed AuthSessionCacheImpl) can throw on a local I/O failure -
+    // unlike a missing/expired session, which this class already treats as "unauthenticated
+    // request" and recovers from, an uncaught exception here would otherwise escape past every
+    // caller's narrower catch (see FirestoreApi/FirebaseStorageApi's rawRequest, which only
+    // catch their own typed exceptions) and abort work that has nothing to do with auth.
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun cachedSessionOrNull(): AuthSession? =
+        try {
+            cache.get()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            println(
+                "SessionFirestoreTokenProvider: reading cached session failed - " +
+                    "${e::class.simpleName}: ${e.message}",
+            )
+            null
         }
 
     private fun AuthSession.refreshedWith(response: FirebaseRefreshTokenResponse): AuthSession =

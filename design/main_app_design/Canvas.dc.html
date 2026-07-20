@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="support.js"></script>
+<template id="__bundler_thumbnail" data-bg-color="#282f3e">
+  <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    <rect x="20" y="14" width="80" height="92" rx="14" fill="#f4efe5"/>
+    <rect x="28" y="24" width="64" height="60" rx="6" fill="#282f3e"/>
+    <circle cx="60" cy="94" r="4" fill="#c9773f"/>
+  </svg>
+</template>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: oklch(0.17 0.02 260); }
+  ::selection { background: oklch(0.68 0.15 45 / 0.35); }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes softPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+  @keyframes cardSwipe { 0%,18% { transform: rotate(0deg) translateX(0); } 35% { transform: rotate(6deg) translateX(14px); } 50%,68% { transform: rotate(0deg) translateX(0); } 85% { transform: rotate(-6deg) translateX(-14px); } 100% { transform: rotate(0deg) translateX(0); } }
+  @keyframes barFill { from { width: 0%; } to { width: 100%; } }
+  @keyframes storyDim { 0%,90% { opacity: 1; } 100% { opacity: 0.5; } }
+</style>
+</helmet>
+
+<div style="width:max-content;min-height:100vh;box-sizing:border-box;padding:96px 120px 160px;background-image:radial-gradient(oklch(0.24 0.02 260) 1px, transparent 1px);background-size:28px 28px;display:flex;flex-direction:column;gap:96px;font-family:'Manrope',sans-serif;">
+
+  <div style="display:flex;flex-direction:column;gap:8px;">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Alongside — mobile app</span>
+    <span style="font-family:'Newsreader',serif;font-size:38px;font-weight:500;color:oklch(0.96 0.01 85);">Main app, settings &amp; recap</span>
+    <span style="font-size:15px;color:oklch(0.72 0.02 260);max-width:640px;line-height:1.5;">Five bottom-nav destinations, Settings reached by icon, and the Stories-style recap triggered when a trip ends. Continues from the auth-gate board.</span>
+  </div>
+
+  <!-- ================= GROUP: MAIN APP ================= -->
+  <div style="display:flex;flex-direction:column;gap:32px;">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:0.16em;text-transform:uppercase;color:oklch(0.96 0.01 85);border-bottom:1px solid oklch(0.33 0.02 260);padding-bottom:10px;width:fit-content;">04 · Main app (bottom nav)</span>
+    <div style="display:flex;gap:56px;align-items:flex-start;flex-wrap:wrap;">
+
+      <!-- Home -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 13</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Home</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;box-sizing:border-box;padding:76px 22px 90px;display:flex;flex-direction:column;gap:22px;overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-family:'Newsreader',serif;font-style:italic;font-size:22px;color:oklch(0.97 0.01 85);">Alongside</span>
+              <div style="width:34px;height:34px;border-radius:50%;background:oklch(0.24 0.02 260);display:flex;align-items:center;justify-content:center;">
+                <div style="width:14px;height:14px;border-radius:50%;border:2px solid oklch(0.75 0.02 260);"></div>
+              </div>
+            </div>
+            <div style="background:oklch(0.23 0.02 260);border-radius:22px;padding:22px;display:flex;flex-direction:column;align-items:center;gap:10px;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.12em;color:oklch(0.72 0.02 260);text-transform:uppercase;">Trip day</span>
+              <div style="display:flex;gap:6px;">
+                <div style="width:38px;height:52px;border-radius:9px;background:oklch(0.28 0.02 260);position:relative;display:flex;align-items:center;justify-content:center;"><div style="position:absolute;left:0;right:0;top:50%;height:1px;background:oklch(0.14 0.01 260);"></div><span style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:600;color:oklch(0.68 0.15 45);">4</span></div>
+                <div style="width:38px;height:52px;border-radius:9px;background:oklch(0.28 0.02 260);position:relative;display:flex;align-items:center;justify-content:center;"><div style="position:absolute;left:0;right:0;top:50%;height:1px;background:oklch(0.14 0.01 260);"></div><span style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:600;color:oklch(0.68 0.15 45);">/7</span></div>
+              </div>
+              <span style="font-size:12.5px;color:oklch(0.7 0.02 260);">together since day 1 · Vinnytsia</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <span style="font-size:13px;color:oklch(0.72 0.02 260);text-transform:uppercase;letter-spacing:0.06em;">Today</span>
+              <div style="background:oklch(0.97 0.012 85);border-radius:18px;padding:16px;display:flex;gap:12px;align-items:center;">
+                <image-slot id="home-today-photo" shape="rounded" radius="12" placeholder="day photo" style="width:56px;height:56px;flex-shrink:0;"></image-slot>
+                <div style="display:flex;flex-direction:column;gap:2px;">
+                  <span style="font-size:15.5px;font-weight:600;color:oklch(0.22 0.02 60);">Day 4 · Vinnytsia</span>
+                  <span style="font-size:12.5px;color:oklch(0.48 0.02 60);">Both added photos — tap to open</span>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <span style="font-size:13px;color:oklch(0.72 0.02 260);text-transform:uppercase;letter-spacing:0.06em;">New matches</span>
+              <div style="display:flex;gap:10px;">
+                <div style="flex:1;background:oklch(0.23 0.02 260);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;">
+                  <image-slot id="home-match-1" shape="rounded" radius="10" placeholder="place" style="width:100%;height:64px;"></image-slot>
+                  <span style="font-size:12.5px;color:oklch(0.9 0.01 85);">Cafe Kyiv</span>
+                </div>
+                <div style="flex:1;background:oklch(0.23 0.02 260);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;">
+                  <image-slot id="home-match-2" shape="rounded" radius="10" placeholder="place" style="width:100%;height:64px;"></image-slot>
+                  <span style="font-size:12.5px;color:oklch(0.9 0.01 85);">Old Town</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- Timeline locked -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 14</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Timeline — locked day</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;box-sizing:border-box;padding:76px 0 90px;display:flex;flex-direction:column;gap:18px;overflow:hidden;">
+            <span style="font-family:'Newsreader',serif;font-size:22px;color:oklch(0.97 0.01 85);padding:0 22px;">Timeline</span>
+            <div style="display:flex;align-items:center;gap:14px;padding:0 8px;">
+              <div style="width:64px;flex-shrink:0;height:280px;background:oklch(0.23 0.02 260);border-radius:20px;opacity:0.4;transform:scale(0.9);"></div>
+              <div style="flex:1;height:340px;background:oklch(0.23 0.02 260);border-radius:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;">
+                <div style="width:46px;height:46px;border-radius:50%;border:2.5px dashed oklch(0.68 0.15 45);"></div>
+                <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.95 0.01 85);">Day 5 isn't ready yet</span>
+                <span style="font-size:12.5px;color:oklch(0.7 0.02 260);line-height:1.6;">Your partner is still out taking photos.<br/>You'll both see it the moment you're both done.</span>
+              </div>
+              <div style="width:64px;flex-shrink:0;height:280px;background:oklch(0.23 0.02 260);border-radius:20px;opacity:0.4;transform:scale(0.9);"></div>
+            </div>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- Timeline unlocked -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 15</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Timeline — unlocked day</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;box-sizing:border-box;padding:76px 22px 90px;display:flex;flex-direction:column;gap:16px;overflow:hidden;">
+            <div style="display:flex;flex-direction:column;gap:2px;">
+              <span style="font-family:'Newsreader',serif;font-size:24px;color:oklch(0.97 0.01 85);">Day 4 · Vinnytsia</span>
+              <span style="font-size:12.5px;color:oklch(0.7 0.02 260);">Ukraine · together</span>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <image-slot id="timeline-photo-1" shape="rounded" radius="14" placeholder="your photo" style="flex:1;height:150px;"></image-slot>
+              <image-slot id="timeline-photo-2" shape="rounded" radius="14" placeholder="their photo" style="flex:1;height:150px;"></image-slot>
+            </div>
+            <div style="background:oklch(0.23 0.02 260);border-radius:18px;padding:18px;flex:1;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:14.5px;color:oklch(0.9 0.01 85);line-height:1.7;">We wandered into the old quarter and found a courtyard full of cats and lemonade. Felt like the whole city slowed down just for us._</span>
+            </div>
+            <div style="display:flex;justify-content:center;gap:6px;">
+              <div style="width:6px;height:6px;border-radius:50%;background:oklch(0.4 0.02 260);"></div>
+              <div style="width:6px;height:6px;border-radius:50%;background:oklch(0.4 0.02 260);"></div>
+              <div style="width:6px;height:6px;border-radius:50%;background:oklch(0.4 0.02 260);"></div>
+              <div style="width:16px;height:6px;border-radius:3px;background:oklch(0.68 0.15 45);"></div>
+              <div style="width:6px;height:6px;border-radius:50%;background:oklch(0.4 0.02 260);"></div>
+            </div>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- Places -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 16</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Places</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;box-sizing:border-box;padding:76px 22px 90px;display:flex;flex-direction:column;gap:16px;overflow:hidden;">
+            <span style="font-family:'Newsreader',serif;font-size:24px;color:oklch(0.97 0.01 85);">Places</span>
+            <div style="background:oklch(0.68 0.15 45 / 0.15);border:1px solid oklch(0.68 0.15 45 / 0.4);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;">
+              <div style="width:22px;height:22px;border-radius:50%;background:oklch(0.68 0.15 45);flex-shrink:0;"></div>
+              <span style="font-size:12.5px;color:oklch(0.95 0.01 85);">Added "Rynok Square" from Google Maps</span>
+            </div>
+            <sc-for list="{{ placeGroups }}" as="grp" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <span style="font-size:12.5px;color:oklch(0.7 0.02 260);text-transform:uppercase;letter-spacing:0.06em;">{{ grp.city }}</span>
+                <sc-for list="{{ grp.items }}" as="p" hint-placeholder-count="2">
+                  <div style="background:oklch(0.97 0.012 85);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+                    <image-slot id="places-{{ p.id }}" shape="rounded" radius="9" placeholder="place" style="width:40px;height:40px;flex-shrink:0;"></image-slot>
+                    <span style="font-size:14.5px;color:oklch(0.22 0.02 60);">{{ p.name }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- Matcher -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 17</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Matcher</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;box-sizing:border-box;padding:76px 22px 60px;display:flex;flex-direction:column;gap:16px;overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-family:'Newsreader',serif;font-size:24px;color:oklch(0.97 0.01 85);">Matcher</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:oklch(0.7 0.02 260);">14 left</span>
+            </div>
+            <div style="position:relative;flex:1;">
+              <div style="position:absolute;inset:16px 8px;background:oklch(0.23 0.02 260);border-radius:22px;transform:rotate(3deg);"></div>
+              <div style="position:absolute;inset:16px 8px;background:oklch(0.23 0.02 260);border-radius:22px;transform:rotate(-2deg);"></div>
+              <div style="position:absolute;inset:8px;background:oklch(0.97 0.012 85);border-radius:22px;overflow:hidden;display:flex;flex-direction:column;animation:cardSwipe 5s ease-in-out infinite;transform-origin:bottom center;">
+                <image-slot id="matcher-card-photo" shape="rect" placeholder="place photo" style="flex:1;"></image-slot>
+                <div style="padding:16px;display:flex;flex-direction:column;gap:2px;">
+                  <span style="font-size:18px;font-weight:600;color:oklch(0.22 0.02 60);">Rynok Square</span>
+                  <span style="font-size:12.5px;color:oklch(0.48 0.02 60);">Lviv, Ukraine</span>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:center;gap:26px;">
+              <div style="width:56px;height:56px;border-radius:50%;background:oklch(0.23 0.02 260);display:flex;align-items:center;justify-content:center;"><div style="width:20px;height:20px;position:relative;"><div style="position:absolute;width:100%;height:2.5px;background:oklch(0.75 0.02 260);top:50%;transform:translateY(-50%) rotate(45deg);"></div><div style="position:absolute;width:100%;height:2.5px;background:oklch(0.75 0.02 260);top:50%;transform:translateY(-50%) rotate(-45deg);"></div></div></div>
+              <div style="width:64px;height:64px;border-radius:50%;background:oklch(0.68 0.15 45);display:flex;align-items:center;justify-content:center;"><div style="width:22px;height:22px;border-radius:50% 50% 50% 0;background:#fff;transform:rotate(-45deg);"></div></div>
+            </div>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- Match list -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 18</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Match List</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;box-sizing:border-box;padding:76px 22px 90px;display:flex;flex-direction:column;gap:16px;overflow:hidden;">
+            <span style="font-family:'Newsreader',serif;font-size:24px;color:oklch(0.97 0.01 85);">Our Matches</span>
+            <sc-for list="{{ matches }}" as="m" hint-placeholder-count="3">
+              <div style="background:oklch(0.97 0.012 85);border-radius:16px;padding:12px;display:flex;align-items:center;gap:12px;margin-bottom:4px;">
+                <image-slot id="match-{{ m.id }}" shape="rounded" radius="10" placeholder="place" style="width:52px;height:52px;flex-shrink:0;"></image-slot>
+                <div style="display:flex;flex-direction:column;gap:2px;flex:1;">
+                  <span style="font-size:15px;font-weight:600;color:oklch(0.22 0.02 60);">{{ m.name }}</span>
+                  <span style="font-size:12px;color:oklch(0.48 0.02 60);">{{ m.city }}</span>
+                </div>
+                <div style="width:26px;height:26px;border-radius:50%;background:oklch(0.68 0.15 45);flex-shrink:0;"></div>
+              </div>
+            </sc-for>
+          </div>
+        </x-import>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= GROUP: SETTINGS & DEBUG ================= -->
+  <div style="display:flex;flex-direction:column;gap:32px;">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:0.16em;text-transform:uppercase;color:oklch(0.96 0.01 85);border-bottom:1px solid oklch(0.33 0.02 260);padding-bottom:10px;width:fit-content;">05 · Settings &amp; debug</span>
+    <div style="display:flex;gap:56px;align-items:flex-start;">
+
+      <!-- Settings -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 19</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Settings (owner view)</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" title="Settings" hint-size="402,874">
+          <div style="display:flex;flex-direction:column;gap:22px;padding:8px 0 24px;">
+            <div>
+              <span style="display:block;padding:4px 32px 6px;font-size:13px;color:oklch(0.4 0.02 60 / 0.6);text-transform:uppercase;">Profile</span>
+              <div style="background:#fff;border-radius:26px;margin:0 16px;overflow:hidden;">
+                <div style="display:flex;align-items:center;min-height:52px;padding:0 16px;font-size:17px;">Account &amp; permissions</div>
+              </div>
+            </div>
+            <div>
+              <span style="display:block;padding:4px 32px 6px;font-size:13px;color:oklch(0.4 0.02 60 / 0.6);text-transform:uppercase;">Notifications</span>
+              <div style="background:#fff;border-radius:26px;margin:0 16px;overflow:hidden;">
+                <div style="display:flex;align-items:center;min-height:52px;padding:0 16px;font-size:17px;">Push notifications</div>
+              </div>
+            </div>
+            <div>
+              <span style="display:block;padding:4px 32px 6px;font-size:13px;color:oklch(0.4 0.02 60 / 0.6);text-transform:uppercase;">Trip</span>
+              <div style="background:#fff;border-radius:26px;margin:0 16px;overflow:hidden;">
+                <div style="display:flex;align-items:center;min-height:52px;padding:0 16px;font-size:17px;color:oklch(0.6 0.13 45);border-bottom:0.5px solid rgba(60,60,67,0.12);">Leave Trip</div>
+                <div style="display:flex;align-items:center;min-height:52px;padding:0 16px;font-size:17px;color:oklch(0.55 0.2 25);">Delete Trip <span style="margin-left:auto;font-size:11px;font-family:'JetBrains Mono',monospace;color:oklch(0.55 0.02 60);text-transform:uppercase;">owner only</span></div>
+              </div>
+            </div>
+            <span style="text-align:center;font-size:12px;color:oklch(0.55 0.02 60);">Alongside v1.0.0 (42)</span>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- Debug menu -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 20 · dev-only</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Debug Menu</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;box-sizing:border-box;padding:76px 22px 90px;display:flex;flex-direction:column;gap:16px;overflow:hidden;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:14px solid oklch(0.68 0.15 45);"></div>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:oklch(0.68 0.15 45);letter-spacing:0.08em;">DEV BUILD — NOT SHIPPED</span>
+            </div>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:20px;color:oklch(0.96 0.01 85);">Debug Menu</span>
+            <div style="display:flex;flex-direction:column;gap:1px;background:oklch(0.33 0.02 260);border-radius:14px;overflow:hidden;">
+              <div style="background:oklch(0.23 0.02 260);padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:14px;color:oklch(0.9 0.01 85);">force_delete_all_trips()</div>
+              <div style="background:oklch(0.23 0.02 260);padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:14px;color:oklch(0.9 0.01 85);">clear_local_cache()</div>
+              <div style="background:oklch(0.23 0.02 260);padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:14px;color:oklch(0.9 0.01 85);">force_onboarding_replay()</div>
+              <div style="background:oklch(0.23 0.02 260);padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:14px;color:oklch(0.9 0.01 85);">simulate_symmetric_unlock()</div>
+            </div>
+            <span style="font-size:12px;color:oklch(0.6 0.02 260);line-height:1.6;">Reached via 5 taps on the version number in Settings. Excluded from release builds.</span>
+          </div>
+        </x-import>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= GROUP: RECAP ================= -->
+  <div style="display:flex;flex-direction:column;gap:32px;">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:0.16em;text-transform:uppercase;color:oklch(0.96 0.01 85);border-bottom:1px solid oklch(0.33 0.02 260);padding-bottom:10px;width:fit-content;">06 · Recap (Stories format)</span>
+    <div style="display:flex;gap:56px;align-items:flex-start;">
+
+      <!-- Recap intro -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 21 · Slide 1</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Recap — Intro</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;box-sizing:border-box;padding:70px 20px 30px;display:flex;flex-direction:column;gap:20px;">
+            <div style="display:flex;gap:4px;">
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.68 0.15 45);overflow:hidden;"><div style="height:100%;background:oklch(0.95 0.01 85);animation:barFill 4s linear infinite;"></div></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.4 0.02 260);"></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.4 0.02 260);"></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.4 0.02 260);"></div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;">
+              <span style="font-family:'Newsreader',serif;font-style:italic;font-size:30px;color:oklch(0.98 0.01 85);line-height:1.25;">Your trip,<br/>together</span>
+              <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start;">
+                <sc-for list="{{ route }}" as="city" hint-placeholder-count="7">
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="width:7px;height:7px;border-radius:50%;background:oklch(0.68 0.15 45);"></div>
+                    <span style="font-size:14px;color:oklch(0.88 0.015 85);">{{ city }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- Recap parallel lives -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 22 · Slide 2</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Recap — Before Kyiv (pre-trip)</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;position:relative;">
+            <div style="position:absolute;inset:0;display:flex;">
+              <image-slot id="recap-parallel-a" shape="rect" placeholder="you, before the trip" style="flex:1;"></image-slot>
+              <image-slot id="recap-parallel-b" shape="rect" placeholder="them, before the trip" style="flex:1;"></image-slot>
+            </div>
+            <div style="position:absolute;left:50%;top:0;bottom:0;width:2px;background:oklch(0.17 0.02 260);"></div>
+            <div style="position:absolute;left:20px;right:20px;top:70px;display:flex;gap:4px;">
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.9 0.01 85/0.4);"></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.68 0.15 45);overflow:hidden;"><div style="height:100%;background:oklch(0.95 0.01 85);animation:barFill 4s linear infinite;"></div></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.9 0.01 85/0.4);"></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.9 0.01 85/0.4);"></div>
+            </div>
+            <div style="position:absolute;left:16px;right:16px;bottom:44px;display:flex;flex-direction:column;gap:4px;text-align:center;">
+              <span style="font-family:'Newsreader',serif;font-style:italic;font-size:20px;color:#fff;">Weeks apart, before Kyiv</span>
+              <span style="font-size:13px;color:oklch(0.85 0.015 85);">The last night before you were finally in the same city</span>
+            </div>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- Recap day slide -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 23 · Slide 3</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Recap — Day highlight</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;position:relative;">
+            <image-slot id="recap-day-photo" shape="rect" placeholder="day collage" style="position:absolute;inset:0;"></image-slot>
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg, oklch(0.1 0.01 260/0.5) 0%, transparent 30%, transparent 70%, oklch(0.1 0.01 260/0.85) 100%);"></div>
+            <div style="position:absolute;left:20px;right:20px;top:70px;display:flex;gap:4px;">
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.9 0.01 85/0.4);"></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.9 0.01 85/0.4);"></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.68 0.15 45);overflow:hidden;"><div style="height:100%;background:oklch(0.95 0.01 85);animation:barFill 4s linear infinite;"></div></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.9 0.01 85/0.4);"></div>
+            </div>
+            <div style="position:absolute;left:22px;right:22px;bottom:40px;display:flex;flex-direction:column;gap:6px;">
+              <span style="font-family:'Newsreader',serif;font-size:26px;color:#fff;">Day 3 · Ternopil</span>
+              <span style="font-size:14px;color:oklch(0.9 0.01 85);line-height:1.5;">"Lake at sunset, then the best cherry dumplings of the whole trip."</span>
+            </div>
+          </div>
+        </x-import>
+      </div>
+
+      <!-- Recap final -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Screen 24 · Final slide</span>
+          <span style="font-family:'Newsreader',serif;font-size:19px;color:oklch(0.96 0.01 85);">Recap — Back home</span>
+        </div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+          <div style="height:100%;box-sizing:border-box;padding:70px 20px 40px;display:flex;flex-direction:column;gap:20px;">
+            <div style="display:flex;gap:4px;">
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.68 0.15 45);"></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.68 0.15 45);"></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.68 0.15 45);"></div>
+              <div style="flex:1;height:3px;border-radius:2px;background:oklch(0.68 0.15 45);"></div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;">
+              <div style="width:96px;height:96px;border-radius:9999px;background:oklch(0.23 0.02 260);display:flex;align-items:center;justify-content:center;">
+                <span style="font-family:'JetBrains Mono',monospace;font-size:44px;font-weight:600;color:oklch(0.68 0.15 45);">7</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;">
+                <span style="font-family:'Newsreader',serif;font-size:26px;color:#fff;">Days together.</span>
+                <span style="font-size:14.5px;color:oklch(0.85 0.015 85);">Home again, already counting down to the next one.</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:-6px;">
+                <div style="width:26px;height:26px;border-radius:50%;background:oklch(0.68 0.15 45);"></div>
+                <div style="width:26px;height:26px;border-radius:50%;background:oklch(0.9 0.01 85);margin-left:-8px;"></div>
+              </div>
+            </div>
+          </div>
+        </x-import>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      placeGroups: [
+        { city: 'Lviv', items: [{ id: 'lv1', name: 'Rynok Square' }, { id: 'lv2', name: 'Lviv Coffee Mine' }] },
+        { city: 'Vinnytsia', items: [{ id: 'vn1', name: 'Roshen Fountain' }] },
+      ],
+      matches: [
+        { id: 'm1', name: 'Rynok Square', city: 'Lviv, Ukraine' },
+        { id: 'm2', name: 'Cafe Kyiv', city: 'Kyiv, Ukraine' },
+        { id: 'm3', name: 'Central Park', city: 'Chișinău, Moldova' },
+      ],
+      route: ['Rzeszów', 'Lviv', 'Ternopil', 'Vinnytsia', 'Zhmerynka', 'Kyiv', 'Chișinău'],
+    };
+  }
+}
+</script>
+</body>
+</html>

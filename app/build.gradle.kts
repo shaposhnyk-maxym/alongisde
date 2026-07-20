@@ -20,10 +20,13 @@ kotlin {
             implementation(projects.feature.auth)
             implementation(projects.feature.onboarding)
             implementation(projects.feature.pairing)
+            implementation(projects.feature.diary)
             implementation(libs.findLibrary("navigation3-runtime").get())
             implementation(libs.findLibrary("orbit-core").get())
             implementation(libs.findLibrary("orbit-viewmodel").get())
             implementation(libs.findLibrary("orbit-compose").get())
+            implementation(libs.findLibrary("kotlinx-datetime").get())
+            implementation(compose.materialIconsExtended)
         }
         androidMain.dependencies {
             implementation(project.dependencies.platform(libs.findLibrary("firebase-bom").get()))

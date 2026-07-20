@@ -105,7 +105,6 @@ public class FirestoreApi(
     @Suppress("TooGenericExceptionCaught", "ThrowsCount")
     private suspend fun rawRequest(block: HttpRequestBuilder.() -> Unit): HttpResponse {
         val token = tokenProvider.currentToken()
-        println("FirestoreApi: token present=${token != null} length=${token?.length}")
         return try {
             httpClient.request {
                 block()

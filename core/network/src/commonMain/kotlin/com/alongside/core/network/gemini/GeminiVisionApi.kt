@@ -15,22 +15,59 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.serialization.decodeFromString
+import kotlin.random.Random
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
-/** Ktor-based client for the Gemini `generateContent` REST endpoint (multimodal: text + inline-base64 images). */
+/**
+ * Ktor-based client for the Gemini `generateContent` REST endpoint (multimodal: text +
+ * inline-base64 images). Retries [GeminiException.ServerError] (5xx - "model overloaded", per
+ * Google's own guidance) and [GeminiException.NetworkTimeout] with exponential backoff + jitter;
+ * [GeminiException.ClientError] (4xx, e.g. depleted quota/bad request) and
+ * [GeminiException.MalformedResponse] are never retried - retrying wouldn't fix either.
+ */
 public class GeminiVisionApi(
     private val httpClient: HttpClient,
     private val config: GeminiConfig,
+    private val maxAttempts: Int = DEFAULT_MAX_ATTEMPTS,
+    private val initialBackoff: Duration = 1.seconds,
+    private val sleep: suspend (Duration) -> Unit = { delay(it) },
+    private val random: Random = Random.Default,
 ) {
     public suspend fun generateContent(request: GenerateContentRequest): GenerateContentResponse {
-        val response =
-            rawRequest(config.generateContentUrl) {
-                contentType(ContentType.Application.Json)
-                setBody(request)
+        var attempt = 1
+        var backoff = initialBackoff
+        while (true) {
+            try {
+                val response =
+                    rawRequest(config.generateContentUrl) {
+                        contentType(ContentType.Application.Json)
+                        setBody(request)
+                    }
+                throwIfError(response)
+                return parseBody(response)
+            } catch (e: GeminiException) {
+                if (attempt >= maxAttempts || !e.isRetryable()) throw e
+                sleep(backoff + jitter(backoff))
+                backoff *= 2
+                attempt++
             }
-        throwIfError(response)
-        return parseBody(response)
+        }
     }
+
+    private fun GeminiException.isRetryable(): Boolean =
+        when (this) {
+            is GeminiException.ServerError, is GeminiException.NetworkTimeout -> true
+            else -> false
+        }
+
+    // Jitter prevents every client hitting a recovering server at the exact same instant
+    // (the "thundering herd" problem) - a random fraction of the current backoff, added on top.
+    private fun jitter(backoff: Duration): Duration =
+        (backoff.inWholeMilliseconds * random.nextDouble(0.0, JITTER_FRACTION)).toLong().milliseconds
 
     // Catching Exception broadly and re-throwing as a typed GeminiException is the point of this
     // boundary function; CancellationException is excluded so cancellation still propagates.
@@ -92,5 +129,7 @@ public class GeminiVisionApi(
     private companion object {
         val SUCCESS_RANGE = 200..299
         val CLIENT_ERROR_RANGE = 400..499
+        const val DEFAULT_MAX_ATTEMPTS = 4
+        const val JITTER_FRACTION = 0.3
     }
 }

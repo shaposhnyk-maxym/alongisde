@@ -48,6 +48,9 @@ public class SyncCoordinator(
 
     private enum class PreflightOutcome { PUSH, REMOTE_WON, UNREACHABLE }
 
+    // Any preflight-read failure (offline, permission-denied, etc.) is treated the same way:
+    // retry later rather than surface the specific cause here.
+    @Suppress("SwallowedException")
     private suspend fun preflight(operation: SyncOperation): PreflightOutcome {
         val localUpdatedAt = operation.fields.updatedAtOrNull()
         if (operation.type != SyncOperationType.UPSERT || localUpdatedAt == null) {
@@ -63,27 +66,27 @@ public class SyncCoordinator(
                 }
             }
         } catch (e: FirestoreException) {
-            val detail =
-                when (e) {
-                    is FirestoreException.ClientError -> "code=${e.code} status=${e.status} message=${e.message}"
-                    is FirestoreException.ServerError -> "code=${e.code} status=${e.status} message=${e.message}"
-                    else -> e.message.toString()
-                }
-            println("SyncCoordinator: preflight read threw ${e::class.simpleName}: $detail")
             PreflightOutcome.UNREACHABLE
         }
     }
 
+    // markStatus runs BEFORE the operation leaves the durable queue, not after: if this
+    // coroutine is cancelled between the two (e.g. the screen observing this sync loop leaves
+    // composition right after a push completes), a push that already succeeded but never got
+    // this far would otherwise be gone from the queue forever with no way to retry it, while the
+    // local row stays stuck at its pre-sync status permanently. Reversed, the worst case of the
+    // same cancellation is a harmless redundant re-push next cycle - store.remove() is what's
+    // left undone.
     private suspend fun applyBatchResult(result: SyncBatchResult) {
         if (result.succeeded.isNotEmpty()) {
-            store.remove(result.succeeded.map { it.id })
             for (operation in result.succeeded) {
                 markStatus(operation, SyncStatus.SYNCED)
             }
+            store.remove(result.succeeded.map { it.id })
         }
         for (operation in result.failed) {
-            store.markRetry(operation.id, operation.attempts)
             markStatus(operation, SyncStatus.FAILED)
+            store.markRetry(operation.id, operation.attempts)
         }
     }
 
@@ -98,7 +101,14 @@ public class SyncCoordinator(
         operation: SyncOperation,
         status: SyncStatus,
     ) {
-        bindingFor(operation.collectionPath)?.markStatus(operation.documentId, status)
+        val binding = bindingFor(operation.collectionPath)
+        if (binding == null) {
+            println(
+                "SyncCoordinator: NO BINDING for '${operation.collectionPath}' - known bindings=" +
+                    bindings.map { it.collectionPath },
+            )
+        }
+        binding?.markStatus(operation.documentId, status)
     }
 
     private fun bindingFor(path: String): SyncEntityBinding? = bindings.find { it.collectionPath == path }

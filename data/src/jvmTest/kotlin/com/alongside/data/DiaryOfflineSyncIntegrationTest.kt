@@ -18,6 +18,7 @@ import com.alongside.core.domain.diary.shouldTriggerPartnerReadyPush
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.diary.Episode
 import com.alongside.core.model.diary.Photo
+import com.alongside.core.network.firestore.model.FirestoreValue
 import com.alongside.core.network.queue.MaxAttemptsRetryPolicy
 import com.alongside.core.network.queue.SyncQueueProcessor
 import com.alongside.data.diary.DiaryEntryFirestoreMapper
@@ -26,22 +27,30 @@ import com.alongside.data.diary.SyncingDiaryEntryRepository
 import com.alongside.data.episode.EpisodeFirestoreMapper
 import com.alongside.data.episode.EpisodeSyncEntityBinding
 import com.alongside.data.episode.SyncingEpisodeRepository
+import com.alongside.data.sync.FakePhotoUploadClient
 import com.alongside.data.sync.FakeRemoteDocumentReader
 import com.alongside.data.sync.RecordingSyncNetworkClient
 import com.alongside.data.sync.SyncCoordinator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.LocalDate
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 
 private val FIXED_NOW = Instant.fromEpochMilliseconds(1_752_800_000_000)
+
+// One day after testDiaryEntry's default date - so a plain SYNCED entry auto-closes via the
+// date-has-passed rule (docs/roadmap.md M12.6) without every test in this file needing to
+// thread an explicit closedAt through just to exercise the sync mechanism.
+private val TODAY = LocalDate(2026, 7, 19)
 
 private object DiaryFixedClock : Clock {
     override fun now(): Instant = FIXED_NOW
@@ -138,6 +147,7 @@ class DiaryOfflineSyncIntegrationTest {
                 geocodingClient = FakeGeocodingClient(),
                 visionDescriptionClient = FakeVisionClient(),
                 imageBytesLoader = { byteArrayOf(1) },
+                photoUploadClient = FakePhotoUploadClient(),
                 clock = DiaryFixedClock,
             )
         val ownEpisodes =
@@ -164,8 +174,8 @@ class DiaryOfflineSyncIntegrationTest {
     private suspend fun assertUnlockState(expected: DayUnlockState) {
         val own = diaryEntryRepository.getById("entry-own")
         val partner = diaryEntryRepository.getById("entry-partner")
-        assertEquals(expected, resolveDayUnlockState(diaryDayStatus(own), diaryDayStatus(partner)))
-        assertEquals(expected == DayUnlockState.UNLOCKED, shouldTriggerPartnerReadyPush(own, partner))
+        assertEquals(expected, resolveDayUnlockState(diaryDayStatus(own, TODAY), diaryDayStatus(partner, TODAY)))
+        assertEquals(expected == DayUnlockState.UNLOCKED, shouldTriggerPartnerReadyPush(own, partner, TODAY))
     }
 
     @Test
@@ -196,5 +206,24 @@ class DiaryOfflineSyncIntegrationTest {
                 setOf(DiaryEntryFirestoreMapper.COLLECTION_PATH, EpisodeFirestoreMapper.COLLECTION_PATH),
                 networkClient.pushed.map { it.collectionPath }.toSet(),
             )
+        }
+
+    @Test
+    fun `synced episode fields carry the Storage remoteUrl, not the original content uri`() =
+        runTest {
+            captureAndPersistBothSides()
+
+            coordinator.sync()
+
+            val episodeOps = networkClient.pushed.filter { it.collectionPath == EpisodeFirestoreMapper.COLLECTION_PATH }
+            val allPhotoValues =
+                episodeOps.flatMap { op -> (op.fields["photos"] as FirestoreValue.ArrayValue).value.values }
+            assertTrue(allPhotoValues.isNotEmpty())
+            allPhotoValues.forEach { photoValue ->
+                val photoFields = (photoValue as FirestoreValue.MapValue).value.fields
+                val remoteUrl = (photoFields["remoteUrl"] as FirestoreValue.StringValue).value
+                assertFalse(remoteUrl.startsWith("content://"))
+                assertTrue(remoteUrl.startsWith("https://firebasestorage.googleapis.com/"))
+            }
         }
 }

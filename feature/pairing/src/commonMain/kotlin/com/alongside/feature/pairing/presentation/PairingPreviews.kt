@@ -31,7 +31,9 @@ private fun PairingPreview(state: PairingState) {
     AlongsideTheme {
         PairingContent(
             state = state,
-            onCreateTrip = {},
+            onPickTripDates = {},
+            onTripDatesChange = { _, _ -> },
+            onConfirmTripDates = {},
             onStartJoinFlow = {},
             onBackToChoice = {},
             onCodeInputChange = {},
@@ -54,6 +56,18 @@ private fun PairingChoicePreview() {
 @Composable
 private fun PairingChoiceCreatingPreview() {
     PairingPreview(PairingState(isCreating = true))
+}
+
+@Preview
+@Composable
+private fun PairingCreatePickDatesPreview() {
+    PairingPreview(
+        PairingState(
+            isPickingDates = true,
+            tripStartDate = LocalDate(2026, 7, 18),
+            tripEndDate = LocalDate(2026, 8, 1),
+        ),
+    )
 }
 
 @Preview
