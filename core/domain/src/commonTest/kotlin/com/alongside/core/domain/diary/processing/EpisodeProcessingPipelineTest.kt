@@ -139,7 +139,7 @@ class EpisodeProcessingPipelineTest {
         }
 
     @Test
-    fun `onEpisodeReady fires per cluster as each one completes, in order`() =
+    fun `onEpisodeReady fires per cluster as each one completes in order`() =
         runTest {
             val ready = mutableListOf<String>()
             val ids = listOf("episode-1", "episode-2").iterator()
@@ -159,7 +159,7 @@ class EpisodeProcessingPipelineTest {
         }
 
     @Test
-    fun `a cluster that throws an uncaught exception is skipped, not fatal to the whole batch`() =
+    fun `a cluster that throws an uncaught exception is skipped not fatal to the whole batch`() =
         runTest {
             val ready = mutableListOf<Set<String>>()
             val uploadClient = FakePhotoUploadClient()

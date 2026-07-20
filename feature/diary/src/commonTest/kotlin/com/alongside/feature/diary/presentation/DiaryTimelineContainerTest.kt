@@ -244,7 +244,7 @@ class DiaryTimelineContainerTest {
         }
 
     @Test
-    fun `closing a day other than today upserts that day's entry, not today's`() =
+    fun `closing a day other than today upserts that day's entry not today's`() =
         runTest {
             val otherDate = FIXED_TODAY.plus(1, DateTimeUnit.DAY)
             val trip =

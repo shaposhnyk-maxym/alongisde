@@ -79,7 +79,7 @@ class DiaryTimelineDayTest {
     }
 
     @Test
-    fun `a synced entry for today that is not closed yet is OPEN, not READY`() {
+    fun `a synced entry for today that is not closed yet is OPEN not READY`() {
         val date = LocalDate(2026, 7, 19)
         val ownEntry = entry(id = "own-1", userId = "own", date = date, syncStatus = SyncStatus.SYNCED)
 
