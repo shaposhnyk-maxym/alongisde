@@ -8,4 +8,5 @@ public data class Photo(
     val takenAt: Instant,
     val latitude: Double,
     val longitude: Double,
+    val remoteUrl: String? = null,
 )

@@ -40,6 +40,7 @@ dependencies {
     implementation(projects.feature.auth)
     implementation(projects.feature.onboarding)
     implementation(projects.feature.pairing)
+    implementation(projects.feature.diary)
     implementation(projects.core.network)
     implementation(projects.core.database)
     implementation(projects.core.domain)

@@ -18,8 +18,16 @@ public class FirestoreSyncNetworkClient(
             }
             SyncResult.Success
         } catch (e: FirestoreException.ClientError) {
+            println(
+                "FirestoreSyncNetworkClient: push ${operation.collectionPath}/${operation.documentId} " +
+                    "failed (non-retryable): code=${e.code} status=${e.status} message=${e.message}",
+            )
             SyncResult.Failure(retryable = false, cause = e)
         } catch (e: FirestoreException) {
+            println(
+                "FirestoreSyncNetworkClient: push ${operation.collectionPath}/${operation.documentId} " +
+                    "failed (retryable): ${e::class.simpleName}: ${e.message}",
+            )
             SyncResult.Failure(retryable = true, cause = e)
         }
 }

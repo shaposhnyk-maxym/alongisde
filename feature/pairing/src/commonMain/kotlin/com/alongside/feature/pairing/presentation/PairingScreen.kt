@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.alongside.core.ui.component.InkGradientBackground
+import kotlinx.datetime.LocalDate
 import org.orbitmvi.orbit.compose.collectAsState
 
 @Composable
@@ -20,7 +21,9 @@ public fun PairingScreen(
 
     PairingContent(
         state = state,
-        onCreateTrip = { container.onIntent(PairingIntent.CreateTrip) },
+        onPickTripDates = { container.onIntent(PairingIntent.PickTripDates) },
+        onTripDatesChange = { start, end -> container.onIntent(PairingIntent.TripDatesChanged(start, end)) },
+        onConfirmTripDates = { container.onIntent(PairingIntent.ConfirmTripDates) },
         onStartJoinFlow = { container.onIntent(PairingIntent.StartJoinFlow) },
         onBackToChoice = { container.onIntent(PairingIntent.BackToChoice) },
         onCodeInputChange = { container.onIntent(PairingIntent.CodeInputChanged(it)) },
@@ -32,7 +35,9 @@ public fun PairingScreen(
 @Composable
 internal fun PairingContent(
     state: PairingState,
-    onCreateTrip: () -> Unit,
+    onPickTripDates: () -> Unit,
+    onTripDatesChange: (LocalDate, LocalDate) -> Unit,
+    onConfirmTripDates: () -> Unit,
     onStartJoinFlow: () -> Unit,
     onBackToChoice: () -> Unit,
     onCodeInputChange: (String) -> Unit,
@@ -54,10 +59,22 @@ internal fun PairingContent(
                 PairingStep.CHOICE ->
                     ChoiceStep(
                         isCreating = state.isCreating,
-                        onCreateTrip = onCreateTrip,
+                        onCreateTrip = onPickTripDates,
                         onStartJoinFlow = onStartJoinFlow,
                         animateEntrance = animateEntrance,
                     )
+                PairingStep.CREATE_PICK_DATES ->
+                    state.tripStartDate?.let { startDate ->
+                        state.tripEndDate?.let { endDate ->
+                            PickDatesStep(
+                                startDate = startDate,
+                                endDate = endDate,
+                                onDatesChange = onTripDatesChange,
+                                onConfirm = onConfirmTripDates,
+                                onBackToChoice = onBackToChoice,
+                            )
+                        }
+                    }
                 PairingStep.CREATE_SHOW_CODE ->
                     state.ownTrip?.let { trip ->
                         CreateShowCodeStep(

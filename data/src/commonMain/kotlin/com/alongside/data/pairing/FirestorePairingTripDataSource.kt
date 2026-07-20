@@ -44,11 +44,9 @@ public class FirestorePairingTripDataSource(
 
     override fun observeByUserId(userId: String): Flow<Trip?> =
         channelFlow {
-            println("FirestorePairingTripDataSource: observeByUserId($userId) subscribed")
             val poller =
                 launch {
                     while (isActive) {
-                        println("FirestorePairingTripDataSource: poll tick for $userId")
                         // Push before pull: operations parked in the durable queue (a write
                         // that 403'd or happened offline) have no other trigger than save() -
                         // the poll tick is what drains them once connectivity/auth is back.
@@ -73,11 +71,7 @@ public class FirestorePairingTripDataSource(
     @Suppress("TooGenericExceptionCaught")
     private suspend fun pushPendingSync() {
         try {
-            val result = syncCoordinator.sync()
-            println(
-                "FirestorePairingTripDataSource: sync() -> " +
-                    "succeeded=${result.succeeded.size} failed=${result.failed.size}",
-            )
+            syncCoordinator.sync()
         } catch (e: FirestoreException) {
             println("FirestorePairingTripDataSource: sync() threw ${e::class.simpleName}: ${e.message}")
         } catch (e: Throwable) {

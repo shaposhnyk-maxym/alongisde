@@ -1,7 +1,16 @@
 package com.alongside.feature.pairing.presentation
 
+import kotlinx.datetime.LocalDate
+
 public sealed interface PairingIntent {
-    public data object CreateTrip : PairingIntent
+    public data object PickTripDates : PairingIntent
+
+    public data class TripDatesChanged(
+        val startDate: LocalDate,
+        val endDate: LocalDate,
+    ) : PairingIntent
+
+    public data object ConfirmTripDates : PairingIntent
 
     public data object StartJoinFlow : PairingIntent
 

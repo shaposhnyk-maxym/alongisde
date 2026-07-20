@@ -77,6 +77,28 @@ class EpisodeFirestoreMapperTest {
     }
 
     @Test
+    fun `toFields and fromDocument round trip a photo's remoteUrl when present`() {
+        val photos = listOf(testPhoto(id = "photo-1", remoteUrl = "https://firebasestorage.googleapis.com/photo-1"))
+        val episode = testEpisode(photos = photos)
+        val document = FirestoreDocument(fields = EpisodeFirestoreMapper.toFields(episode))
+
+        val decoded = EpisodeFirestoreMapper.fromDocument(document)
+
+        assertEquals("https://firebasestorage.googleapis.com/photo-1", decoded.photos.single().remoteUrl)
+    }
+
+    @Test
+    fun `toFields and fromDocument round trip a photo's remoteUrl when null`() {
+        val photos = listOf(testPhoto(id = "photo-1", remoteUrl = null))
+        val episode = testEpisode(photos = photos)
+        val document = FirestoreDocument(fields = EpisodeFirestoreMapper.toFields(episode))
+
+        val decoded = EpisodeFirestoreMapper.fromDocument(document)
+
+        assertNull(decoded.photos.single().remoteUrl)
+    }
+
+    @Test
     fun `fromDocument reads NullValue placeName and description as null`() {
         val document =
             FirestoreDocument(fields = EpisodeFirestoreMapper.toFields(testEpisode(placeName = null, description = null)))

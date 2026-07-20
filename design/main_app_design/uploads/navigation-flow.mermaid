@@ -1,0 +1,27 @@
+flowchart TD
+    Login --> Onboarding
+    Onboarding --> CreateJoin["Create / Join Trip"]
+    CreateJoin -->|Create: обрати дати| Waiting["Очікування партнера"]
+    CreateJoin -->|Join: код| Home
+    Waiting --> Home
+
+    Home["Хоум"] --> Timeline["Таймлайн (карусель днів)"]
+    Home --> Places["Місця (по локаціях)"]
+    Home --> Matcher["Матчер (свайп)"]
+    Home --> MatchList["Match-лист"]
+    Home -.іконка.-> Settings
+
+    Timeline -->|свайп вліво/вправо| Timeline
+
+    Places -->|"Поділитися" з Maps| Places
+    Places --> Matcher
+
+    Matcher -->|обоє так| MatchList
+    Matcher -->|обоє ні| Removed["Прибрано з колоди"]
+    Matcher -->|розійшлись| Matcher
+
+    Settings --> DebugMenu["Debug Menu (hidden)"]
+    Settings --> LeaveDelete["Leave / Delete Trip"]
+
+    Home -->|Поїздка завершилась| Recap["Recap (Stories)"]
+    Recap --> Home

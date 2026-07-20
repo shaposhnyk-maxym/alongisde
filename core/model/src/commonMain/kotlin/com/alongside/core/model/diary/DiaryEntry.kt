@@ -12,4 +12,5 @@ public data class DiaryEntry(
     val syncStatus: SyncStatus,
     val createdAt: Instant,
     val updatedAt: Instant,
+    val closedAt: Instant? = null,
 )

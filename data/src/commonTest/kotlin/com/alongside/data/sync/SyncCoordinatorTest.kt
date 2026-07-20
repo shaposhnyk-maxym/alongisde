@@ -1,6 +1,7 @@
 package com.alongside.data.sync
 
 import com.alongside.core.database.sync.PersistedSyncOperationStatus
+import com.alongside.core.database.sync.SyncOperationStore
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.network.firestore.model.FirestoreDocument
 import com.alongside.core.network.queue.MaxAttemptsRetryPolicy
@@ -151,6 +152,48 @@ class SyncCoordinatorTest {
 
             assertEquals(listOf("trip-1"), result.succeeded.map { it.documentId })
             assertEquals(listOf("trip-1"), remoteReader.readDocumentIds)
+        }
+
+    // --- Cancellation-resilience: markStatus must land before the op leaves the durable queue ---
+
+    @Test
+    fun `a succeeded operation is marked SYNCED locally before it is removed from the queue`() =
+        runTest {
+            val callOrder = mutableListOf<String>()
+            val binding = TripSyncEntityBinding(local)
+            val orderedBinding =
+                object : SyncEntityBinding {
+                    override val collectionPath: String = binding.collectionPath
+
+                    override suspend fun applyRemote(document: FirestoreDocument) = binding.applyRemote(document)
+
+                    override suspend fun markStatus(
+                        documentId: String,
+                        status: SyncStatus,
+                    ) {
+                        callOrder += "markStatus:$documentId"
+                        binding.markStatus(documentId, status)
+                    }
+                }
+            val orderedStore =
+                object : SyncOperationStore by store {
+                    override suspend fun remove(ids: List<String>) {
+                        callOrder += "remove:${ids.joinToString()}"
+                        store.remove(ids)
+                    }
+                }
+            val orderedCoordinator =
+                SyncCoordinator(
+                    store = orderedStore,
+                    processor = SyncQueueProcessor(networkClient, MaxAttemptsRetryPolicy(MAX_ATTEMPTS)),
+                    remoteReader = remoteReader,
+                    bindings = listOf(orderedBinding),
+                )
+            repository.upsert(testTrip(id = "trip-1"))
+
+            orderedCoordinator.sync()
+
+            assertEquals(listOf("markStatus:trip-1", "remove:op-1"), callOrder)
         }
 
     // --- Preflight and DELETE edge cases ---

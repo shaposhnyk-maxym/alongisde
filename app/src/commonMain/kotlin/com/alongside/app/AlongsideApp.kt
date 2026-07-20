@@ -1,12 +1,17 @@
 package com.alongside.app
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.savedstate.serialization.SavedStateConfiguration
+import com.alongside.app.capture.rememberPhotoPickerLauncher
 import com.alongside.app.navigation.AlongsideNavDisplay
 import com.alongside.app.navigation.Home
 import com.alongside.app.navigation.Login
@@ -26,6 +31,9 @@ import com.alongside.feature.auth.GoogleAuthProvider
 import com.alongside.feature.auth.presentation.AuthContainer
 import com.alongside.feature.auth.presentation.AuthScreen
 import com.alongside.feature.auth.presentation.AuthSideEffect
+import com.alongside.feature.diary.presentation.DiaryTimelineContainer
+import com.alongside.feature.diary.presentation.DiaryTimelineIntent
+import com.alongside.feature.diary.presentation.DiaryTimelineScreen
 import com.alongside.feature.onboarding.PermissionController
 import com.alongside.feature.onboarding.presentation.OnboardingContainer
 import com.alongside.feature.onboarding.presentation.OnboardingScreen
@@ -33,6 +41,7 @@ import com.alongside.feature.onboarding.presentation.OnboardingSideEffect
 import com.alongside.feature.pairing.presentation.PairingContainer
 import com.alongside.feature.pairing.presentation.PairingScreen
 import com.alongside.feature.pairing.presentation.PairingSideEffect
+import kotlinx.datetime.LocalDate
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
@@ -127,9 +136,26 @@ public fun AlongsideApp(
                 }
                 entry<Timeline> {
                     MainTabScreen(tab = MainTab.TIMELINE, backStack = backStack) {
-                        PlaceholderScreen(
-                            title = "Timeline",
-                            note = "The day-by-day carousel of your shared diary - feature:diary.",
+                        val container = koinViewModel<DiaryTimelineContainer>()
+                        var captureDate by remember { mutableStateOf<LocalDate?>(null) }
+                        val launchPhotoPicker =
+                            rememberPhotoPickerLauncher { uris ->
+                                // Cleared immediately after use (not left holding the last value
+                                // forever) so a later, unrelated event can never misattribute
+                                // photos to a stale date - the underlying system picker is modal,
+                                // so a second "Add Photos" tap can't race this in practice, but
+                                // there's no reason to leave a stale date sitting in state either.
+                                captureDate?.let { date ->
+                                    container.onIntent(DiaryTimelineIntent.ProcessCapturedPhotos(date, uris))
+                                }
+                                captureDate = null
+                            }
+                        DiaryTimelineScreen(
+                            container,
+                            onAddPhotos = { date ->
+                                captureDate = date
+                                launchPhotoPicker()
+                            },
                         )
                     }
                 }

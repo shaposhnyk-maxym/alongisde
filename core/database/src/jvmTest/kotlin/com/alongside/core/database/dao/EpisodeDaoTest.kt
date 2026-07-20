@@ -101,6 +101,29 @@ class EpisodeDaoTest {
         }
 
     @Test
+    fun `two different episodes sharing the same photo id each keep their own row`() =
+        runTest {
+            // Photo.id is a content:// URI (see AndroidExifPhotoReader) - unique per physical file on
+            // one device, but nothing stops two different episodes from referencing the same file
+            // (reused test fixtures; imported/shared photos). A single-column PK on photos.id let
+            // upsertPhotos's INSERT OR REPLACE silently steal one episode's row for the other on
+            // every poll tick - the fix widens the PK to (id, episodeId).
+            val episodeA = episodeEntity(id = "episode-a")
+            val episodeB = episodeEntity(id = "episode-b")
+            val sharedPhotoId = "content://photos/shared"
+
+            dao.upsert(episodeA, listOf(photoEntity(sharedPhotoId, episodeA.id)))
+            dao.upsert(episodeB, listOf(photoEntity(sharedPhotoId, episodeB.id)))
+
+            assertEquals(listOf(sharedPhotoId), dao.getById(episodeA.id)?.photos?.map { it.id })
+            assertEquals(listOf(sharedPhotoId), dao.getById(episodeB.id)?.photos?.map { it.id })
+
+            // Re-upserting A (as a repeat poll tick would) must not evict B's row, and vice versa.
+            dao.upsert(episodeA, listOf(photoEntity(sharedPhotoId, episodeA.id)))
+            assertEquals(listOf(sharedPhotoId), dao.getById(episodeB.id)?.photos?.map { it.id })
+        }
+
+    @Test
     fun `delete removes the episode and cascades to its photos`() =
         runTest {
             val episode = episodeEntity()

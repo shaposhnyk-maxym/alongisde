@@ -13,6 +13,7 @@ internal fun testDiaryEntry(
     syncStatus: SyncStatus = SyncStatus.PENDING,
     createdAt: Instant = Instant.fromEpochMilliseconds(1_752_600_000_000),
     updatedAt: Instant = createdAt,
+    closedAt: Instant? = null,
 ): DiaryEntry =
     DiaryEntry(
         id = id,
@@ -22,4 +23,5 @@ internal fun testDiaryEntry(
         syncStatus = syncStatus,
         createdAt = createdAt,
         updatedAt = updatedAt,
+        closedAt = closedAt,
     )

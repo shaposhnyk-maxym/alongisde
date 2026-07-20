@@ -21,8 +21,12 @@ private object FixedClock : Clock {
 private class FakeAuthSessionCache : AuthSessionCache {
     var current: AuthSession? = null
     var saved = mutableListOf<AuthSession>()
+    var getFailure: Exception? = null
 
-    override suspend fun get(): AuthSession? = current
+    override suspend fun get(): AuthSession? {
+        getFailure?.let { throw it }
+        return current
+    }
 
     override suspend fun save(session: AuthSession) {
         saved += session
@@ -119,6 +123,15 @@ class SessionFirestoreTokenProviderTest {
     fun `an expired session without a refresh token yields null without refreshing`() =
         runTest {
             cache.current = session(refreshToken = null, issuedAt = FIXED_NOW - 2.hours)
+
+            assertNull(provider.currentToken())
+            assertEquals(emptyList(), refresher.refreshedWith)
+        }
+
+    @Test
+    fun `a local cache read failure yields null instead of throwing uncaught`() =
+        runTest {
+            cache.getFailure = IllegalStateException("simulated local database I/O failure")
 
             assertNull(provider.currentToken())
             assertEquals(emptyList(), refresher.refreshedWith)

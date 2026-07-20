@@ -12,3 +12,12 @@ kotlin {
     // Compose Desktop, per docs/kmp-module-architecture.md) can depend on
     // this module.
 }
+
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation(libs.findLibrary("coil-compose").get())
+            implementation(libs.findLibrary("coil-network-ktor3").get())
+        }
+    }
+}

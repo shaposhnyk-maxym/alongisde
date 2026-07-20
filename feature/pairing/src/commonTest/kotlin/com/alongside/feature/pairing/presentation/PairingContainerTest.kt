@@ -7,6 +7,7 @@ import com.alongside.feature.pairing.fakeTrip
 import com.alongside.feature.pairing.testAuthSession
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
@@ -67,22 +68,116 @@ class PairingContainerTest {
         }
 
     @Test
-    fun `creating a trip shows progress and then the invite code`() =
+    fun `picking trip dates opens the date step pre-filled with the default range`() =
+        runTest {
+            containerUnderTest().test(this) {
+                containerHost.onIntent(PairingIntent.PickTripDates)
+                val expectedStart = FixedClock.todayIn(TimeZone.currentSystemDefault())
+                expectState {
+                    copy(
+                        isPickingDates = true,
+                        tripStartDate = expectedStart,
+                        tripEndDate = expectedStart.plus(14, DateTimeUnit.DAY),
+                    )
+                }
+            }
+        }
+
+    @Test
+    fun `changing the picked dates updates state`() =
+        runTest {
+            containerUnderTest().test(this) {
+                containerHost.onIntent(PairingIntent.PickTripDates)
+                val expectedStart = FixedClock.todayIn(TimeZone.currentSystemDefault())
+                expectState {
+                    copy(
+                        isPickingDates = true,
+                        tripStartDate = expectedStart,
+                        tripEndDate = expectedStart.plus(14, DateTimeUnit.DAY),
+                    )
+                }
+
+                val customStart = LocalDate(2026, 9, 1)
+                val customEnd = LocalDate(2026, 9, 5)
+                containerHost.onIntent(PairingIntent.TripDatesChanged(customStart, customEnd))
+                expectState { copy(tripStartDate = customStart, tripEndDate = customEnd) }
+            }
+        }
+
+    @Test
+    fun `confirming picked dates creates the trip with exactly those dates`() =
         runTest {
             containerUnderTest().test(this) {
                 runOnCreate()
-                containerHost.onIntent(PairingIntent.CreateTrip)
+                containerHost.onIntent(PairingIntent.PickTripDates)
+                val expectedStart = FixedClock.todayIn(TimeZone.currentSystemDefault())
+                expectState {
+                    copy(
+                        isPickingDates = true,
+                        tripStartDate = expectedStart,
+                        tripEndDate = expectedStart.plus(14, DateTimeUnit.DAY),
+                    )
+                }
+
+                val customStart = LocalDate(2026, 9, 1)
+                val customEnd = LocalDate(2026, 9, 5)
+                containerHost.onIntent(PairingIntent.TripDatesChanged(customStart, customEnd))
+                expectState { copy(tripStartDate = customStart, tripEndDate = customEnd) }
+
+                containerHost.onIntent(PairingIntent.ConfirmTripDates)
                 expectState { copy(isCreating = true) }
                 val created = repository.createdTrips.single()
-                expectState { copy(isCreating = false, ownTrip = created) }
+                expectState { copy(isCreating = false, isPickingDates = false, ownTrip = created) }
                 cancelAndIgnoreRemainingItems()
             }
             val created = repository.createdTrips.single()
             assertEquals(PairingStep.CREATE_SHOW_CODE, PairingState(ownTrip = created).step)
             assertEquals("uid-1", created.ownerId)
-            val expectedStart = FixedClock.todayIn(TimeZone.currentSystemDefault())
-            assertEquals(expectedStart, created.startDate)
-            assertEquals(expectedStart.plus(14, DateTimeUnit.DAY), created.endDate)
+            assertEquals(LocalDate(2026, 9, 1), created.startDate)
+            assertEquals(LocalDate(2026, 9, 5), created.endDate)
+        }
+
+    @Test
+    fun `confirming with an end date before the start date does not create a trip`() =
+        runTest {
+            containerUnderTest().test(this) {
+                containerHost.onIntent(PairingIntent.PickTripDates)
+                val expectedStart = FixedClock.todayIn(TimeZone.currentSystemDefault())
+                expectState {
+                    copy(
+                        isPickingDates = true,
+                        tripStartDate = expectedStart,
+                        tripEndDate = expectedStart.plus(14, DateTimeUnit.DAY),
+                    )
+                }
+
+                val invalidStart = LocalDate(2026, 9, 5)
+                val invalidEnd = LocalDate(2026, 9, 1)
+                containerHost.onIntent(PairingIntent.TripDatesChanged(invalidStart, invalidEnd))
+                expectState { copy(tripStartDate = invalidStart, tripEndDate = invalidEnd) }
+
+                containerHost.onIntent(PairingIntent.ConfirmTripDates)
+            }
+            assertEquals(emptyList(), repository.createdTrips)
+        }
+
+    @Test
+    fun `back from the date step returns to choice and clears the picked dates`() =
+        runTest {
+            containerUnderTest().test(this) {
+                containerHost.onIntent(PairingIntent.PickTripDates)
+                val expectedStart = FixedClock.todayIn(TimeZone.currentSystemDefault())
+                expectState {
+                    copy(
+                        isPickingDates = true,
+                        tripStartDate = expectedStart,
+                        tripEndDate = expectedStart.plus(14, DateTimeUnit.DAY),
+                    )
+                }
+
+                containerHost.onIntent(PairingIntent.BackToChoice)
+                expectState { copy(isPickingDates = false, tripStartDate = null, tripEndDate = null) }
+            }
         }
 
     @Test
@@ -90,10 +185,19 @@ class PairingContainerTest {
         runTest {
             containerUnderTest().test(this) {
                 runOnCreate()
-                containerHost.onIntent(PairingIntent.CreateTrip)
+                containerHost.onIntent(PairingIntent.PickTripDates)
+                val expectedStart = FixedClock.todayIn(TimeZone.currentSystemDefault())
+                expectState {
+                    copy(
+                        isPickingDates = true,
+                        tripStartDate = expectedStart,
+                        tripEndDate = expectedStart.plus(14, DateTimeUnit.DAY),
+                    )
+                }
+                containerHost.onIntent(PairingIntent.ConfirmTripDates)
                 expectState { copy(isCreating = true) }
                 val created = repository.createdTrips.single()
-                expectState { copy(isCreating = false, ownTrip = created) }
+                expectState { copy(isCreating = false, isPickingDates = false, ownTrip = created) }
 
                 repository.activeTrip.value = created.copy(memberId = "partner")
                 expectSideEffect(PairingSideEffect.Paired)

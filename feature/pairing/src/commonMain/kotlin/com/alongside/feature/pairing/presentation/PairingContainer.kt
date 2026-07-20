@@ -6,6 +6,7 @@ import com.alongside.core.domain.pairing.INVITE_CODE_LENGTH
 import com.alongside.core.domain.pairing.JoinTripResult
 import com.alongside.core.domain.pairing.PairingRepository
 import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
@@ -15,7 +16,7 @@ import org.orbitmvi.orbit.syntax.Syntax
 import org.orbitmvi.orbit.viewmodel.container
 import kotlin.time.Clock
 
-/** Placeholder trip length until a date-picker step exists (deliberately out of M8's scope). */
+/** Default range the date-picker step opens with, before the user adjusts it. */
 internal const val DEFAULT_TRIP_LENGTH_DAYS: Int = 14
 
 public class PairingContainer(
@@ -29,7 +30,9 @@ public class PairingContainer(
 
     public fun onIntent(intent: PairingIntent) {
         when (intent) {
-            PairingIntent.CreateTrip -> createTrip()
+            PairingIntent.PickTripDates -> pickTripDates()
+            is PairingIntent.TripDatesChanged -> tripDatesChanged(intent.startDate, intent.endDate)
+            PairingIntent.ConfirmTripDates -> confirmTripDates()
             PairingIntent.StartJoinFlow -> startJoinFlow()
             PairingIntent.BackToChoice -> backToChoice()
             is PairingIntent.CodeInputChanged -> codeInputChanged(intent.value)
@@ -41,10 +44,8 @@ public class PairingContainer(
     // joiner submitting a code end up here when the stored trip gains its second person.
     private suspend fun Syntax<PairingState, PairingSideEffect>.observeActiveTrip() {
         val uid = currentUid()
-        println("PairingContainer: observeActiveTrip starting, uid=$uid")
         if (uid == null) return
         pairingRepository.observeActiveTrip(uid).collect { trip ->
-            println("PairingContainer: observeActiveTrip emitted trip=${trip?.id} memberId=${trip?.memberId}")
             when {
                 trip == null -> Unit
                 trip.memberId != null -> postSideEffect(PairingSideEffect.Paired)
@@ -53,18 +54,34 @@ public class PairingContainer(
         }
     }
 
-    private fun createTrip() =
+    private fun pickTripDates() =
+        intent {
+            val today = clock.todayIn(TimeZone.currentSystemDefault())
+            reduce {
+                state.copy(
+                    isPickingDates = true,
+                    tripStartDate = today,
+                    tripEndDate = today.plus(DEFAULT_TRIP_LENGTH_DAYS, DateTimeUnit.DAY),
+                )
+            }
+        }
+
+    private fun tripDatesChanged(
+        startDate: LocalDate,
+        endDate: LocalDate,
+    ) = intent {
+        reduce { state.copy(tripStartDate = startDate, tripEndDate = endDate) }
+    }
+
+    private fun confirmTripDates() =
         intent {
             val uid = currentUid() ?: return@intent
+            val startDate = state.tripStartDate ?: return@intent
+            val endDate = state.tripEndDate ?: return@intent
+            if (endDate < startDate) return@intent
             reduce { state.copy(isCreating = true) }
-            val today = clock.todayIn(TimeZone.currentSystemDefault())
-            val trip =
-                pairingRepository.createTrip(
-                    ownerId = uid,
-                    startDate = today,
-                    endDate = today.plus(DEFAULT_TRIP_LENGTH_DAYS, DateTimeUnit.DAY),
-                )
-            reduce { state.copy(isCreating = false, ownTrip = trip) }
+            val trip = pairingRepository.createTrip(ownerId = uid, startDate = startDate, endDate = endDate)
+            reduce { state.copy(isCreating = false, isPickingDates = false, ownTrip = trip) }
         }
 
     private fun startJoinFlow() =
@@ -74,7 +91,16 @@ public class PairingContainer(
 
     private fun backToChoice() =
         intent {
-            reduce { state.copy(isJoinFlowChosen = false, codeInput = "", joinError = null) }
+            reduce {
+                state.copy(
+                    isJoinFlowChosen = false,
+                    isPickingDates = false,
+                    tripStartDate = null,
+                    tripEndDate = null,
+                    codeInput = "",
+                    joinError = null,
+                )
+            }
         }
 
     private fun codeInputChanged(value: String) =

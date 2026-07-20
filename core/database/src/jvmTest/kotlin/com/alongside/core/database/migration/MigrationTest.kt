@@ -118,7 +118,7 @@ class MigrationTest {
             .databaseBuilder<AlongsideDatabase>(name = dbFile.absolutePath)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
-            .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+            .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
             .build()
 
     @Test
@@ -176,7 +176,7 @@ class MigrationTest {
                     .databaseBuilder<AlongsideDatabase>(name = v4File.absolutePath)
                     .setDriver(BundledSQLiteDriver())
                     .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6)
+                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                     .build()
             try {
                 val episode = database.episodeDao().getById("episode-1")
@@ -198,7 +198,7 @@ class MigrationTest {
                     .databaseBuilder<AlongsideDatabase>(name = v5File.absolutePath)
                     .setDriver(BundledSQLiteDriver())
                     .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(MIGRATION_5_6)
+                    .addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                     .build()
             try {
                 val episode = database.episodeDao().getById("episode-1")
@@ -209,6 +209,282 @@ class MigrationTest {
                 v5File.delete()
             }
         }
+
+    @Test
+    fun `migration 6 to 7 backfills remoteUrl null on existing photos and round-trips a new non-null value`() =
+        runTest {
+            val v6File = File.createTempFile("migration-test-v6", ".db")
+            v6File.delete()
+            createVersion6Database(v6File)
+            val database =
+                Room
+                    .databaseBuilder<AlongsideDatabase>(name = v6File.absolutePath)
+                    .setDriver(BundledSQLiteDriver())
+                    .setQueryCoroutineContext(Dispatchers.IO)
+                    .addMigrations(MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+                    .build()
+            try {
+                val preMigrationEpisode = database.episodeDao().getById("episode-1")
+                assertEquals(null, preMigrationEpisode?.photos?.single { it.id == "photo-1" }?.remoteUrl)
+
+                val episode = requireNotNull(preMigrationEpisode).episode
+                val originalPhoto = preMigrationEpisode.photos.single { it.id == "photo-1" }
+                val photoWithRemoteUrl =
+                    originalPhoto.copy(remoteUrl = "https://firebasestorage.googleapis.com/photos%2Fphoto-1")
+                database.episodeDao().upsert(episode, listOf(photoWithRemoteUrl))
+
+                val reloaded = database.episodeDao().getById("episode-1")
+                val roundTripPhoto = reloaded?.photos?.single { it.id == "photo-1" }
+                assertEquals(
+                    "https://firebasestorage.googleapis.com/photos%2Fphoto-1",
+                    roundTripPhoto?.remoteUrl,
+                )
+            } finally {
+                database.close()
+                v6File.delete()
+            }
+        }
+
+    @Test
+    fun `migration 7 to 8 backfills closedAt null on existing diary entries and round-trips a new non-null value`() =
+        runTest {
+            val v7File = File.createTempFile("migration-test-v7", ".db")
+            v7File.delete()
+            createVersion7Database(v7File)
+            val database =
+                Room
+                    .databaseBuilder<AlongsideDatabase>(name = v7File.absolutePath)
+                    .setDriver(BundledSQLiteDriver())
+                    .setQueryCoroutineContext(Dispatchers.IO)
+                    .addMigrations(MIGRATION_7_8, MIGRATION_8_9)
+                    .build()
+            try {
+                val preMigrationEntry = database.diaryEntryDao().getById("entry-1")
+                assertEquals(null, preMigrationEntry?.closedAt)
+
+                val closedEntry = requireNotNull(preMigrationEntry).copy(closedAt = Instant.fromEpochMilliseconds(999))
+                database.diaryEntryDao().upsert(closedEntry)
+
+                val reloaded = database.diaryEntryDao().getById("entry-1")
+                assertEquals(Instant.fromEpochMilliseconds(999), reloaded?.closedAt)
+            } finally {
+                database.close()
+                v7File.delete()
+            }
+        }
+
+    @Test
+    fun `migration 8 to 9 widens photos primary key so two episodes can share a photo id`() =
+        runTest {
+            val v8File = File.createTempFile("migration-test-v8", ".db")
+            v8File.delete()
+            createVersion8Database(v8File)
+            val database =
+                Room
+                    .databaseBuilder<AlongsideDatabase>(name = v8File.absolutePath)
+                    .setDriver(BundledSQLiteDriver())
+                    .setQueryCoroutineContext(Dispatchers.IO)
+                    .addMigrations(MIGRATION_8_9)
+                    .build()
+            try {
+                val preMigrationEpisode = database.episodeDao().getById("episode-1")
+                assertEquals(listOf("photo-1"), preMigrationEpisode?.photos?.map { it.id })
+
+                // The v8 bug: this same photo id, under a different episodeId, would have
+                // silently replaced episode-1's row via INSERT OR REPLACE on the old single-
+                // column PK. Post-migration the composite PK keeps both rows independent.
+                val episodeTwo = requireNotNull(preMigrationEpisode).episode.copy(id = "episode-2")
+                val photoForEpisodeTwo = preMigrationEpisode.photos.single().copy(episodeId = "episode-2")
+                database.episodeDao().upsertEpisode(episodeTwo)
+                database.episodeDao().upsertPhotos(listOf(photoForEpisodeTwo))
+
+                assertPhotoIds(database, "episode-1", listOf("photo-1"))
+                assertPhotoIds(database, "episode-2", listOf("photo-1"))
+            } finally {
+                database.close()
+                v8File.delete()
+            }
+        }
+
+    private suspend fun assertPhotoIds(
+        database: AlongsideDatabase,
+        episodeId: String,
+        expected: List<String>,
+    ) {
+        assertEquals(
+            expected,
+            database
+                .episodeDao()
+                .getById(episodeId)
+                ?.photos
+                ?.map { it.id },
+        )
+    }
+
+    private fun createVersion8Database(file: File) {
+        val connection = BundledSQLiteDriver().open(file.absolutePath)
+        try {
+            connection.createVersion4SyncableTables()
+            connection.createVersion8AuxiliaryTables()
+            connection.insertVersion8Rows()
+            connection.execSQL("PRAGMA user_version = 8")
+        } finally {
+            connection.close()
+        }
+    }
+
+    private fun SQLiteConnection.createVersion8AuxiliaryTables() {
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `episodes` (`id` TEXT NOT NULL, `diaryEntryId` TEXT NOT NULL, " +
+                "`startTime` INTEGER NOT NULL, `endTime` INTEGER NOT NULL, `latitude` REAL NOT NULL, " +
+                "`longitude` REAL NOT NULL, `placeName` TEXT, `description` TEXT, " +
+                "`descriptionAttempts` INTEGER NOT NULL, `syncStatus` TEXT NOT NULL DEFAULT 'PENDING', " +
+                "`updatedAt` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))",
+        )
+        execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_episodes_diaryEntryId` ON `episodes` (`diaryEntryId`)",
+        )
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `photos` (`id` TEXT NOT NULL, `episodeId` TEXT NOT NULL, " +
+                "`uri` TEXT NOT NULL, `takenAt` INTEGER NOT NULL, `latitude` REAL NOT NULL, " +
+                "`longitude` REAL NOT NULL, `remoteUrl` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`episodeId`) " +
+                "REFERENCES `episodes`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        )
+        execSQL("CREATE INDEX IF NOT EXISTS `index_photos_episodeId` ON `photos` (`episodeId`)")
+        // createVersion4SyncableTables already created diary_entries without closedAt (that
+        // column doesn't exist until MIGRATION_7_8) - add it here to reach the v8 shape.
+        execSQL("ALTER TABLE `diary_entries` ADD COLUMN `closedAt` INTEGER")
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `push_tokens` (`userId` TEXT NOT NULL, `token` TEXT NOT NULL, " +
+                "`platform` TEXT NOT NULL, `syncStatus` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`userId`))",
+        )
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `auth_session` (`id` TEXT NOT NULL, `uid` TEXT NOT NULL, " +
+                "`email` TEXT, `displayName` TEXT, `photoUrl` TEXT, `idToken` TEXT NOT NULL, " +
+                "`refreshToken` TEXT, `expiresInSeconds` INTEGER NOT NULL, `issuedAt` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`id`))",
+        )
+    }
+
+    private fun SQLiteConnection.insertVersion8Rows() {
+        execSQL(
+            "INSERT INTO episodes (id, diaryEntryId, startTime, endTime, latitude, longitude, " +
+                "placeName, description, descriptionAttempts, syncStatus, updatedAt) VALUES " +
+                "('episode-1', 'entry-1', 100, 200, 49.0, 24.0, 'Rynok Square', " +
+                "'Wandering the old town', 0, 'PENDING', 200)",
+        )
+        execSQL(
+            "INSERT INTO photos (id, episodeId, uri, takenAt, latitude, longitude, remoteUrl) VALUES " +
+                "('photo-1', 'episode-1', 'content://photos/photo-1', 150, 49.0, 24.0, NULL)",
+        )
+    }
+
+    private fun createVersion7Database(file: File) {
+        val connection = BundledSQLiteDriver().open(file.absolutePath)
+        try {
+            connection.createVersion4SyncableTables()
+            connection.createVersion7AuxiliaryTables()
+            connection.insertVersion7Row()
+            connection.execSQL("PRAGMA user_version = 7")
+        } finally {
+            connection.close()
+        }
+    }
+
+    private fun SQLiteConnection.createVersion7AuxiliaryTables() {
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `episodes` (`id` TEXT NOT NULL, `diaryEntryId` TEXT NOT NULL, " +
+                "`startTime` INTEGER NOT NULL, `endTime` INTEGER NOT NULL, `latitude` REAL NOT NULL, " +
+                "`longitude` REAL NOT NULL, `placeName` TEXT, `description` TEXT, " +
+                "`descriptionAttempts` INTEGER NOT NULL, `syncStatus` TEXT NOT NULL DEFAULT 'PENDING', " +
+                "`updatedAt` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))",
+        )
+        execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_episodes_diaryEntryId` ON `episodes` (`diaryEntryId`)",
+        )
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `photos` (`id` TEXT NOT NULL, `episodeId` TEXT NOT NULL, " +
+                "`uri` TEXT NOT NULL, `takenAt` INTEGER NOT NULL, `latitude` REAL NOT NULL, " +
+                "`longitude` REAL NOT NULL, `remoteUrl` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`episodeId`) " +
+                "REFERENCES `episodes`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        )
+        execSQL("CREATE INDEX IF NOT EXISTS `index_photos_episodeId` ON `photos` (`episodeId`)")
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `push_tokens` (`userId` TEXT NOT NULL, `token` TEXT NOT NULL, " +
+                "`platform` TEXT NOT NULL, `syncStatus` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`userId`))",
+        )
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `auth_session` (`id` TEXT NOT NULL, `uid` TEXT NOT NULL, " +
+                "`email` TEXT, `displayName` TEXT, `photoUrl` TEXT, `idToken` TEXT NOT NULL, " +
+                "`refreshToken` TEXT, `expiresInSeconds` INTEGER NOT NULL, `issuedAt` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`id`))",
+        )
+    }
+
+    private fun SQLiteConnection.insertVersion7Row() {
+        execSQL(
+            "INSERT INTO diary_entries (id, tripId, userId, date, syncStatus, createdAt, updatedAt) " +
+                "VALUES ('entry-1', 'trip-1', 'owner-1', '2026-07-16', 'SYNCED', 111, 111)",
+        )
+    }
+
+    private fun createVersion6Database(file: File) {
+        val connection = BundledSQLiteDriver().open(file.absolutePath)
+        try {
+            connection.createVersion4SyncableTables()
+            connection.createVersion6AuxiliaryTables()
+            connection.insertVersion6Rows()
+            connection.execSQL("PRAGMA user_version = 6")
+        } finally {
+            connection.close()
+        }
+    }
+
+    private fun SQLiteConnection.createVersion6AuxiliaryTables() {
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `episodes` (`id` TEXT NOT NULL, `diaryEntryId` TEXT NOT NULL, " +
+                "`startTime` INTEGER NOT NULL, `endTime` INTEGER NOT NULL, `latitude` REAL NOT NULL, " +
+                "`longitude` REAL NOT NULL, `placeName` TEXT, `description` TEXT, " +
+                "`descriptionAttempts` INTEGER NOT NULL, `syncStatus` TEXT NOT NULL DEFAULT 'PENDING', " +
+                "`updatedAt` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))",
+        )
+        execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_episodes_diaryEntryId` ON `episodes` (`diaryEntryId`)",
+        )
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `photos` (`id` TEXT NOT NULL, `episodeId` TEXT NOT NULL, " +
+                "`uri` TEXT NOT NULL, `takenAt` INTEGER NOT NULL, `latitude` REAL NOT NULL, " +
+                "`longitude` REAL NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`episodeId`) REFERENCES " +
+                "`episodes`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        )
+        execSQL("CREATE INDEX IF NOT EXISTS `index_photos_episodeId` ON `photos` (`episodeId`)")
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `push_tokens` (`userId` TEXT NOT NULL, `token` TEXT NOT NULL, " +
+                "`platform` TEXT NOT NULL, `syncStatus` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`userId`))",
+        )
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `auth_session` (`id` TEXT NOT NULL, `uid` TEXT NOT NULL, " +
+                "`email` TEXT, `displayName` TEXT, `photoUrl` TEXT, `idToken` TEXT NOT NULL, " +
+                "`refreshToken` TEXT, `expiresInSeconds` INTEGER NOT NULL, `issuedAt` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`id`))",
+        )
+    }
+
+    private fun SQLiteConnection.insertVersion6Rows() {
+        execSQL(
+            "INSERT INTO episodes (id, diaryEntryId, startTime, endTime, latitude, longitude, " +
+                "placeName, description, descriptionAttempts, syncStatus, updatedAt) VALUES " +
+                "('episode-1', 'entry-1', 100, 200, 49.0, 24.0, 'Rynok Square', " +
+                "'Wandering the old town', 0, 'PENDING', 200)",
+        )
+        execSQL(
+            "INSERT INTO photos (id, episodeId, uri, takenAt, latitude, longitude) VALUES " +
+                "('photo-1', 'episode-1', 'content://photos/photo-1', 150, 49.0, 24.0)",
+        )
+    }
 
     private fun createVersion5Database(file: File) {
         val connection = BundledSQLiteDriver().open(file.absolutePath)

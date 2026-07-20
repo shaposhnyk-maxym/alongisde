@@ -46,6 +46,12 @@ class PairingScreenNavigationTest {
         waitForStep("CHOICE")
         composeTestRule.onNodeWithText("Create a Trip").performClick()
 
+        waitForStep("CREATE_PICK_DATES")
+        // The picker opens pre-filled with a default range - confirming it as-is is enough to
+        // exercise the step transition; the actual date-selection logic is covered by
+        // PairingContainerTest against TripDatesChanged directly.
+        composeTestRule.onNodeWithText("Confirm Dates").performClick()
+
         waitForStep("CREATE_SHOW_CODE")
         composeTestRule.onNodeWithText("Waiting for your partner", substring = true).assertExists()
 
@@ -53,6 +59,19 @@ class PairingScreenNavigationTest {
         runBlocking { dataSource.save(created.copy(memberId = "partner-uid")) }
 
         waitForStep("PAIRED")
+    }
+
+    @Test
+    fun `back from the date step returns to choice`() {
+        setContent()
+
+        waitForStep("CHOICE")
+        composeTestRule.onNodeWithText("Create a Trip").performClick()
+
+        waitForStep("CREATE_PICK_DATES")
+        composeTestRule.onNodeWithText("Back").performClick()
+
+        waitForStep("CHOICE")
     }
 
     @Test
