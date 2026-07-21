@@ -120,7 +120,7 @@ class EpisodeProcessingPipelineTest {
         }
 
     @Test
-    fun `geocoded city, cityPlaceId, and countryCode are carried onto the episode`() =
+    fun `geocoded city and cityPlaceId and countryCode are carried onto the episode`() =
         runTest {
             val geocoding =
                 FakePlaceGeocodingClient(
