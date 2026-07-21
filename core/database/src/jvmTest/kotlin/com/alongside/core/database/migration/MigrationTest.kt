@@ -1,6 +1,7 @@
 package com.alongside.core.database.migration
 
 import androidx.room.Room
+import androidx.room.migration.Migration
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
@@ -130,6 +131,7 @@ class MigrationTest {
                 MIGRATION_10_11,
                 MIGRATION_11_12,
                 MIGRATION_12_13,
+                MIGRATION_13_14,
             ).build()
 
     @Test
@@ -197,6 +199,7 @@ class MigrationTest {
                         MIGRATION_10_11,
                         MIGRATION_11_12,
                         MIGRATION_12_13,
+                        MIGRATION_13_14,
                     ).build()
             try {
                 val episode = database.episodeDao().getById("episode-1")
@@ -227,6 +230,7 @@ class MigrationTest {
                         MIGRATION_10_11,
                         MIGRATION_11_12,
                         MIGRATION_12_13,
+                        MIGRATION_13_14,
                     ).build()
             try {
                 val episode = database.episodeDao().getById("episode-1")
@@ -257,6 +261,7 @@ class MigrationTest {
                         MIGRATION_10_11,
                         MIGRATION_11_12,
                         MIGRATION_12_13,
+                        MIGRATION_13_14,
                     ).build()
             try {
                 val preMigrationEpisode = database.episodeDao().getById("episode-1")
@@ -298,6 +303,7 @@ class MigrationTest {
                         MIGRATION_10_11,
                         MIGRATION_11_12,
                         MIGRATION_12_13,
+                        MIGRATION_13_14,
                     ).build()
             try {
                 val preMigrationEntry = database.diaryEntryDao().getById("entry-1")
@@ -325,8 +331,14 @@ class MigrationTest {
                     .databaseBuilder<AlongsideDatabase>(name = v8File.absolutePath)
                     .setDriver(BundledSQLiteDriver())
                     .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
-                    .build()
+                    .addMigrations(
+                        MIGRATION_8_9,
+                        MIGRATION_9_10,
+                        MIGRATION_10_11,
+                        MIGRATION_11_12,
+                        MIGRATION_12_13,
+                        MIGRATION_13_14,
+                    ).build()
             try {
                 val preMigrationEpisode = database.episodeDao().getById("episode-1")
                 assertEquals(listOf("photo-1"), preMigrationEpisode?.photos?.map { it.id })
@@ -354,12 +366,14 @@ class MigrationTest {
             v9File.delete()
             createVersion9Database(v9File)
             val database =
-                Room
-                    .databaseBuilder<AlongsideDatabase>(name = v9File.absolutePath)
-                    .setDriver(BundledSQLiteDriver())
-                    .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
-                    .build()
+                openDatabase(
+                    v9File,
+                    MIGRATION_9_10,
+                    MIGRATION_10_11,
+                    MIGRATION_11_12,
+                    MIGRATION_12_13,
+                    MIGRATION_13_14,
+                )
             try {
                 val preMigrationPlace = database.placeCandidateDao().getById("place-1")
                 assertEquals(emptyList(), preMigrationPlace?.photos)
@@ -398,7 +412,7 @@ class MigrationTest {
                     .databaseBuilder<AlongsideDatabase>(name = v10File.absolutePath)
                     .setDriver(BundledSQLiteDriver())
                     .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
+                    .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
                     .build()
             try {
                 val preMigrationPlace = database.placeCandidateDao().getById("place-1")
@@ -441,7 +455,7 @@ class MigrationTest {
                     .databaseBuilder<AlongsideDatabase>(name = v11File.absolutePath)
                     .setDriver(BundledSQLiteDriver())
                     .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(MIGRATION_11_12, MIGRATION_12_13)
+                    .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
                     .build()
             try {
                 val preMigrationPlace = database.placeCandidateDao().getById("place-1")
@@ -513,13 +527,79 @@ class MigrationTest {
             }
         }
 
-    private fun openVersion12To13Database(file: File): AlongsideDatabase =
+    @Test
+    fun `migration 13 to 14 backfills geocodeAttempts to zero on an existing episode, round trips a new value`() =
+        runTest {
+            val v13File = File.createTempFile("migration-test-v13", ".db")
+            v13File.delete()
+            createVersion13Database(v13File)
+            val database = openVersion13To14Database(v13File)
+            try {
+                val preMigrationEpisode = database.episodeDao().getById("episode-1")?.episode
+                assertEquals(0, preMigrationEpisode?.geocodeAttempts)
+
+                val updatedEpisode = requireNotNull(preMigrationEpisode).copy(geocodeAttempts = 3)
+                database.episodeDao().upsertEpisode(updatedEpisode)
+                val reloadedEpisode = database.episodeDao().getById("episode-1")?.episode
+                assertEquals(3, reloadedEpisode?.geocodeAttempts)
+            } finally {
+                database.close()
+                v13File.delete()
+            }
+        }
+
+    private fun openVersion13To14Database(file: File): AlongsideDatabase =
         Room
             .databaseBuilder<AlongsideDatabase>(name = file.absolutePath)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
-            .addMigrations(MIGRATION_12_13)
+            .addMigrations(MIGRATION_13_14)
             .build()
+
+    private fun createVersion13Database(file: File) {
+        val connection = BundledSQLiteDriver().open(file.absolutePath)
+        try {
+            connection.createVersion4SyncableTables()
+            connection.createVersion9AuxiliaryTables()
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `photos` TEXT NOT NULL DEFAULT ''")
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `rating` REAL")
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `category` TEXT")
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `city` TEXT")
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `cityPlaceId` TEXT")
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `countryCode` TEXT")
+            connection.execSQL("ALTER TABLE `episodes` ADD COLUMN `city` TEXT")
+            connection.execSQL("ALTER TABLE `episodes` ADD COLUMN `cityPlaceId` TEXT")
+            connection.execSQL("ALTER TABLE `episodes` ADD COLUMN `countryCode` TEXT")
+            connection.execSQL(
+                "INSERT INTO place_candidates (id, tripId, name, latitude, longitude, note, addedByUserId, " +
+                    "ownerSwipe, memberSwipe, syncStatus, createdAt, updatedAt, photos, rating, category, " +
+                    "city, cityPlaceId, countryCode) VALUES ('place-1', 'trip-1', 'Cafe', 49.0, 24.0, NULL, " +
+                    "'owner-1', NULL, NULL, 'PENDING', 333, 333, '', 4.3, 'Restaurant', 'Lviv', NULL, NULL)",
+            )
+            connection.execSQL(
+                "INSERT INTO episodes (id, diaryEntryId, startTime, endTime, latitude, longitude, " +
+                    "placeName, description, descriptionAttempts, syncStatus, updatedAt, city, cityPlaceId, " +
+                    "countryCode) VALUES ('episode-1', 'entry-1', 100, 200, 49.0, 24.0, 'Rynok Square', " +
+                    "'Wandering the old town', 0, 'PENDING', 200, NULL, NULL, NULL)",
+            )
+            connection.execSQL("PRAGMA user_version = 13")
+        } finally {
+            connection.close()
+        }
+    }
+
+    private fun openDatabase(
+        file: File,
+        vararg migrations: Migration,
+    ): AlongsideDatabase =
+        Room
+            .databaseBuilder<AlongsideDatabase>(name = file.absolutePath)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.IO)
+            .addMigrations(*migrations)
+            .build()
+
+    private fun openVersion12To13Database(file: File) = openDatabase(file, MIGRATION_12_13, MIGRATION_13_14)
 
     private fun createVersion12Database(file: File) {
         val connection = BundledSQLiteDriver().open(file.absolutePath)

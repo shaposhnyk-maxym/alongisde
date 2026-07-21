@@ -38,6 +38,7 @@ internal fun testEpisode(
     city: String? = null,
     cityPlaceId: String? = null,
     countryCode: String? = null,
+    geocodeAttempts: Int = 1,
 ): Episode =
     Episode(
         id = id,
@@ -55,4 +56,5 @@ internal fun testEpisode(
         city = city,
         cityPlaceId = cityPlaceId,
         countryCode = countryCode,
+        geocodeAttempts = geocodeAttempts,
     )

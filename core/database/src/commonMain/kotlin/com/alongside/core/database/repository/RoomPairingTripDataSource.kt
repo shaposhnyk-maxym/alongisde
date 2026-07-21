@@ -17,6 +17,8 @@ internal class RoomPairingTripDataSource(
 
     override fun observeByUserId(userId: String): Flow<Trip?> = dao.observeByUserId(userId).map { it?.toDomain() }
 
+    override suspend fun getActiveTrip(userId: String): Trip? = dao.getByUserId(userId)?.toDomain()
+
     override suspend fun save(trip: Trip) {
         dao.upsert(trip.toEntity())
     }

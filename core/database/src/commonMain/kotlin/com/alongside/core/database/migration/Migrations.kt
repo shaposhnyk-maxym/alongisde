@@ -173,3 +173,19 @@ internal val MIGRATION_12_13: Migration =
             connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `countryCode` TEXT")
         }
     }
+
+/**
+ * v13 -> v14 (M12.11 bugfix): episodes.geocodeAttempts, capping automatic reverse-geocoding
+ * retries the same way descriptionAttempts caps description regeneration. Before this,
+ * `EpisodeProcessingPipeline.retryIncomplete` never re-attempted geocoding at all - an episode
+ * captured offline (reverse-geocoding needs network, same as description generation) permanently
+ * kept null city/cityPlaceId/countryCode/placeName forever, since nothing ever revisited it.
+ * NOT NULL DEFAULT 0, same shape as v4->v5's descriptionAttempts - a fresh counter, not a nullable
+ * value with real data to backfill.
+ */
+internal val MIGRATION_13_14: Migration =
+    object : Migration(13, 14) {
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL("ALTER TABLE `episodes` ADD COLUMN `geocodeAttempts` INTEGER NOT NULL DEFAULT 0")
+        }
+    }

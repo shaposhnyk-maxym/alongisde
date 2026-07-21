@@ -1,15 +1,22 @@
 package com.alongside.feature.diary.presentation
 
 import com.alongside.core.domain.diary.processing.EpisodeProcessingPipeline
+import com.alongside.core.domain.diary.processing.GeocodingResult
+import com.alongside.core.domain.diary.processing.PhotoUploadResult
+import com.alongside.core.domain.work.BackgroundJobKind
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.diary.Episode
 import com.alongside.core.model.diary.Photo
+import com.alongside.feature.diary.FakeBackgroundWorkScheduler
 import com.alongside.feature.diary.FakeDiaryEntryRepository
 import com.alongside.feature.diary.FakeEpisodeRepository
 import com.alongside.feature.diary.FakeExifPhotoReader
 import com.alongside.feature.diary.FakeGeocodingClient
+import com.alongside.feature.diary.FakePairingRepository
 import com.alongside.feature.diary.FakePhotoUploadClient
 import com.alongside.feature.diary.FakeVisionClient
+import com.alongside.feature.diary.fakeTrip
+import com.alongside.feature.diary.testDiaryEntry
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
@@ -26,22 +33,29 @@ private object CaptureFixedClock : Clock {
 class DiaryCaptureCoordinatorTest {
     private val diaryEntryRepository = FakeDiaryEntryRepository()
     private val episodeRepository = FakeEpisodeRepository()
+    private val pairingRepository = FakePairingRepository()
+    private val backgroundWorkScheduler = FakeBackgroundWorkScheduler()
 
-    private fun coordinator(exifPhotoReader: FakeExifPhotoReader) =
-        DiaryCaptureCoordinator(
-            diaryEntryRepository = diaryEntryRepository,
-            episodeRepository = episodeRepository,
-            processingPipeline =
-                EpisodeProcessingPipeline(
-                    geocodingClient = FakeGeocodingClient(),
-                    visionDescriptionClient = FakeVisionClient(),
-                    imageBytesLoader = { byteArrayOf(1) },
-                    photoUploadClient = FakePhotoUploadClient(),
-                    clock = CaptureFixedClock,
-                ),
-            exifPhotoReader = exifPhotoReader,
-            clock = CaptureFixedClock,
-        )
+    private fun coordinator(
+        exifPhotoReader: FakeExifPhotoReader,
+        photoUploadClient: FakePhotoUploadClient = FakePhotoUploadClient(),
+        geocodingClient: FakeGeocodingClient = FakeGeocodingClient(),
+    ) = DiaryCaptureCoordinator(
+        diaryEntryRepository = diaryEntryRepository,
+        episodeRepository = episodeRepository,
+        processingPipeline =
+            EpisodeProcessingPipeline(
+                geocodingClient = geocodingClient,
+                visionDescriptionClient = FakeVisionClient(),
+                imageBytesLoader = { byteArrayOf(1) },
+                photoUploadClient = photoUploadClient,
+                clock = CaptureFixedClock,
+            ),
+        exifPhotoReader = exifPhotoReader,
+        pairingRepository = pairingRepository,
+        backgroundWorkScheduler = backgroundWorkScheduler,
+        clock = CaptureFixedClock,
+    )
 
     private fun photo(
         id: String,
@@ -52,19 +66,24 @@ class DiaryCaptureCoordinatorTest {
         photos: List<Photo>,
         description: String? = null,
         descriptionAttempts: Int = 1,
+        id: String = "episode-1",
+        diaryEntryId: String = "entry-1",
+        placeName: String? = "Rynok Square",
+        geocodeAttempts: Int = 1,
     ) = Episode(
-        id = "episode-1",
-        diaryEntryId = "entry-1",
+        id = id,
+        diaryEntryId = diaryEntryId,
         startTime = CAPTURE_FIXED_NOW,
         endTime = CAPTURE_FIXED_NOW,
         latitude = 1.0,
         longitude = 1.0,
-        placeName = "Rynok Square",
+        placeName = placeName,
         description = description,
         descriptionAttempts = descriptionAttempts,
         photos = photos,
         syncStatus = SyncStatus.PENDING,
         updatedAt = CAPTURE_FIXED_NOW,
+        geocodeAttempts = geocodeAttempts,
     )
 
     // The exact race this guards against: Orbit intents run concurrently and the reactive
@@ -203,11 +222,148 @@ class DiaryCaptureCoordinatorTest {
         }
 
     @Test
+    fun `retryIncompleteEpisodes re-geocodes a missing placeName`() =
+        runTest {
+            val underTest = coordinator(FakeExifPhotoReader(emptyMap()))
+            val episode =
+                incompleteEpisode(
+                    photos = listOf(photo("p1", remoteUrl = "https://storage/p1")),
+                    description = "already generated",
+                    placeName = null,
+                    geocodeAttempts = 1,
+                )
+
+            underTest.retryIncompleteEpisodes(listOf(episode))
+
+            assertEquals("Rynok Square", episodeRepository.upserted.single().placeName)
+        }
+
+    @Test
+    fun `retryIncompleteEpisodes gives up on a missing placeName past the attempt cap`() =
+        runTest {
+            val underTest = coordinator(FakeExifPhotoReader(emptyMap()))
+            val episode =
+                incompleteEpisode(
+                    photos = listOf(photo("p1", remoteUrl = "https://storage/p1")),
+                    description = "already generated",
+                    placeName = null,
+                    geocodeAttempts = 5,
+                )
+
+            underTest.retryIncompleteEpisodes(listOf(episode))
+
+            assertEquals(0, episodeRepository.upserted.size)
+        }
+
+    @Test
+    fun `capture enqueues EPISODE_RETRY when the resulting episode still needs geocoding retry`() =
+        runTest {
+            val underTest =
+                coordinator(
+                    FakeExifPhotoReader(mapOf("content://p1" to photo("p1"))),
+                    geocodingClient = FakeGeocodingClient(result = GeocodingResult.NotFound),
+                )
+
+            underTest.capture(
+                tripId = "trip-1",
+                userId = "user-1",
+                date = LocalDate(2026, 7, 19),
+                existingEntryId = null,
+                uris = listOf("content://p1"),
+            )
+
+            assertEquals(listOf(BackgroundJobKind.EPISODE_RETRY), backgroundWorkScheduler.scheduledOneOffs)
+        }
+
+    @Test
     fun `retryIncompleteEpisodes with an empty list upserts nothing`() =
         runTest {
             val underTest = coordinator(FakeExifPhotoReader(emptyMap()))
 
             underTest.retryIncompleteEpisodes(emptyList())
+
+            assertEquals(0, episodeRepository.upserted.size)
+        }
+
+    @Test
+    fun `capture enqueues EPISODE_RETRY when the resulting episode still needs retry`() =
+        runTest {
+            val underTest =
+                coordinator(
+                    FakeExifPhotoReader(mapOf("content://p1" to photo("p1"))),
+                    photoUploadClient = FakePhotoUploadClient { PhotoUploadResult.Failure(RuntimeException("offline")) },
+                )
+
+            underTest.capture(
+                tripId = "trip-1",
+                userId = "user-1",
+                date = LocalDate(2026, 7, 19),
+                existingEntryId = null,
+                uris = listOf("content://p1"),
+            )
+
+            assertEquals(listOf(BackgroundJobKind.EPISODE_RETRY), backgroundWorkScheduler.scheduledOneOffs)
+        }
+
+    @Test
+    fun `capture does not enqueue EPISODE_RETRY when the resulting episode is already complete`() =
+        runTest {
+            val underTest = coordinator(FakeExifPhotoReader(mapOf("content://p1" to photo("p1"))))
+
+            underTest.capture(
+                tripId = "trip-1",
+                userId = "user-1",
+                date = LocalDate(2026, 7, 19),
+                existingEntryId = null,
+                uris = listOf("content://p1"),
+            )
+
+            assertEquals(emptyList(), backgroundWorkScheduler.scheduledOneOffs)
+        }
+
+    @Test
+    fun `retryAllIncompleteEpisodes retries only own incomplete episodes under the attempt cap`() =
+        runTest {
+            val underTest = coordinator(FakeExifPhotoReader(emptyMap()))
+            pairingRepository.activeTrip.value = fakeTrip(id = "trip-1")
+            diaryEntryRepository.upsert(testDiaryEntry(id = "own-entry", tripId = "trip-1", userId = "user-1"))
+            diaryEntryRepository.upsert(testDiaryEntry(id = "partner-entry", tripId = "trip-1", userId = "partner-1"))
+            episodeRepository.upsert(
+                incompleteEpisode(id = "own-incomplete", diaryEntryId = "own-entry", photos = listOf(photo("p1"))),
+            )
+            episodeRepository.upsert(
+                incompleteEpisode(
+                    id = "own-complete",
+                    diaryEntryId = "own-entry",
+                    photos = listOf(photo("p2", remoteUrl = "https://storage/p2")),
+                    description = "already generated",
+                ),
+            )
+            episodeRepository.upsert(
+                incompleteEpisode(
+                    id = "own-capped",
+                    diaryEntryId = "own-entry",
+                    photos = listOf(photo("p3", remoteUrl = "https://storage/p3")),
+                    description = null,
+                    descriptionAttempts = 5,
+                ),
+            )
+            episodeRepository.upsert(
+                incompleteEpisode(id = "partner-incomplete", diaryEntryId = "partner-entry", photos = listOf(photo("p4"))),
+            )
+            episodeRepository.upserted.clear()
+
+            underTest.retryAllIncompleteEpisodes("user-1")
+
+            assertEquals(listOf("own-incomplete"), episodeRepository.upserted.map { it.id })
+        }
+
+    @Test
+    fun `retryAllIncompleteEpisodes is a no-op when there is no active trip`() =
+        runTest {
+            val underTest = coordinator(FakeExifPhotoReader(emptyMap()))
+
+            underTest.retryAllIncompleteEpisodes("user-1")
 
             assertEquals(0, episodeRepository.upserted.size)
         }

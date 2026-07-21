@@ -2,7 +2,9 @@ package com.alongside.data.place
 
 import com.alongside.core.database.sync.PersistedSyncOperationStatus
 import com.alongside.core.database.sync.PersistedSyncOperationType
+import com.alongside.core.domain.work.BackgroundJobKind
 import com.alongside.core.model.SyncStatus
+import com.alongside.data.FakeBackgroundWorkScheduler
 import com.alongside.data.sync.InMemorySyncOperationStore
 import com.alongside.data.sync.SyncOperationCodec
 import com.alongside.data.testPlace
@@ -21,11 +23,13 @@ private object SyncingClock : Clock {
 class SyncingPlaceCandidateRepositoryTest {
     private val local = RecordingPlaceCandidateRepository()
     private val store = InMemorySyncOperationStore()
+    private val backgroundWorkScheduler = FakeBackgroundWorkScheduler()
     private var nextOpId = 0
     private val repository =
         SyncingPlaceCandidateRepository(
             local = local,
             store = store,
+            backgroundWorkScheduler = backgroundWorkScheduler,
             clock = SyncingClock,
             generateOpId = { "op-${++nextOpId}" },
         )
@@ -75,5 +79,17 @@ class SyncingPlaceCandidateRepositoryTest {
             val record = store.loadAll().last()
             assertEquals(PersistedSyncOperationType.DELETE, record.type)
             assertEquals("place-1", record.documentId)
+        }
+
+    @Test
+    fun `upsert and delete each schedule a SYNC_QUEUE_FLUSH backstop`() =
+        runTest {
+            repository.upsert(testPlace())
+            repository.delete("place-1")
+
+            assertEquals(
+                listOf(BackgroundJobKind.SYNC_QUEUE_FLUSH, BackgroundJobKind.SYNC_QUEUE_FLUSH),
+                backgroundWorkScheduler.scheduledOneOffs,
+            )
         }
 }

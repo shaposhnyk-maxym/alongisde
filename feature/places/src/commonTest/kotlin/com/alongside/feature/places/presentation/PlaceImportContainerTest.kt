@@ -3,9 +3,12 @@ package com.alongside.feature.places.presentation
 import com.alongside.core.domain.place.importing.PlaceDetailsResult
 import com.alongside.core.domain.place.importing.PlaceImportPipeline
 import com.alongside.core.domain.place.importing.ShareLinkRedirectResult
+import com.alongside.core.domain.work.BackgroundJobKind
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.place.PlaceCandidate
+import com.alongside.core.model.place.PlacePhoto
 import com.alongside.feature.places.FakeAuthSessionCache
+import com.alongside.feature.places.FakeBackgroundWorkScheduler
 import com.alongside.feature.places.FakePairingRepository
 import com.alongside.feature.places.FakePlaceDetailsLookupClient
 import com.alongside.feature.places.FakePlaceGeocodingClient
@@ -67,6 +70,7 @@ class PlaceImportContainerTest {
     private val pairingRepository =
         FakePairingRepository(initialActiveTrip = fakeTrip(id = "trip-1", ownerId = "uid-1"))
     private val authSessionCache = FakeAuthSessionCache(testAuthSession("uid-1"))
+    private val backgroundWorkScheduler = FakeBackgroundWorkScheduler()
 
     private fun pipeline(
         redirectResult: ShareLinkRedirectResult =
@@ -74,10 +78,11 @@ class PlaceImportContainerTest {
                 "https://www.google.com/maps/place/Lviv+Coffee+Manufacture/@49.8397,24.0297,17z",
             ),
         lookupResult: PlaceDetailsResult = FOUND_RESULT,
+        photoClient: FakePlacePhotoClient = FakePlacePhotoClient(),
     ) = PlaceImportPipeline(
         redirectResolver = FakeShareLinkRedirectResolver(redirectResult),
         detailsLookupClient = FakePlaceDetailsLookupClient(lookupResult),
-        photoClient = FakePlacePhotoClient(),
+        photoClient = photoClient,
         photoUploadClient = FakePlacePhotoUploadClient(),
         placeGeocodingClient = FakePlaceGeocodingClient(),
         generatePlaceId = { "place-1" },
@@ -93,6 +98,7 @@ class PlaceImportContainerTest {
         placeCandidateRepository = placeCandidateRepository,
         authSessionCache = authSessionCache,
         pairingRepository = pairingRepository,
+        backgroundWorkScheduler = backgroundWorkScheduler,
     )
 
     @Test
@@ -174,6 +180,36 @@ class PlaceImportContainerTest {
             }
             assertEquals(1, placeCandidateRepository.upserted.size)
             assertEquals("place-1", placeCandidateRepository.upserted.single().id)
+        }
+
+    @Test
+    fun `Accept does not enqueue PLACE_RETRY when the imported place has no incomplete photos`() =
+        runTest {
+            containerUnderTest().test(this) {
+                runOnCreate()
+                expectState { copy(status = PlaceImportStatus.FOUND, place = EXPECTED_PLACE) }
+
+                containerHost.onIntent(PlaceImportIntent.Accept)
+                expectSideEffect(PlaceImportSideEffect.Imported)
+            }
+            assertEquals(emptyList(), backgroundWorkScheduler.scheduledOneOffs)
+        }
+
+    @Test
+    fun `Accept enqueues PLACE_RETRY when the imported place still has an incomplete photo`() =
+        runTest {
+            val lookupResult = FOUND_RESULT.copy(photoRefs = listOf("ref-1"))
+            val pipeline = pipeline(lookupResult = lookupResult, photoClient = FakePlacePhotoClient(emptyMap()))
+            val expectedPlace = EXPECTED_PLACE.copy(photos = listOf(PlacePhoto(photoRef = "ref-1", remoteUrl = null)))
+
+            containerUnderTest(pipeline = pipeline).test(this) {
+                runOnCreate()
+                expectState { copy(status = PlaceImportStatus.FOUND, place = expectedPlace) }
+
+                containerHost.onIntent(PlaceImportIntent.Accept)
+                expectSideEffect(PlaceImportSideEffect.Imported)
+            }
+            assertEquals(listOf(BackgroundJobKind.PLACE_RETRY), backgroundWorkScheduler.scheduledOneOffs)
         }
 
     @Test

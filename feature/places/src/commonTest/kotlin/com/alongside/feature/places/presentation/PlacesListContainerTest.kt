@@ -1,31 +1,18 @@
 package com.alongside.feature.places.presentation
 
-import com.alongside.core.domain.place.importing.PlaceDetailsResult
-import com.alongside.core.domain.place.importing.PlaceImportPipeline
-import com.alongside.core.domain.place.importing.ShareLinkRedirectResult
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.place.PlaceCandidate
 import com.alongside.feature.places.FakeAuthSessionCache
 import com.alongside.feature.places.FakePairingRepository
-import com.alongside.feature.places.FakePlaceDetailsLookupClient
-import com.alongside.feature.places.FakePlaceGeocodingClient
-import com.alongside.feature.places.FakePlacePhotoClient
-import com.alongside.feature.places.FakePlacePhotoUploadClient
-import com.alongside.feature.places.FakeShareLinkRedirectResolver
 import com.alongside.feature.places.RecordingPlaceCandidateRepository
 import com.alongside.feature.places.fakeTrip
 import com.alongside.feature.places.testAuthSession
 import kotlinx.coroutines.test.runTest
 import org.orbitmvi.orbit.test.test
 import kotlin.test.Test
-import kotlin.time.Clock
 import kotlin.time.Instant
 
 private val FIXED_NOW = Instant.fromEpochMilliseconds(1_752_800_000_000)
-
-private object PlacesListFixedClock : Clock {
-    override fun now(): Instant = FIXED_NOW
-}
 
 private fun place(id: String) =
     PlaceCandidate(
@@ -48,22 +35,8 @@ class PlacesListContainerTest {
     private val pairingRepository = FakePairingRepository(initialActiveTrip = fakeTrip(id = "trip-1"))
     private val authSessionCache = FakeAuthSessionCache(testAuthSession("uid-1"))
     private val placesListDataSource = PlacesListDataSource(pairingRepository, placeCandidateRepository)
-    private val placeRetryDataSource =
-        PlaceRetryDataSource(
-            pairingRepository = pairingRepository,
-            placeCandidateRepository = placeCandidateRepository,
-            pipeline =
-                PlaceImportPipeline(
-                    redirectResolver = FakeShareLinkRedirectResolver(ShareLinkRedirectResult.Failure(Exception())),
-                    detailsLookupClient = FakePlaceDetailsLookupClient(PlaceDetailsResult.NotFound),
-                    photoClient = FakePlacePhotoClient(),
-                    photoUploadClient = FakePlacePhotoUploadClient(),
-                    placeGeocodingClient = FakePlaceGeocodingClient(),
-                    clock = PlacesListFixedClock,
-                ),
-        )
 
-    private fun containerUnderTest() = PlacesListContainer(authSessionCache, placesListDataSource, placeRetryDataSource)
+    private fun containerUnderTest() = PlacesListContainer(authSessionCache, placesListDataSource)
 
     @Test
     fun `loads the active trip's places from Room`() =

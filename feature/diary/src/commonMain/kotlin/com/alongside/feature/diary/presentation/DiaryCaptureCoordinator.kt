@@ -3,10 +3,14 @@ package com.alongside.feature.diary.presentation
 import com.alongside.core.domain.diary.DiaryEntryRepository
 import com.alongside.core.domain.diary.EpisodeRepository
 import com.alongside.core.domain.diary.processing.EpisodeProcessingPipeline
+import com.alongside.core.domain.pairing.PairingRepository
+import com.alongside.core.domain.work.BackgroundJobKind
+import com.alongside.core.domain.work.BackgroundWorkScheduler
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.diary.DiaryEntry
 import com.alongside.core.model.diary.Episode
 import com.alongside.feature.diary.capture.ExifPhotoReader
+import kotlinx.coroutines.flow.first
 import kotlinx.datetime.LocalDate
 import kotlin.time.Clock
 
@@ -17,6 +21,11 @@ private const val DEFAULT_LANGUAGE_TAG = "en"
 // remoteUrl just means "upload hasn't succeeded yet"; retrying that is cheap/safe and isn't
 // capped by this - there's no separate per-photo attempt counter, nor a need for one.
 private const val MAX_DESCRIPTION_ATTEMPTS = 5
+
+// Same rationale as MAX_DESCRIPTION_ATTEMPTS, for reverse-geocoding: a still-missing placeName
+// means the geocoding client itself is the blocker, worth giving up on eventually rather than
+// retrying forever.
+private const val MAX_GEOCODE_ATTEMPTS = 5
 
 /**
  * The Timeline's capture write-path: EXIF read -> M10's processing pipeline -> persistence.
@@ -29,6 +38,8 @@ public class DiaryCaptureCoordinator(
     private val episodeRepository: EpisodeRepository,
     private val processingPipeline: EpisodeProcessingPipeline,
     private val exifPhotoReader: ExifPhotoReader,
+    private val pairingRepository: PairingRepository,
+    private val backgroundWorkScheduler: BackgroundWorkScheduler,
     private val clock: Clock = Clock.System,
 ) {
     // Deterministic, not Uuid.random() - two racy captures for a day with no entry yet (Orbit
@@ -65,6 +76,7 @@ public class DiaryCaptureCoordinator(
         )
 
         val photos = exifPhotoReader.readExifPhotos(uris)
+        val builtEpisodes = mutableListOf<Episode>()
         processingPipeline.process(
             diaryEntryId = entryId,
             photos = photos,
@@ -72,8 +84,16 @@ public class DiaryCaptureCoordinator(
             // Each cluster's episode is persisted the moment it's built, not batched behind the
             // full photo set - so a later cluster failing can no longer orphan an earlier
             // cluster's already-uploaded-to-Storage photos with nothing local to show for it.
-            onEpisodeReady = { episode -> episodeRepository.upsert(episode) },
+            onEpisodeReady = { episode ->
+                episodeRepository.upsert(episode)
+                builtEpisodes += episode
+            },
         )
+        // Event-driven enqueue (docs/roadmap.md M12.11) - the periodic sweep is only a backstop
+        // for a missed enqueue, not the primary path.
+        if (builtEpisodes.any(::needsRetry)) {
+            backgroundWorkScheduler.scheduleOneOff(BackgroundJobKind.EPISODE_RETRY)
+        }
     }
 
     /** Final - once closed, [entry]'s date can never receive an existing-entry match again. */
@@ -96,7 +116,22 @@ public class DiaryCaptureCoordinator(
         }
     }
 
+    /**
+     * Worker-facing entry point (docs/roadmap.md M12.11): unlike [retryIncompleteEpisodes], which
+     * needs an already-gathered episode list (the Timeline Container has one for free in its
+     * reactive state), this gathers [ownUserId]'s own incomplete episodes from scratch - there's
+     * no Container/reactive state to read from a background Worker. Mirrors the same trip/entry
+     * lookups the Timeline itself uses.
+     */
+    public suspend fun retryAllIncompleteEpisodes(ownUserId: String) {
+        val trip = pairingRepository.getActiveTrip(ownUserId) ?: return
+        val ownEntries = diaryEntryRepository.observeByTrip(trip.id).first().filter { it.userId == ownUserId }
+        val episodes = ownEntries.flatMap { entry -> episodeRepository.observeByDiaryEntry(entry.id).first() }
+        retryIncompleteEpisodes(episodes)
+    }
+
     private fun needsRetry(episode: Episode): Boolean =
         episode.photos.any { it.remoteUrl == null } ||
-            (episode.description == null && episode.descriptionAttempts < MAX_DESCRIPTION_ATTEMPTS)
+            (episode.description == null && episode.descriptionAttempts < MAX_DESCRIPTION_ATTEMPTS) ||
+            (episode.placeName == null && episode.geocodeAttempts < MAX_GEOCODE_ATTEMPTS)
 }

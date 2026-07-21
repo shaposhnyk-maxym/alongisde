@@ -38,6 +38,9 @@ internal class RecordingTripRepository :
     override fun observeByUserId(userId: String): Flow<Trip?> =
         trips.map { all -> all.values.firstOrNull { it.ownerId == userId || it.memberId == userId } }
 
+    override suspend fun getActiveTrip(userId: String): Trip? =
+        trips.value.values.firstOrNull { it.ownerId == userId || it.memberId == userId }
+
     override suspend fun save(trip: Trip) {
         savedDirectly += trip
         trips.value = trips.value + (trip.id to trip)

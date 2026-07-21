@@ -19,4 +19,5 @@ public data class Episode(
     val city: String? = null,
     val cityPlaceId: String? = null,
     val countryCode: String? = null,
+    val geocodeAttempts: Int = 0,
 )

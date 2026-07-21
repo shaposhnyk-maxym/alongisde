@@ -7,6 +7,8 @@ import com.alongside.core.domain.diary.processing.PhotoUploadClient
 import com.alongside.core.domain.diary.processing.PhotoUploadResult
 import com.alongside.core.domain.diary.processing.PlaceGeocodingClient
 import com.alongside.core.domain.diary.processing.VisionDescriptionResult
+import com.alongside.core.domain.work.BackgroundJobKind
+import com.alongside.core.domain.work.BackgroundWorkScheduler
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.diary.DiaryEntry
 import com.alongside.core.model.diary.Photo
@@ -32,12 +34,14 @@ internal fun testDiaryEntry(
         closedAt = closedAt,
     )
 
-/** Always finds the same place, regardless of who's asking - mirrors the data-layer fixture. */
-internal class FakeGeocodingClient : PlaceGeocodingClient {
+/** Finds the same scripted result for every call, regardless of who's asking - mirrors the data-layer fixture. */
+internal class FakeGeocodingClient(
+    private val result: GeocodingResult = GeocodingResult.Found("Rynok Square"),
+) : PlaceGeocodingClient {
     override suspend fun reverseGeocode(
         latitude: Double,
         longitude: Double,
-    ): GeocodingResult = GeocodingResult.Found("Rynok Square")
+    ): GeocodingResult = result
 }
 
 internal class FakeVisionClient : EpisodeVisionDescriptionClient {
@@ -48,11 +52,27 @@ internal class FakeVisionClient : EpisodeVisionDescriptionClient {
     ): VisionDescriptionResult = VisionDescriptionResult.Generated("A wander through the old town.")
 }
 
-internal class FakePhotoUploadClient : PhotoUploadClient {
+internal class FakePhotoUploadClient(
+    private val resultFor: (Photo) -> PhotoUploadResult = { PhotoUploadResult.Uploaded("https://storage/${it.id}") },
+) : PhotoUploadClient {
     override suspend fun upload(
         photo: Photo,
         bytes: ByteArray,
-    ): PhotoUploadResult = PhotoUploadResult.Uploaded("https://storage/${photo.id}")
+    ): PhotoUploadResult = resultFor(photo)
+}
+
+internal class FakeBackgroundWorkScheduler : BackgroundWorkScheduler {
+    val scheduledOneOffs = mutableListOf<BackgroundJobKind>()
+    var periodicSweepEnsured: Boolean = false
+        private set
+
+    override fun scheduleOneOff(kind: BackgroundJobKind) {
+        scheduledOneOffs += kind
+    }
+
+    override fun ensurePeriodicSweepScheduled() {
+        periodicSweepEnsured = true
+    }
 }
 
 /** No-op by default - tests that care about polling behavior can subclass or wrap this. */
