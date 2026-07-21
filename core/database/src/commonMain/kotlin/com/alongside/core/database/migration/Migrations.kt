@@ -121,3 +121,34 @@ internal val MIGRATION_9_10: Migration =
             connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `category` TEXT")
         }
     }
+
+/**
+ * v10 -> v11 (M13.2): `photoUrls` (successes-only, Storage URLs) -> `photos`
+ * (`photoRef\tremoteUrlOrEmpty` pairs, see [com.alongside.core.database.converter.PlacePhotoListTypeConverters])
+ * - retrying a failed photo upload needs the original Google Places `photoRef` back, which
+ * `photoUrls` never kept. No backfill attempted: place import didn't ship to anyone until this
+ * milestone, so no real `photoUrls` data exists on any schema-10 database to preserve - an honest
+ * reset (new column defaults to `''`, i.e. an empty photo list) rather than a hacky one (e.g.
+ * treating the lost ref as equal to the URL itself).
+ */
+internal val MIGRATION_10_11: Migration =
+    object : Migration(10, 11) {
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `photos` TEXT NOT NULL DEFAULT ''")
+            connection.execSQL("ALTER TABLE `place_candidates` DROP COLUMN `photoUrls`")
+        }
+    }
+
+/**
+ * v11 -> v12 (M13.2 follow-up): `place_candidates.city`, reverse-geocoded from the place's own
+ * lat/lng at import time (see `PlaceImportPipeline.lookupCity`) - powers the Places screen's
+ * city-grouped list. Nullable with no DEFAULT, same shape as v6->v7's `remoteUrl` - every existing
+ * row's `city` stays NULL, the correct "not yet known" state (and the honest one: this column
+ * didn't exist when those rows were imported, so there's nothing to backfill it from).
+ */
+internal val MIGRATION_11_12: Migration =
+    object : Migration(11, 12) {
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `city` TEXT")
+        }
+    }

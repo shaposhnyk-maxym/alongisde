@@ -1,7 +1,10 @@
 package com.alongside.core.ui.component
 
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -40,6 +43,14 @@ public fun rememberZoomableState(): ZoomableState = remember { ZoomableState() }
  * panned past its own edges. Not centroid-anchored (zooming always expands from the content's own
  * center, not the pinch focal point) - a deliberately simpler, still-natural-feeling
  * implementation rather than the fully rigorous focal-point math a dedicated zoom library would do.
+ *
+ * Only claims a gesture (calling [androidx.compose.ui.input.pointer.PointerInputChange.consume])
+ * when it's an actual pinch (2+ pointers) or the content is already zoomed in - a plain one-finger
+ * drag at 1x scale is left unconsumed so an ancestor `HorizontalPager` (as in
+ * [FullscreenPhotoViewer]) still receives it and can swipe pages. The naive
+ * `detectTransformGestures`-based version this replaced consumed every drag unconditionally,
+ * which silently broke swiping between photos whenever the current page carried this modifier -
+ * i.e. always, since [FullscreenPhotoViewer] applies it to whichever page is current.
  */
 public fun Modifier.zoomable(state: ZoomableState): Modifier =
     this
@@ -49,16 +60,26 @@ public fun Modifier.zoomable(state: ZoomableState): Modifier =
             translationX = state.offset.x
             translationY = state.offset.y
         }.pointerInput(state) {
-            detectTransformGestures { _, pan, zoom, _ ->
-                val newScale = (state.scale * zoom).coerceIn(MIN_SCALE, MAX_SCALE)
-                val maxX = ((size.width * (newScale - 1)) / 2).coerceAtLeast(0f)
-                val maxY = ((size.height * (newScale - 1)) / 2).coerceAtLeast(0f)
-                state.scale = newScale
-                state.offset =
-                    Offset(
-                        (state.offset.x + pan.x * newScale).coerceIn(-maxX, maxX),
-                        (state.offset.y + pan.y * newScale).coerceIn(-maxY, maxY),
-                    )
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false)
+                do {
+                    val event = awaitPointerEvent()
+                    val canceled = event.changes.any { it.isConsumed }
+                    if (!canceled && (event.changes.size > 1 || state.scale > MIN_SCALE)) {
+                        val zoom = event.calculateZoom()
+                        val pan = event.calculatePan()
+                        val newScale = (state.scale * zoom).coerceIn(MIN_SCALE, MAX_SCALE)
+                        val maxX = ((size.width * (newScale - 1)) / 2).coerceAtLeast(0f)
+                        val maxY = ((size.height * (newScale - 1)) / 2).coerceAtLeast(0f)
+                        state.scale = newScale
+                        state.offset =
+                            Offset(
+                                (state.offset.x + pan.x * newScale).coerceIn(-maxX, maxX),
+                                (state.offset.y + pan.y * newScale).coerceIn(-maxY, maxY),
+                            )
+                        event.changes.forEach { it.consume() }
+                    }
+                } while (!canceled && event.changes.any { it.pressed })
             }
         }.pointerInput(state) {
             detectTapGestures(

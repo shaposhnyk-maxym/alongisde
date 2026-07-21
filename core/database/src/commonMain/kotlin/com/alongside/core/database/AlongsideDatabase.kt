@@ -7,6 +7,7 @@ import androidx.room.RoomDatabaseConstructor
 import androidx.room.TypeConverters
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.alongside.core.database.converter.AlongsideTypeConverters
+import com.alongside.core.database.converter.PlacePhotoListTypeConverters
 import com.alongside.core.database.converter.StringListTypeConverters
 import com.alongside.core.database.dao.AuthSessionDao
 import com.alongside.core.database.dao.DiaryEntryDao
@@ -23,6 +24,8 @@ import com.alongside.core.database.entity.PlaceCandidateEntity
 import com.alongside.core.database.entity.PushTokenEntity
 import com.alongside.core.database.entity.SyncOperationEntity
 import com.alongside.core.database.entity.TripEntity
+import com.alongside.core.database.migration.MIGRATION_10_11
+import com.alongside.core.database.migration.MIGRATION_11_12
 import com.alongside.core.database.migration.MIGRATION_3_4
 import com.alongside.core.database.migration.MIGRATION_4_5
 import com.alongside.core.database.migration.MIGRATION_5_6
@@ -59,10 +62,10 @@ internal const val DATABASE_FILE_NAME = "alongside.db"
         AuthSessionEntity::class,
         SyncOperationEntity::class,
     ],
-    version = 10,
+    version = 12,
     exportSchema = true,
 )
-@TypeConverters(AlongsideTypeConverters::class, StringListTypeConverters::class)
+@TypeConverters(AlongsideTypeConverters::class, StringListTypeConverters::class, PlacePhotoListTypeConverters::class)
 @ConstructedBy(AlongsideDatabaseConstructor::class)
 public abstract class AlongsideDatabase : RoomDatabase() {
     internal abstract fun tripDao(): TripDao
@@ -100,6 +103,8 @@ public fun getRoomDatabase(builder: RoomDatabase.Builder<AlongsideDatabase>): Al
             MIGRATION_7_8,
             MIGRATION_8_9,
             MIGRATION_9_10,
+            MIGRATION_10_11,
+            MIGRATION_11_12,
         ).build()
 
 /** Factory rather than a public [AuthSessionCacheImpl] - keeps the Room-backed impl an internal detail. */
@@ -114,7 +119,7 @@ public fun AlongsideDatabase.diaryEntryRepository(): DiaryEntryRepository = Diar
 /** Room-backed local [EpisodeRepository] - the `data` module wraps it with sync-queue enqueueing. */
 public fun AlongsideDatabase.episodeRepository(): EpisodeRepository = EpisodeRepositoryImpl(this)
 
-/** Room-backed local [PlaceCandidateRepository] - not yet wired into sync-queue enqueueing (M13.1). */
+/** Room-backed local [PlaceCandidateRepository] - the `data` module wraps it with sync-queue enqueueing. */
 public fun AlongsideDatabase.placeCandidateRepository(): PlaceCandidateRepository = PlaceCandidateRepositoryImpl(this)
 
 /** Local (Room) side of pairing lookups - the `data` module composes it with the Firestore side. */

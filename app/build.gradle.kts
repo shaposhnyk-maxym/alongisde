@@ -21,6 +21,7 @@ kotlin {
             implementation(projects.feature.onboarding)
             implementation(projects.feature.pairing)
             implementation(projects.feature.diary)
+            implementation(projects.feature.places)
             implementation(libs.findLibrary("navigation3-runtime").get())
             implementation(libs.findLibrary("orbit-core").get())
             implementation(libs.findLibrary("orbit-viewmodel").get())

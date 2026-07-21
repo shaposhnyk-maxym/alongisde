@@ -1825,6 +1825,10 @@ Extension чи Compose UI, це M13.2.
   доступний з `data`-модуля для інтеграційного тесту — сама sync-логіка
   лишається задачею M14/M15, коли Matcher реально потребуватиме
   крос-девайс видимість пулу місць.
+  **Оновлення (M13.2, 2026-07-21):** цей план змінено за прямим
+  запитом користувача — `PlaceCandidateSyncEntityBinding`/`data/place/`
+  таки реалізовано в M13.2, раніше за M14/M15, разом з photo-retry
+  poll loop-ом; деталі — в M13.2's власних нотатках.
 - **`List<String>` (`photoUrls`) — newline-delimited рядок у Room, не
   JSON** — `core:database` не має залежності на kotlinx.serialization;
   кожен елемент — URL (ніколи не містить `\n`), тож простий
@@ -1847,22 +1851,123 @@ Extension чи Compose UI, це M13.2.
 
 ---
 
-### M13.2 — Places: інтеграція в застосунок (share-link entry point)
+### M13.2 — Places: інтеграція в застосунок (share-link entry point) ✅ done
 `feature:places` (частина 1) + `androidApp` — Android `ACTION_SEND`
 intent-filter, iOS Share Extension, перший реальний Orbit Container і
 екран підтвердження імпортованого місця, споживає `PlaceImportPipeline`
 з M13.1.
 
 **Accept:**
-- Android: тест, що intent-filter приймає `ACTION_SEND` з очікуваним
-  MIME-типом (`text/plain`) (інструментальний тест або Robolectric)
-- `PlaceImportContainerTest` (orbit-test, фейковий `PlaceImportPipeline`):
-  отриманий share-текст → пайплайн викликається → стан підтвердження;
-  Accept — зберігає `PlaceCandidate`; Discard — не зберігає
-- Screenshot-тести: картка підтвердження в станах
-  loading/found-з-фото-й-рейтингом/not-found/error
-- iOS: мануальна перевірка Share Extension (автоматизувати важко,
-  фіксується як мануальний чекліст, як і в M7)
+- [x] Android: тест, що intent-filter приймає `ACTION_SEND` з очікуваним
+  MIME-типом (`text/plain`) (інструментальний тест або Robolectric) —
+  `ShareIntentManifestTest` (`androidApp/src/test`, Robolectric,
+  `queryIntentActivities` проти реального маніфесту) — перший тест
+  цього модуля взагалі, до цього `androidApp` не мав жодного test
+  source set
+- [x] `PlaceImportContainerTest` (orbit-test, реальний `PlaceImportPipeline`
+  на feature-локальних фейках його чотирьох сімів — не фейк самого
+  пайплайна, той самий патерн, що `feature:diary`'s `Fake*.kt` для
+  `EpisodeProcessingPipeline`): отриманий share-текст → пайплайн
+  викликається → стан підтвердження; Accept — зберігає `PlaceCandidate`;
+  Discard — не зберігає (7 тестів, incl. no-url-in-text і no-active-trip
+  гілки)
+- [x] Screenshot-тести: картка підтвердження в станах
+  loading/found-з-фото-й-рейтингом/not-found/error — 4 `@Preview` →
+  auto-generated Roborazzi-голдени в `feature/places/screenshots/`
+- [x] iOS: мануальна перевірка Share Extension зафіксована як чекліст у
+  `docs/manual-checklists.md` (той самий підхід, що M7/M10) — `iosApp`
+  ще не існує, BLOCKED
+
+**Відхилення від початкового плану (узгоджені з користувачем перед
+реалізацією):**
+- **Скоуп розширено поза буквальні Accept-критерії, за прямим запитом
+  користувача**: `PlaceCandidate` підключено до `SyncCoordinator` ЗАРАЗ
+  (не відкладено до M14/M15, як планувалось у M13.1) — durable
+  Firestore-синк того самого класу, що вже мають Trip/DiaryEntry/Episode
+  (`PlaceCandidateFirestoreMapper`/`SyncingPlaceCandidateRepository`/
+  `PlaceCandidateSyncEntityBinding`, `data/place/`); плюс новий
+  photo-retry poll loop (`PlaceRetryDataSource`, `feature:places`),
+  якого в діарі-модулі як окремого durable-механізму насправді нема
+  (дослідження показало: діарі-фото-аплоад не має власної черги/
+  паралелізму, лише in-memory 30с poll, той самий підхід і тут
+  застосовано, з тим самим чесно задокументованим обмеженням — працює,
+  лише поки composed якийсь екран).
+- **`PlaceCandidate.photoUrls: List<String>` → `photos: List<PlacePhoto>`**
+  (нове `core:model`) — без цього retry неможливий: стара форма губила
+  Google Places `photoRef` і сам факт часткового збою назавжди. Room:
+  schema v10→v11 (`MIGRATION_10_11`), новий `photos` стовпець
+  (`photoRef\tremoteUrlOrEmpty`-пари, `PlacePhotoListTypeConverters`),
+  старий `photoUrls` дропнутий — свідомо без backfill (місце-імпорт не
+  діставався до жодного реального користувача до цього мілстоуна, тож
+  реальних даних на схемі v10 не існує).
+- **Retry-loop розміщено на існуючій Places-tab заглушці** (не на
+  повноцінному списковому екрані — той належить M16) —
+  `LaunchedEffect` в `AlongsideApp.kt`'s `entry<Places>`, запускає
+  `PlaceRetryDataSource.observeAndRetry(uid)` поки таб на екрані; M16,
+  ймовірно, перенесе цей запуск у свій реальний Container.
+- **`androidApp` отримав перший test source set** (`src/test`,
+  Robolectric + JUnit4) — модуль був чисто композиційним коренем без
+  жодного тесту; `testOptions.unitTests.isIncludeAndroidResources`
+  додано в `androidApp/build.gradle.kts`.
+- **Нова `core:network` фабрика** `createShareLinkRedirectHttpClient()`
+  (по одній на android/ios/jvm, поряд з `createFirestoreHttpClient()`) —
+  окремий Ktor-клієнт з `followRedirects = false`, обов'язковим для
+  `KtorShareLinkRedirectResolver` (не можна перевикористати спільний
+  `single<HttpClient>`, інакше колізія типів у Koin).
+- **`MainActivity` — `android:launchMode="singleTask"`** — без цього
+  другий `ACTION_SEND` під час роботи застосунку створював би нову
+  Activity-інстанцію замість виклику `onNewIntent` на існуючій.
+- **Firestore rules для `placeCandidates` не знадобилось міняти** —
+  повний `match /placeCandidates/{placeId}` блок вже існував у
+  `firebase/firestore.rules` (підготовлений заздалегідь у M9), просто
+  підтверджено, не написано заново.
+
+**Оновлення (пост-M13.2, 2026-07-21): реальний Places-екран замість
+заглушки, за прямим запитом користувача, з дизайн-референсом
+`design/main_app_design/Alongside - Main App and Recap (standalone).html`
+("Screen 16").** Раніше за M16 (яке лишається відповідальним за
+add/edit/delete) реалізовано read-only список:
+- **`PlaceCandidate.city: String?`** (нове поле) — reverse-geocoded від
+  lat/lng самого місця через уже наявний `PlaceGeocodingClient` (той
+  самий сім, що `EpisodeProcessingPipeline` використовує для episode
+  place names) замість розширення Places API (New) відповіді
+  (`addressComponents` там — інша форма полів, ніж у класичного
+  Geocoding API). `GeocodeResult.cityName()` — новий, окремий від
+  `preferredPlaceName()` каскад (`locality` → `administrative_area_level_2`
+  → `administrative_area_level_1`, null якщо нічого не тегнуто — на
+  відміну від `preferredPlaceName()`, без fallback на formatted address).
+  `PlaceImportPipeline` отримав п'ятий конструкторський параметр;
+  `config/detekt.yml`'s `LongParameterList` — `constructorThreshold: 8`
+  додано окремо від `functionThreshold` (детект розрізняє їх, а не
+  єдиний спільний поріг, як здавалось із коментаря M12.5). Схема
+  v11→v12 (`MIGRATION_11_12`), без backfill (та сама "нема реальних
+  даних ще" причина, що v10→v11).
+- **`MediaListRow`** (нове, `core:ui`) — генерик list-row (фото +
+  заголовок з приглушено-сірим "accent" через buildAnnotatedString/
+  SpanStyle, перший такий кейс у кодовій базі + опційний підзаголовок),
+  свідомо не Places-специфічний — той самий shape знадобиться M15's
+  Match-list. Формат "назва — рейтинг" + категорія в підзаголовку —
+  пряма вимога користувача, замінює мокапову спрощену (лише назва)
+  версію рядка.
+- **`InkBackground`** (нове, `core:ui`) — плаский, без градієнта,
+  варіант `InkGradientBackground` (перевикористовує той самий
+  `gradientTop`-токен, не новий колір) — свідоме відхилення саме для
+  цього екрана від теплого градієнтного фону, який мають усі інші
+  реальні екрани, підтверджене з користувачем (мокап читається
+  холодніше/пласкіше).
+- **Групування по місту** (`PlaceCityGroup`/`groupedByCity()`,
+  `feature:places`) — названі міста за алфавітом, місця без міста
+  (geocoding не спрацював/нічого не знайшов) — в один хвостовий "Other"
+  гурт, не губляться.
+- **`PlacesListContainer`/`PlacesListDataSource`** (нове) — той самий
+  reactive trip→content shape, що `DiaryTimelineContainer`/
+  `DiaryTimelineDataSource`, звужений (без Intent/SideEffect — цей
+  екран поки що read-only, M16 додасть їх). Photo-retry loop
+  (`PlaceRetryDataSource.observeAndRetry`) переїхав сюди з тимчасового
+  `LaunchedEffect` на Places-tab заглушці — саме той переїзд, який
+  M13.2's нотатка вище й передбачала.
+- **iOS Share Extension та add/edit/delete лишаються поза скоупом** —
+  без змін відносно оригінальних M13.2/M16 меж.
 
 ---
 

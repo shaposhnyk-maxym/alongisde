@@ -1,6 +1,7 @@
 package com.alongside.app
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -21,6 +22,7 @@ import com.alongside.app.navigation.MatchList
 import com.alongside.app.navigation.Matcher
 import com.alongside.app.navigation.Onboarding
 import com.alongside.app.navigation.Pairing
+import com.alongside.app.navigation.PlaceImport
 import com.alongside.app.navigation.PlaceholderScreen
 import com.alongside.app.navigation.Places
 import com.alongside.app.navigation.Recap
@@ -41,6 +43,10 @@ import com.alongside.feature.onboarding.presentation.OnboardingSideEffect
 import com.alongside.feature.pairing.presentation.PairingContainer
 import com.alongside.feature.pairing.presentation.PairingScreen
 import com.alongside.feature.pairing.presentation.PairingSideEffect
+import com.alongside.feature.places.presentation.PlaceImportContainer
+import com.alongside.feature.places.presentation.PlaceImportScreen
+import com.alongside.feature.places.presentation.PlacesListContainer
+import com.alongside.feature.places.presentation.PlacesListScreen
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
@@ -65,6 +71,7 @@ private val NavKeySavedStateConfiguration =
                     subclass(Home::class)
                     subclass(Timeline::class)
                     subclass(Places::class)
+                    subclass(PlaceImport::class)
                     subclass(Matcher::class)
                     subclass(MatchList::class)
                     subclass(Settings::class)
@@ -83,18 +90,32 @@ private val NavKeySavedStateConfiguration =
  * [googleAuthProvider] and [permissionController] are the two Activity/platform-bound seams
  * the auth gate needs - constructed by the platform entry point (MainActivity / iOS host)
  * and passed down, the same wiring the pre-graph placeholders used.
+ *
+ * [pendingShareText] is the raw `ACTION_SEND` text the platform entry point is currently holding
+ * (cold start via `getIntent()`, or a warm-restart update via `onNewIntent`) - every distinct
+ * non-null value pushes a [PlaceImport] card on top of whatever's on screen, then
+ * [onShareTextConsume] clears it so a later, different share can trigger the effect again.
  */
 @Composable
 public fun AlongsideApp(
     googleAuthProvider: GoogleAuthProvider,
     permissionController: PermissionController,
     modifier: Modifier = Modifier,
+    pendingShareText: String? = null,
+    onShareTextConsume: () -> Unit = {},
 ) {
     val backStack =
         rememberNavBackStack(
             configuration = NavKeySavedStateConfiguration,
             elements = arrayOf(Login),
         )
+
+    LaunchedEffect(pendingShareText) {
+        pendingShareText?.let { text ->
+            backStack.add(PlaceImport(text))
+            onShareTextConsume()
+        }
+    }
 
     AlongsideNavDisplay(
         backStack = backStack,
@@ -161,11 +182,21 @@ public fun AlongsideApp(
                 }
                 entry<Places> {
                     MainTabScreen(tab = MainTab.PLACES, backStack = backStack) {
-                        PlaceholderScreen(
-                            title = "Places",
-                            note = "Spots shared from Google Maps land here - feature:places.",
-                        )
+                        // Manual add/edit/delete is M16's job - this is the read-only list, city-
+                        // grouped, synced from Firebase with Room as the source of truth. The
+                        // incomplete-photo retry loop moved into PlacesListContainer's own
+                        // onCreate (see PlaceRetryDataSource's kdoc for its documented gap).
+                        val container = koinViewModel<PlacesListContainer>()
+                        PlacesListScreen(container)
                     }
+                }
+                entry<PlaceImport> { placeImport ->
+                    val container = koinViewModel<PlaceImportContainer> { parametersOf(placeImport.shareText) }
+                    PlaceImportScreen(
+                        container = container,
+                        onImport = { backStack.removeLastOrNull() },
+                        onDiscard = { backStack.removeLastOrNull() },
+                    )
                 }
                 entry<Matcher> {
                     MainTabScreen(tab = MainTab.MATCHER, backStack = backStack) {

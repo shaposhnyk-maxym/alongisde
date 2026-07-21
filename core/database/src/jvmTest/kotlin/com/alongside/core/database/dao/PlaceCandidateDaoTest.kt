@@ -5,6 +5,7 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.alongside.core.database.AlongsideDatabase
 import com.alongside.core.database.entity.PlaceCandidateEntity
 import com.alongside.core.model.SyncStatus
+import com.alongside.core.model.place.PlacePhoto
 import com.alongside.core.model.place.SwipeDirection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -98,21 +99,28 @@ class PlaceCandidateDaoTest {
         }
 
     @Test
-    fun `photoUrls rating and category round trip correctly`() =
+    fun `photos rating category and city round trip correctly`() =
         runTest {
+            val photos =
+                listOf(
+                    PlacePhoto(photoRef = "places/abc/photos/photo-1", remoteUrl = "https://storage/photo-1.jpg"),
+                    PlacePhoto(photoRef = "places/abc/photos/photo-2", remoteUrl = null),
+                )
             val place =
                 placeEntity().copy(
-                    photoUrls = listOf("https://storage/photo-1.jpg", "https://storage/photo-2.jpg"),
+                    photos = photos,
                     rating = 4.3,
                     category = "Restaurant",
+                    city = "Lviv",
                 )
 
             dao.upsert(place)
 
             val loaded = dao.getById(place.id)
-            assertEquals(listOf("https://storage/photo-1.jpg", "https://storage/photo-2.jpg"), loaded?.photoUrls)
+            assertEquals(photos, loaded?.photos)
             assertEquals(4.3, loaded?.rating)
             assertEquals("Restaurant", loaded?.category)
+            assertEquals("Lviv", loaded?.city)
         }
 
     @Test

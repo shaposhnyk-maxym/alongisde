@@ -4,3 +4,10 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.darwin.Darwin
 
 public fun createFirestoreHttpClient(): HttpClient = HttpClient(Darwin) { configureFirestoreHttpClient() }
+
+/** See [com.alongside.core.network.places.KtorShareLinkRedirectResolver]'s kdoc for why `followRedirects = false`. */
+public fun createShareLinkRedirectHttpClient(): HttpClient =
+    HttpClient(Darwin) {
+        followRedirects = false
+        configureFirestoreHttpClient()
+    }

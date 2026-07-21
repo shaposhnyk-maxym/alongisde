@@ -5,6 +5,7 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.alongside.core.database.AlongsideDatabase
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.place.PlaceCandidate
+import com.alongside.core.model.place.PlacePhoto
 import com.alongside.core.model.place.SwipeDirection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -39,9 +40,10 @@ class PlaceCandidateRepositoryImplTest {
     private fun place(
         id: String = "place-1",
         tripId: String = "trip-1",
-        photoUrls: List<String> = emptyList(),
+        photos: List<PlacePhoto> = emptyList(),
         rating: Double? = null,
         category: String? = null,
+        city: String? = null,
     ) = PlaceCandidate(
         id = id,
         tripId = tripId,
@@ -55,9 +57,10 @@ class PlaceCandidateRepositoryImplTest {
         syncStatus = SyncStatus.PENDING,
         createdAt = Instant.fromEpochMilliseconds(1_752_600_000_000),
         updatedAt = Instant.fromEpochMilliseconds(1_752_600_000_000),
-        photoUrls = photoUrls,
+        photos = photos,
         rating = rating,
         category = category,
+        city = city,
     )
 
     @Test
@@ -77,13 +80,14 @@ class PlaceCandidateRepositoryImplTest {
         }
 
     @Test
-    fun `upsert then getById round trips photoUrls rating and category`() =
+    fun `upsert then getById round trips photos rating category and city`() =
         runTest {
             val place =
                 place(
-                    photoUrls = listOf("https://storage/photo-1.jpg"),
+                    photos = listOf(PlacePhoto(photoRef = "places/abc/photos/photo-1", remoteUrl = null)),
                     rating = 4.7,
                     category = "Gym",
+                    city = "Lviv",
                 )
 
             repository.upsert(place)

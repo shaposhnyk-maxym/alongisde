@@ -6,6 +6,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.place.PlaceCandidate
+import com.alongside.core.model.place.PlacePhoto
 import com.alongside.core.model.place.SwipeDirection
 import kotlin.time.Instant
 
@@ -23,9 +24,10 @@ internal data class PlaceCandidateEntity(
     val syncStatus: SyncStatus,
     val createdAt: Instant,
     @ColumnInfo(defaultValue = "0") val updatedAt: Instant,
-    @ColumnInfo(defaultValue = "''") val photoUrls: List<String> = emptyList(),
+    @ColumnInfo(defaultValue = "''") val photos: List<PlacePhoto> = emptyList(),
     val rating: Double? = null,
     val category: String? = null,
+    val city: String? = null,
 )
 
 internal fun PlaceCandidateEntity.toDomain(): PlaceCandidate =
@@ -42,9 +44,10 @@ internal fun PlaceCandidateEntity.toDomain(): PlaceCandidate =
         syncStatus = syncStatus,
         createdAt = createdAt,
         updatedAt = updatedAt,
-        photoUrls = photoUrls,
+        photos = photos,
         rating = rating,
         category = category,
+        city = city,
     )
 
 internal fun PlaceCandidate.toEntity(): PlaceCandidateEntity =
@@ -61,7 +64,8 @@ internal fun PlaceCandidate.toEntity(): PlaceCandidateEntity =
         syncStatus = syncStatus,
         createdAt = createdAt,
         updatedAt = updatedAt,
-        photoUrls = photoUrls,
+        photos = photos,
         rating = rating,
         category = category,
+        city = city,
     )

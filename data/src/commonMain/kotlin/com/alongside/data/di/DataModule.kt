@@ -4,6 +4,7 @@ import com.alongside.core.database.AlongsideDatabase
 import com.alongside.core.database.diaryEntryRepository
 import com.alongside.core.database.episodeRepository
 import com.alongside.core.database.pairingTripLocalDataSource
+import com.alongside.core.database.placeCandidateRepository
 import com.alongside.core.database.sync.SyncOperationStore
 import com.alongside.core.database.syncOperationStore
 import com.alongside.core.database.tripRepository
@@ -11,6 +12,7 @@ import com.alongside.core.domain.diary.DiaryContentPuller
 import com.alongside.core.domain.diary.DiaryEntryRepository
 import com.alongside.core.domain.diary.EpisodeRepository
 import com.alongside.core.domain.pairing.PairingTripDataSource
+import com.alongside.core.domain.place.PlaceCandidateRepository
 import com.alongside.core.domain.trip.TripRepository
 import com.alongside.core.network.firestore.FirestoreApi
 import com.alongside.core.network.queue.FirestoreSyncNetworkClient
@@ -24,6 +26,8 @@ import com.alongside.data.episode.SyncingEpisodeRepository
 import com.alongside.data.pairing.FirestorePairingRemoteDataSource
 import com.alongside.data.pairing.FirestorePairingTripDataSource
 import com.alongside.data.pairing.PairingRemoteDataSource
+import com.alongside.data.place.PlaceCandidateSyncEntityBinding
+import com.alongside.data.place.SyncingPlaceCandidateRepository
 import com.alongside.data.sync.FirestoreRemoteDocumentReader
 import com.alongside.data.sync.RemoteDocumentReader
 import com.alongside.data.sync.SyncCoordinator
@@ -56,6 +60,9 @@ public val dataModule: Module =
         single<EpisodeRepository> {
             SyncingEpisodeRepository(local = get<AlongsideDatabase>().episodeRepository(), store = get())
         }
+        single<PlaceCandidateRepository> {
+            SyncingPlaceCandidateRepository(local = get<AlongsideDatabase>().placeCandidateRepository(), store = get())
+        }
         single<DiaryContentPuller> {
             FirestoreDiaryContentPuller(
                 api = get(),
@@ -76,6 +83,9 @@ public val dataModule: Module =
             DiaryEntrySyncEntityBinding(get<AlongsideDatabase>().diaryEntryRepository())
         } bind SyncEntityBinding::class
         single { EpisodeSyncEntityBinding(get<AlongsideDatabase>().episodeRepository()) } bind SyncEntityBinding::class
+        single {
+            PlaceCandidateSyncEntityBinding(get<AlongsideDatabase>().placeCandidateRepository())
+        } bind SyncEntityBinding::class
         single {
             SyncCoordinator(
                 store = get(),

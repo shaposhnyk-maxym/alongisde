@@ -36,6 +36,33 @@ class GooglePlacesGeocodingClientTest {
         }
 
     @Test
+    fun `OK status with a locality component also fills in the city`() =
+        runBlocking {
+            val api =
+                testGooglePlacesGeocodingApi {
+                    respondJson(
+                        """
+                        {
+                          "results": [{
+                            "formatted_address": "Rynok Square, Lviv, Ukraine",
+                            "address_components": [
+                              {"long_name": "Rynok Square", "short_name": "Rynok Sq", "types": ["point_of_interest"]},
+                              {"long_name": "Lviv", "short_name": "Lviv", "types": ["locality", "political"]}
+                            ]
+                          }],
+                          "status": "OK"
+                        }
+                        """.trimIndent(),
+                    )
+                }
+            val client = GooglePlacesGeocodingClient(api)
+
+            val result = client.reverseGeocode(49.8397, 24.0297)
+
+            assertEquals(GeocodingResult.Found(placeName = "Rynok Square", city = "Lviv"), result)
+        }
+
+    @Test
     fun `ZERO_RESULTS maps to NotFound`() =
         runBlocking {
             val api = testGooglePlacesGeocodingApi { respondJson("""{"results": [], "status": "ZERO_RESULTS"}""") }
