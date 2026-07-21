@@ -6,6 +6,7 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
 import com.alongside.core.database.AlongsideDatabase
 import com.alongside.core.database.entity.SyncOperationEntity
+import com.alongside.core.model.place.PlacePhoto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import java.io.File
@@ -126,6 +127,8 @@ class MigrationTest {
                 MIGRATION_7_8,
                 MIGRATION_8_9,
                 MIGRATION_9_10,
+                MIGRATION_10_11,
+                MIGRATION_11_12,
             ).build()
 
     @Test
@@ -190,6 +193,8 @@ class MigrationTest {
                         MIGRATION_7_8,
                         MIGRATION_8_9,
                         MIGRATION_9_10,
+                        MIGRATION_10_11,
+                        MIGRATION_11_12,
                     ).build()
             try {
                 val episode = database.episodeDao().getById("episode-1")
@@ -211,8 +216,15 @@ class MigrationTest {
                     .databaseBuilder<AlongsideDatabase>(name = v5File.absolutePath)
                     .setDriver(BundledSQLiteDriver())
                     .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
-                    .build()
+                    .addMigrations(
+                        MIGRATION_5_6,
+                        MIGRATION_6_7,
+                        MIGRATION_7_8,
+                        MIGRATION_8_9,
+                        MIGRATION_9_10,
+                        MIGRATION_10_11,
+                        MIGRATION_11_12,
+                    ).build()
             try {
                 val episode = database.episodeDao().getById("episode-1")
                 assertEquals("PENDING", episode?.episode?.syncStatus?.name)
@@ -234,8 +246,14 @@ class MigrationTest {
                     .databaseBuilder<AlongsideDatabase>(name = v6File.absolutePath)
                     .setDriver(BundledSQLiteDriver())
                     .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
-                    .build()
+                    .addMigrations(
+                        MIGRATION_6_7,
+                        MIGRATION_7_8,
+                        MIGRATION_8_9,
+                        MIGRATION_9_10,
+                        MIGRATION_10_11,
+                        MIGRATION_11_12,
+                    ).build()
             try {
                 val preMigrationEpisode = database.episodeDao().getById("episode-1")
                 assertEquals(null, preMigrationEpisode?.photos?.single { it.id == "photo-1" }?.remoteUrl)
@@ -269,7 +287,7 @@ class MigrationTest {
                     .databaseBuilder<AlongsideDatabase>(name = v7File.absolutePath)
                     .setDriver(BundledSQLiteDriver())
                     .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+                    .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
                     .build()
             try {
                 val preMigrationEntry = database.diaryEntryDao().getById("entry-1")
@@ -297,7 +315,7 @@ class MigrationTest {
                     .databaseBuilder<AlongsideDatabase>(name = v8File.absolutePath)
                     .setDriver(BundledSQLiteDriver())
                     .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(MIGRATION_8_9, MIGRATION_9_10)
+                    .addMigrations(MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
                     .build()
             try {
                 val preMigrationEpisode = database.episodeDao().getById("episode-1")
@@ -320,7 +338,7 @@ class MigrationTest {
         }
 
     @Test
-    fun `migration 9 to 10 backfills empty photoUrls and null rating category, round trips new values`() =
+    fun `migration 9 through 12 backfills null rating category and city, round trips new values`() =
         runTest {
             val v9File = File.createTempFile("migration-test-v9", ".db")
             v9File.delete()
@@ -330,34 +348,145 @@ class MigrationTest {
                     .databaseBuilder<AlongsideDatabase>(name = v9File.absolutePath)
                     .setDriver(BundledSQLiteDriver())
                     .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(MIGRATION_9_10)
+                    .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
                     .build()
             try {
                 val preMigrationPlace = database.placeCandidateDao().getById("place-1")
-                assertEquals(emptyList(), preMigrationPlace?.photoUrls)
+                assertEquals(emptyList(), preMigrationPlace?.photos)
                 assertEquals(null, preMigrationPlace?.rating)
                 assertEquals(null, preMigrationPlace?.category)
+                assertEquals(null, preMigrationPlace?.city)
 
                 val updatedPlace =
                     requireNotNull(preMigrationPlace).copy(
-                        photoUrls = listOf("https://storage/photo-1.jpg", "https://storage/photo-2.jpg"),
+                        photos = listOf(PlacePhoto(photoRef = "places/abc/photos/photo-1", remoteUrl = null)),
                         rating = 4.3,
                         category = "Restaurant",
+                        city = "Lviv",
                     )
                 database.placeCandidateDao().upsert(updatedPlace)
 
                 val reloaded = database.placeCandidateDao().getById("place-1")
-                assertEquals(
-                    listOf("https://storage/photo-1.jpg", "https://storage/photo-2.jpg"),
-                    reloaded?.photoUrls,
-                )
+                assertEquals(updatedPlace.photos, reloaded?.photos)
                 assertEquals(4.3, reloaded?.rating)
                 assertEquals("Restaurant", reloaded?.category)
+                assertEquals("Lviv", reloaded?.city)
             } finally {
                 database.close()
                 v9File.delete()
             }
         }
+
+    @Test
+    fun `migration 10 to 11 drops legacy photoUrls, resets photos to empty, round trips new PlacePhoto pairs`() =
+        runTest {
+            val v10File = File.createTempFile("migration-test-v10", ".db")
+            v10File.delete()
+            createVersion10Database(v10File)
+            val database =
+                Room
+                    .databaseBuilder<AlongsideDatabase>(name = v10File.absolutePath)
+                    .setDriver(BundledSQLiteDriver())
+                    .setQueryCoroutineContext(Dispatchers.IO)
+                    .addMigrations(MIGRATION_10_11, MIGRATION_11_12)
+                    .build()
+            try {
+                val preMigrationPlace = database.placeCandidateDao().getById("place-1")
+                // Deliberate, documented data loss - see MIGRATION_10_11's kdoc: photoRef was
+                // never stored under the old photoUrls column, so there's nothing safe to
+                // backfill `photos` with.
+                assertEquals(emptyList(), preMigrationPlace?.photos)
+                assertEquals(4.3, preMigrationPlace?.rating)
+                assertEquals("Restaurant", preMigrationPlace?.category)
+
+                val updatedPlace =
+                    requireNotNull(preMigrationPlace).copy(
+                        photos =
+                            listOf(
+                                PlacePhoto(
+                                    photoRef = "places/abc/photos/photo-1",
+                                    remoteUrl = "https://storage/photo-1.jpg",
+                                ),
+                                PlacePhoto(photoRef = "places/abc/photos/photo-2", remoteUrl = null),
+                            ),
+                    )
+                database.placeCandidateDao().upsert(updatedPlace)
+
+                val reloaded = database.placeCandidateDao().getById("place-1")
+                assertEquals(updatedPlace.photos, reloaded?.photos)
+            } finally {
+                database.close()
+                v10File.delete()
+            }
+        }
+
+    @Test
+    fun `migration 11 to 12 backfills null city on existing places and round trips a new value`() =
+        runTest {
+            val v11File = File.createTempFile("migration-test-v11", ".db")
+            v11File.delete()
+            createVersion11Database(v11File)
+            val database =
+                Room
+                    .databaseBuilder<AlongsideDatabase>(name = v11File.absolutePath)
+                    .setDriver(BundledSQLiteDriver())
+                    .setQueryCoroutineContext(Dispatchers.IO)
+                    .addMigrations(MIGRATION_11_12)
+                    .build()
+            try {
+                val preMigrationPlace = database.placeCandidateDao().getById("place-1")
+                assertEquals(null, preMigrationPlace?.city)
+
+                val updatedPlace = requireNotNull(preMigrationPlace).copy(city = "Lviv")
+                database.placeCandidateDao().upsert(updatedPlace)
+
+                val reloaded = database.placeCandidateDao().getById("place-1")
+                assertEquals("Lviv", reloaded?.city)
+            } finally {
+                database.close()
+                v11File.delete()
+            }
+        }
+
+    private fun createVersion11Database(file: File) {
+        val connection = BundledSQLiteDriver().open(file.absolutePath)
+        try {
+            connection.createVersion4SyncableTables()
+            connection.createVersion9AuxiliaryTables()
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `photos` TEXT NOT NULL DEFAULT ''")
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `rating` REAL")
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `category` TEXT")
+            connection.execSQL(
+                "INSERT INTO place_candidates (id, tripId, name, latitude, longitude, note, addedByUserId, " +
+                    "ownerSwipe, memberSwipe, syncStatus, createdAt, updatedAt, photos, rating, category) " +
+                    "VALUES ('place-1', 'trip-1', 'Cafe', 49.0, 24.0, NULL, 'owner-1', NULL, NULL, " +
+                    "'PENDING', 333, 333, '', 4.3, 'Restaurant')",
+            )
+            connection.execSQL("PRAGMA user_version = 11")
+        } finally {
+            connection.close()
+        }
+    }
+
+    private fun createVersion10Database(file: File) {
+        val connection = BundledSQLiteDriver().open(file.absolutePath)
+        try {
+            connection.createVersion4SyncableTables()
+            connection.createVersion9AuxiliaryTables()
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `photoUrls` TEXT NOT NULL DEFAULT ''")
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `rating` REAL")
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `category` TEXT")
+            connection.execSQL(
+                "INSERT INTO place_candidates (id, tripId, name, latitude, longitude, note, addedByUserId, " +
+                    "ownerSwipe, memberSwipe, syncStatus, createdAt, updatedAt, photoUrls, rating, category) " +
+                    "VALUES ('place-1', 'trip-1', 'Cafe', 49.0, 24.0, NULL, 'owner-1', NULL, NULL, " +
+                    "'PENDING', 333, 333, 'https://storage/photo-1.jpg', 4.3, 'Restaurant')",
+            )
+            connection.execSQL("PRAGMA user_version = 10")
+        } finally {
+            connection.close()
+        }
+    }
 
     private fun createVersion9Database(file: File) {
         val connection = BundledSQLiteDriver().open(file.absolutePath)

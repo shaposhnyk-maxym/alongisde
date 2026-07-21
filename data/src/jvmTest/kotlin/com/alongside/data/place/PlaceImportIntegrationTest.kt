@@ -12,6 +12,8 @@ import com.alongside.core.network.firestore.FirestoreTokenProvider
 import com.alongside.core.network.places.GooglePlacesConfig
 import com.alongside.core.network.places.GooglePlacesDetailsApi
 import com.alongside.core.network.places.GooglePlacesDetailsClient
+import com.alongside.core.network.places.GooglePlacesGeocodingApi
+import com.alongside.core.network.places.GooglePlacesGeocodingClient
 import com.alongside.core.network.places.GooglePlacesPhotoApi
 import com.alongside.core.network.places.GooglePlacesPhotoClient
 import com.alongside.core.network.places.KtorShareLinkRedirectResolver
@@ -80,8 +82,8 @@ private const val RESOLVED_URL =
  * End to end, entirely against real Ktor `MockEngine` clients (not domain-level fakes) plus a
  * real in-memory Room database: a share-link URL resolves through
  * [PlaceImportPipeline] and the resulting [com.alongside.core.model.place.PlaceCandidate] round
- * trips through [PlaceCandidateRepositoryImpl] with its Storage-hosted `photoUrls`, not raw
- * Google photo references.
+ * trips through [PlaceCandidateRepositoryImpl] with its `photos` carrying Storage-hosted
+ * `remoteUrl`s, not raw Google photo references.
  */
 class PlaceImportIntegrationTest {
     private lateinit var database: AlongsideDatabase
@@ -132,6 +134,23 @@ class PlaceImportIntegrationTest {
     private fun buildPhotoClient() =
         GooglePlacesPhotoClient(GooglePlacesPhotoApi(mockClient { respond(byteArrayOf(1, 2, 3)) }, placesConfig))
 
+    private fun buildGeocodingClient(): GooglePlacesGeocodingClient {
+        val geocodeJson =
+            """
+            {
+              "results": [{
+                "formatted_address": "Tyvrivske shose, 1, Vinnytsia, Ukraine",
+                "address_components": [
+                  {"long_name": "Vinnytsia", "short_name": "Vinnytsia", "types": ["locality", "political"]}
+                ]
+              }],
+              "status": "OK"
+            }
+            """.trimIndent()
+        val geocodingApi = GooglePlacesGeocodingApi(mockClient { respondJson(geocodeJson) }, placesConfig)
+        return GooglePlacesGeocodingClient(geocodingApi)
+    }
+
     private fun buildPhotoUploadClient(): FirebasePlacePhotoUploadClient {
         val storageApi =
             FirebaseStorageApi(
@@ -156,6 +175,7 @@ class PlaceImportIntegrationTest {
             detailsLookupClient = buildDetailsClient(),
             photoClient = buildPhotoClient(),
             photoUploadClient = buildPhotoUploadClient(),
+            placeGeocodingClient = buildGeocodingClient(),
             generatePlaceId = { "place-1" },
             clock = FixedClock,
         )
@@ -175,8 +195,10 @@ class PlaceImportIntegrationTest {
             assertEquals("Global Solar", imported.place.name)
             assertEquals(4.2, imported.place.rating)
             assertEquals("Solar energy company", imported.place.category)
-            assertEquals(2, imported.place.photoUrls.size)
-            imported.place.photoUrls.forEach { url ->
+            assertEquals("Vinnytsia", imported.place.city)
+            assertEquals(2, imported.place.photos.size)
+            imported.place.photos.forEach { photo ->
+                val url = requireNotNull(photo.remoteUrl)
                 assertTrue(url.startsWith("https://firebasestorage.googleapis.com/"))
                 assertFalse(url.contains("places.googleapis.com"))
             }

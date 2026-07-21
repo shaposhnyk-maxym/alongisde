@@ -30,6 +30,18 @@ public data object Timeline : NavKey
 @Serializable
 public data object Places : NavKey
 
+/**
+ * The share-link import confirmation card (`feature:places`, M13.2) - pushed on top of whatever
+ * tab is current when the app is launched (or resumed) via `ACTION_SEND`. Carries the raw shared
+ * text rather than an already-extracted URL: `PlaceImportContainer` does that extraction itself
+ * (see `extractShareUrl`), the same reasoning as passing platform-sourced input to a Container
+ * via `parametersOf` elsewhere in this graph.
+ */
+@Serializable
+public data class PlaceImport(
+    val shareText: String,
+) : NavKey
+
 @Serializable
 public data object Matcher : NavKey
 

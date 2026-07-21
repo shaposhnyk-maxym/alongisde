@@ -1,7 +1,10 @@
 package com.alongside.core.domain.place.importing
 
+import com.alongside.core.domain.diary.processing.GeocodingResult
+import com.alongside.core.domain.diary.processing.PlaceGeocodingClient
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.place.PlaceCandidate
+import com.alongside.core.model.place.PlacePhoto
 import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -33,6 +36,7 @@ public class PlaceImportPipeline
         private val detailsLookupClient: PlaceDetailsLookupClient,
         private val photoClient: PlacePhotoClient,
         private val photoUploadClient: PlacePhotoUploadClient,
+        private val placeGeocodingClient: PlaceGeocodingClient,
         private val generatePlaceId: () -> String = { Uuid.random().toString() },
         private val clock: Clock = Clock.System,
     ) {
@@ -110,24 +114,67 @@ public class PlaceImportPipeline
                     syncStatus = SyncStatus.PENDING,
                     createdAt = now,
                     updatedAt = now,
-                    photoUrls = uploadPhotos(placeId, details.photoRefs),
+                    photos = uploadPhotos(placeId, details.photoRefs),
                     rating = details.rating,
                     category = details.category,
+                    city = lookupCity(details.latitude, details.longitude),
                 ),
             )
         }
 
-        // One failed photo (fetch or upload) is skipped, not fatal - the same "degrade, don't
-        // abort" convention as EpisodeProcessingPipeline.uploadCluster.
+        // City is grouping metadata, not required for the place to import - same "enrichment can
+        // fail without failing the import" convention as photo upload above.
+        private suspend fun lookupCity(
+            latitude: Double,
+            longitude: Double,
+        ): String? =
+            when (val result = placeGeocodingClient.reverseGeocode(latitude, longitude)) {
+                is GeocodingResult.Found -> result.city
+                GeocodingResult.NotFound -> null
+                is GeocodingResult.Failure -> null
+            }
+
+        // One failed photo (fetch or upload) leaves that PlacePhoto's remoteUrl null rather than
+        // dropping it - the same "degrade, don't abort" convention as
+        // EpisodeProcessingPipeline.uploadCluster, but keeping the photoRef around (instead of
+        // discarding the entry entirely) is what makes retryIncomplete possible below.
         private suspend fun uploadPhotos(
             placeId: String,
             photoRefs: List<String>,
-        ): List<String> =
-            photoRefs.mapIndexedNotNull { index, photoRef ->
-                val bytes = photoClient.fetchPhotoBytes(photoRef) ?: return@mapIndexedNotNull null
-                when (val result = photoUploadClient.upload(placeId, index, bytes)) {
-                    is PlacePhotoUploadResult.Uploaded -> result.remoteUrl
-                    is PlacePhotoUploadResult.Failure -> null
-                }
+        ): List<PlacePhoto> =
+            photoRefs.mapIndexed { index, photoRef ->
+                PlacePhoto(photoRef = photoRef, remoteUrl = uploadOne(placeId, index, photoRef))
             }
+
+        private suspend fun uploadOne(
+            placeId: String,
+            index: Int,
+            photoRef: String,
+        ): String? {
+            val bytes = photoClient.fetchPhotoBytes(photoRef) ?: return null
+            return when (val result = photoUploadClient.upload(placeId, index, bytes)) {
+                is PlacePhotoUploadResult.Uploaded -> result.remoteUrl
+                is PlacePhotoUploadResult.Failure -> null
+            }
+        }
+
+        /**
+         * Background maintenance pass (see `feature:places`' retry poll loop): a capture-time
+         * hiccup can leave a [PlaceCandidate] with a photo missing its `remoteUrl` - only ever
+         * visible locally, never synced. Re-attempts each such photo by its original index (so a
+         * retried upload lands at the same Storage path a first-try success would have), leaving
+         * already-uploaded photos untouched and a still-failing photo null without throwing - the
+         * same degrade-not-abort convention as [import].
+         */
+        public suspend fun retryIncomplete(place: PlaceCandidate): PlaceCandidate {
+            val retried =
+                place.photos.mapIndexed { index, photo ->
+                    if (photo.remoteUrl != null) {
+                        photo
+                    } else {
+                        photo.copy(remoteUrl = uploadOne(place.id, index, photo.photoRef))
+                    }
+                }
+            return place.copy(photos = retried)
+        }
     }

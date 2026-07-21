@@ -30,6 +30,14 @@ android {
     buildFeatures {
         buildConfig = true
     }
+    // First test source set this module has ever needed (previously a thin, test-free
+    // composition root - see docs/roadmap.md M13.2) - Robolectric needs the merged manifest's
+    // resources to resolve the ACTION_SEND intent-filter against a real PackageManager.
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 val versionCatalog = extensions.getByType<org.gradle.api.artifacts.VersionCatalogsExtension>().named("libs")
@@ -41,6 +49,7 @@ dependencies {
     implementation(projects.feature.onboarding)
     implementation(projects.feature.pairing)
     implementation(projects.feature.diary)
+    implementation(projects.feature.places)
     implementation(projects.core.network)
     implementation(projects.core.database)
     implementation(projects.core.domain)
@@ -51,4 +60,6 @@ dependencies {
     implementation(versionCatalog.findLibrary("koin-compose-viewmodel").get())
     implementation(versionCatalog.findLibrary("ktor-client-core").get())
     implementation(versionCatalog.findLibrary("room-runtime").get())
+    testImplementation(versionCatalog.findLibrary("junit").get())
+    testImplementation(versionCatalog.findLibrary("robolectric").get())
 }

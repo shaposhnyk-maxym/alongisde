@@ -1,5 +1,10 @@
 package com.alongside.core.domain.place.importing
 
+import com.alongside.core.domain.diary.processing.GeocodingResult
+import com.alongside.core.domain.diary.processing.PlaceGeocodingClient
+import com.alongside.core.model.SyncStatus
+import com.alongside.core.model.place.PlaceCandidate
+import com.alongside.core.model.place.PlacePhoto
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -60,6 +65,16 @@ private class FakePlacePhotoUploadClient(
         }
 }
 
+/** Fake [PlaceGeocodingClient] - scriptable, defaults to a found city. */
+private class FakePlaceGeocodingClient(
+    private val result: GeocodingResult = GeocodingResult.Found(placeName = "Lviv Coffee Manufacture", city = "Lviv"),
+) : PlaceGeocodingClient {
+    override suspend fun reverseGeocode(
+        latitude: Double,
+        longitude: Double,
+    ): GeocodingResult = result
+}
+
 private val FOUND_RESULT =
     PlaceDetailsResult.Found(
         name = "Lviv Coffee Manufacture",
@@ -77,11 +92,13 @@ class PlaceImportPipelineTest {
         lookupResult: PlaceDetailsResult = FOUND_RESULT,
         photoBytesByRef: Map<String, ByteArray?> = mapOf("ref-1" to byteArrayOf(1), "ref-2" to byteArrayOf(2)),
         failUploadIndices: Set<Int> = emptySet(),
+        geocodingResult: GeocodingResult = GeocodingResult.Found(placeName = "Lviv Coffee Manufacture", city = "Lviv"),
     ) = PlaceImportPipeline(
         redirectResolver = FakeShareLinkRedirectResolver(redirectResult),
         detailsLookupClient = FakePlaceDetailsLookupClient(lookupResult),
         photoClient = FakePlacePhotoClient(photoBytesByRef),
         photoUploadClient = FakePlacePhotoUploadClient(failUploadIndices),
+        placeGeocodingClient = FakePlaceGeocodingClient(geocodingResult),
         generatePlaceId = { "place-1" },
         clock = FixedClock,
     )
@@ -97,9 +114,13 @@ class PlaceImportPipelineTest {
             assertEquals("Lviv Coffee Manufacture", imported.place.name)
             assertEquals(4.6, imported.place.rating)
             assertEquals("Coffee shop", imported.place.category)
+            assertEquals("Lviv", imported.place.city)
             assertEquals(
-                listOf("https://storage/place-photos/place-1/0", "https://storage/place-photos/place-1/1"),
-                imported.place.photoUrls,
+                listOf(
+                    PlacePhoto(photoRef = "ref-1", remoteUrl = "https://storage/place-photos/place-1/0"),
+                    PlacePhoto(photoRef = "ref-2", remoteUrl = "https://storage/place-photos/place-1/1"),
+                ),
+                imported.place.photos,
             )
             assertEquals(FIXED_NOW, imported.place.createdAt)
             assertEquals(FIXED_NOW, imported.place.updatedAt)
@@ -154,6 +175,7 @@ class PlaceImportPipelineTest {
                     detailsLookupClient = lookupClient,
                     photoClient = FakePlacePhotoClient(emptyMap()),
                     photoUploadClient = FakePlacePhotoUploadClient(),
+                    placeGeocodingClient = FakePlaceGeocodingClient(),
                     generatePlaceId = { "place-1" },
                     clock = FixedClock,
                 )
@@ -166,36 +188,135 @@ class PlaceImportPipelineTest {
         }
 
     @Test
-    fun `one photo failing to fetch still imports the place with the other photo's url`() =
+    fun `one photo failing to fetch still imports the place with that photo's remoteUrl left null`() =
         runTest {
             val result =
                 pipeline(photoBytesByRef = mapOf("ref-1" to null, "ref-2" to byteArrayOf(2)))
                     .import(shareUrl = "https://maps.app.goo.gl/abc", tripId = "trip-1", addedByUserId = "owner-1")
 
             val imported = assertIs<PlaceImportResult.Imported>(result)
-            assertEquals(listOf("https://storage/place-photos/place-1/1"), imported.place.photoUrls)
+            assertEquals(
+                listOf(
+                    PlacePhoto(photoRef = "ref-1", remoteUrl = null),
+                    PlacePhoto(photoRef = "ref-2", remoteUrl = "https://storage/place-photos/place-1/1"),
+                ),
+                imported.place.photos,
+            )
         }
 
     @Test
-    fun `one photo failing to upload still imports the place with the other photo's url`() =
+    fun `one photo failing to upload still imports the place with that photo's remoteUrl left null`() =
         runTest {
             val result =
                 pipeline(failUploadIndices = setOf(0))
                     .import(shareUrl = "https://maps.app.goo.gl/abc", tripId = "trip-1", addedByUserId = "owner-1")
 
             val imported = assertIs<PlaceImportResult.Imported>(result)
-            assertEquals(listOf("https://storage/place-photos/place-1/1"), imported.place.photoUrls)
+            assertEquals(
+                listOf(
+                    PlacePhoto(photoRef = "ref-1", remoteUrl = null),
+                    PlacePhoto(photoRef = "ref-2", remoteUrl = "https://storage/place-photos/place-1/1"),
+                ),
+                imported.place.photos,
+            )
         }
 
     @Test
-    fun `all photos failing still imports the place with an empty photoUrls list`() =
+    fun `all photos failing still imports the place with every photo kept and a null remoteUrl`() =
         runTest {
             val result =
                 pipeline(photoBytesByRef = mapOf("ref-1" to null, "ref-2" to null))
                     .import(shareUrl = "https://maps.app.goo.gl/abc", tripId = "trip-1", addedByUserId = "owner-1")
 
             val imported = assertIs<PlaceImportResult.Imported>(result)
-            assertEquals(emptyList(), imported.place.photoUrls)
+            assertEquals(
+                listOf(PlacePhoto(photoRef = "ref-1", remoteUrl = null), PlacePhoto(photoRef = "ref-2", remoteUrl = null)),
+                imported.place.photos,
+            )
             assertEquals("Lviv Coffee Manufacture", imported.place.name)
+        }
+
+    @Test
+    fun `geocoding not finding a city still imports the place with a null city`() =
+        runTest {
+            val result =
+                pipeline(geocodingResult = GeocodingResult.NotFound)
+                    .import(shareUrl = "https://maps.app.goo.gl/abc", tripId = "trip-1", addedByUserId = "owner-1")
+
+            val imported = assertIs<PlaceImportResult.Imported>(result)
+            assertEquals(null, imported.place.city)
+            assertEquals("Lviv Coffee Manufacture", imported.place.name)
+        }
+
+    @Test
+    fun `geocoding failure still imports the place with a null city`() =
+        runTest {
+            val result =
+                pipeline(geocodingResult = GeocodingResult.Failure(IllegalStateException("boom")))
+                    .import(shareUrl = "https://maps.app.goo.gl/abc", tripId = "trip-1", addedByUserId = "owner-1")
+
+            val imported = assertIs<PlaceImportResult.Imported>(result)
+            assertEquals(null, imported.place.city)
+        }
+
+    private fun placeWithPhotos(photos: List<PlacePhoto>) =
+        PlaceCandidate(
+            id = "place-1",
+            tripId = "trip-1",
+            name = "Lviv Coffee Manufacture",
+            latitude = 49.8397,
+            longitude = 24.0297,
+            note = null,
+            addedByUserId = "owner-1",
+            ownerSwipe = null,
+            memberSwipe = null,
+            syncStatus = SyncStatus.PENDING,
+            createdAt = FIXED_NOW,
+            updatedAt = FIXED_NOW,
+            photos = photos,
+        )
+
+    @Test
+    fun `retryIncomplete uploads a photo still missing its remoteUrl at its original index`() =
+        runTest {
+            val place =
+                placeWithPhotos(
+                    listOf(
+                        PlacePhoto(photoRef = "ref-1", remoteUrl = "https://storage/place-photos/place-1/0"),
+                        PlacePhoto(photoRef = "ref-2", remoteUrl = null),
+                    ),
+                )
+
+            val retried = pipeline().retryIncomplete(place)
+
+            assertEquals(
+                listOf(
+                    PlacePhoto(photoRef = "ref-1", remoteUrl = "https://storage/place-photos/place-1/0"),
+                    PlacePhoto(photoRef = "ref-2", remoteUrl = "https://storage/place-photos/place-1/1"),
+                ),
+                retried.photos,
+            )
+        }
+
+    @Test
+    fun `retryIncomplete still failing keeps the photo unuploaded without throwing`() =
+        runTest {
+            val place = placeWithPhotos(listOf(PlacePhoto(photoRef = "ref-1", remoteUrl = null)))
+
+            val retried =
+                pipeline(photoBytesByRef = mapOf("ref-1" to null, "ref-2" to byteArrayOf(2))).retryIncomplete(place)
+
+            assertEquals(listOf(PlacePhoto(photoRef = "ref-1", remoteUrl = null)), retried.photos)
+        }
+
+    @Test
+    fun `retryIncomplete on a fully-uploaded place returns it unchanged`() =
+        runTest {
+            val place =
+                placeWithPhotos(listOf(PlacePhoto(photoRef = "ref-1", remoteUrl = "https://storage/existing")))
+
+            val retried = pipeline().retryIncomplete(place)
+
+            assertEquals(place, retried)
         }
 }

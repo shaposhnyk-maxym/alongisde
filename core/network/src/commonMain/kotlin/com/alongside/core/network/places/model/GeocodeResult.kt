@@ -38,3 +38,25 @@ private val PREFERRED_COMPONENT_TYPES =
         "locality",
         "administrative_area_level_2",
     )
+
+/**
+ * Unlike [preferredPlaceName], which deliberately prefers a street/POI name over the bare city,
+ * this wants specifically the city - `locality` first, falling back to the next-coarsest
+ * administrative levels for addresses without one tagged. Null (not the formatted address) when
+ * nothing in this cascade matches - a place's "city" grouping is allowed to be absent, unlike a
+ * display name which always needs something to show.
+ */
+public fun GeocodeResult.cityName(): String? {
+    for (type in CITY_COMPONENT_TYPES) {
+        val match = addressComponents.firstOrNull { type in it.types }
+        if (match != null) return match.longName
+    }
+    return null
+}
+
+private val CITY_COMPONENT_TYPES =
+    listOf(
+        "locality",
+        "administrative_area_level_2",
+        "administrative_area_level_1",
+    )

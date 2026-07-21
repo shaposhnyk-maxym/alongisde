@@ -16,7 +16,8 @@ public data class PlaceCandidate(
     val syncStatus: SyncStatus,
     val createdAt: Instant,
     val updatedAt: Instant,
-    val photoUrls: List<String> = emptyList(),
+    val photos: List<PlacePhoto> = emptyList(),
     val rating: Double? = null,
     val category: String? = null,
+    val city: String? = null,
 )
