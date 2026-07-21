@@ -73,12 +73,13 @@ public class EpisodeProcessingPipeline
         ): Episode {
             val centroidLatitude = cluster.map { it.latitude }.average()
             val centroidLongitude = cluster.map { it.longitude }.average()
-            val placeName =
+            val geocoded =
                 when (val result = geocodingClient.reverseGeocode(centroidLatitude, centroidLongitude)) {
-                    is GeocodingResult.Found -> result.placeName
+                    is GeocodingResult.Found -> result
                     GeocodingResult.NotFound -> null
                     is GeocodingResult.Failure -> null
                 }
+            val placeName = geocoded?.placeName
             val description = describeCluster(cluster, placeName, languageTag)
             val uploadedPhotos = uploadCluster(cluster)
 
@@ -95,6 +96,9 @@ public class EpisodeProcessingPipeline
                 photos = uploadedPhotos,
                 syncStatus = SyncStatus.PENDING,
                 updatedAt = clock.now(),
+                city = geocoded?.city,
+                cityPlaceId = geocoded?.cityPlaceId,
+                countryCode = geocoded?.countryCode,
             )
         }
 

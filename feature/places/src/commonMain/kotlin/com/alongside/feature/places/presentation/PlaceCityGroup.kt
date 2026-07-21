@@ -2,10 +2,16 @@ package com.alongside.feature.places.presentation
 
 import com.alongside.core.model.place.PlaceCandidate
 
-/** [city] is null for the trailing "no city known yet" group - rendered as "Other" by the screen. */
+/**
+ * [city] is null for the trailing "no city known yet" group - rendered as "Other" by the screen.
+ * [countryCode] is the shared ISO 3166-1 alpha-2 code of the group's places (they're grouped by
+ * the same city, so in practice they share a country) - null for the trailing group, same as
+ * [city].
+ */
 public data class PlaceCityGroup(
     val city: String?,
     val places: List<PlaceCandidate>,
+    val countryCode: String? = null,
 )
 
 /**
@@ -20,6 +26,6 @@ public fun List<PlaceCandidate>.groupedByCity(): List<PlaceCityGroup> {
             .groupBy { requireNotNull(it.city) }
             .entries
             .sortedBy { it.key }
-            .map { (city, places) -> PlaceCityGroup(city, places) }
+            .map { (city, places) -> PlaceCityGroup(city, places, countryCode = places.first().countryCode) }
     return if (unnamed.isEmpty()) namedGroups else namedGroups + PlaceCityGroup(city = null, places = unnamed)
 }

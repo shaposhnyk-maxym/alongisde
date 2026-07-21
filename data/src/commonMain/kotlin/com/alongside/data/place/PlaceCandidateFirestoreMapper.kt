@@ -36,6 +36,8 @@ public object PlaceCandidateFirestoreMapper {
             "rating" to (place.rating?.let { FirestoreValue.DoubleValue(it) } ?: FirestoreValue.NullValue),
             "category" to (place.category?.let { FirestoreValue.StringValue(it) } ?: FirestoreValue.NullValue),
             "city" to (place.city?.let { FirestoreValue.StringValue(it) } ?: FirestoreValue.NullValue),
+            "cityPlaceId" to (place.cityPlaceId?.let { FirestoreValue.StringValue(it) } ?: FirestoreValue.NullValue),
+            "countryCode" to (place.countryCode?.let { FirestoreValue.StringValue(it) } ?: FirestoreValue.NullValue),
         )
 
     public fun fromDocument(document: FirestoreDocument): PlaceCandidate {
@@ -57,6 +59,8 @@ public object PlaceCandidateFirestoreMapper {
             rating = (fields["rating"] as? FirestoreValue.DoubleValue)?.value,
             category = (fields["category"] as? FirestoreValue.StringValue)?.value,
             city = (fields["city"] as? FirestoreValue.StringValue)?.value,
+            cityPlaceId = (fields["cityPlaceId"] as? FirestoreValue.StringValue)?.value,
+            countryCode = (fields["countryCode"] as? FirestoreValue.StringValue)?.value,
         )
     }
 

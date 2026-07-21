@@ -143,4 +143,68 @@ class GeocodeResultTest {
 
         assertNull(result.cityName())
     }
+
+    @Test
+    fun `countryCode reads the short name of the country component`() {
+        val result =
+            GeocodeResult(
+                formattedAddress = "1 Fake St, City, France",
+                addressComponents =
+                    listOf(
+                        AddressComponent(longName = "City", shortName = "City", types = listOf("locality")),
+                        AddressComponent(longName = "France", shortName = "FR", types = listOf("country", "political")),
+                    ),
+            )
+
+        assertEquals("FR", result.countryCode())
+    }
+
+    @Test
+    fun `countryCode is null when no country component is present`() {
+        val result =
+            GeocodeResult(
+                formattedAddress = "1 Fake St, City",
+                addressComponents = listOf(component("City", "locality")),
+            )
+
+        assertNull(result.countryCode())
+    }
+
+    @Test
+    fun `localityPlaceId picks the place_id of the result typed locality`() {
+        val results =
+            listOf(
+                GeocodeResult(
+                    formattedAddress = "1 Fake St, City, France",
+                    placeId = "street-place-id",
+                    types = listOf("street_address"),
+                ),
+                GeocodeResult(
+                    formattedAddress = "City, France",
+                    placeId = "locality-place-id",
+                    types = listOf("locality", "political"),
+                ),
+                GeocodeResult(
+                    formattedAddress = "France",
+                    placeId = "country-place-id",
+                    types = listOf("country", "political"),
+                ),
+            )
+
+        assertEquals("locality-place-id", results.localityPlaceId())
+    }
+
+    @Test
+    fun `localityPlaceId is null when no result is typed locality`() {
+        val results =
+            listOf(
+                GeocodeResult(
+                    formattedAddress = "1 Fake St, Region",
+                    placeId = "street-place-id",
+                    types = listOf("street_address"),
+                ),
+            )
+
+        assertNull(results.localityPlaceId())
+    }
 }

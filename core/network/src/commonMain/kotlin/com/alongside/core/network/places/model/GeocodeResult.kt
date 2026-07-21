@@ -7,6 +7,8 @@ import kotlinx.serialization.Serializable
 public data class GeocodeResult(
     @SerialName("formatted_address") val formattedAddress: String,
     @SerialName("address_components") val addressComponents: List<AddressComponent> = emptyList(),
+    @SerialName("place_id") val placeId: String? = null,
+    val types: List<String> = emptyList(),
 )
 
 /**
@@ -60,3 +62,16 @@ private val CITY_COMPONENT_TYPES =
         "administrative_area_level_2",
         "administrative_area_level_1",
     )
+
+/** ISO 3166-1 alpha-2 code from the `country`-typed address component's `short_name`, if tagged. */
+public fun GeocodeResult.countryCode(): String? = addressComponents.firstOrNull { "country" in it.types }?.shortName
+
+/**
+ * Unlike [countryCode]/[cityName], which read a single result's `address_components`, this reads
+ * the top-level `place_id` of whichever result in the full response is itself typed `locality` -
+ * Google's reverse-geocoding response is a list of same-coordinate interpretations at different
+ * granularities (street address, locality, administrative area, country, ...), each with its own
+ * `place_id`. That `place_id` is a stable, already-available identifier for the city itself -
+ * useful for later re-localizing its display name without a new geocoding request.
+ */
+public fun List<GeocodeResult>.localityPlaceId(): String? = firstOrNull { "locality" in it.types }?.placeId

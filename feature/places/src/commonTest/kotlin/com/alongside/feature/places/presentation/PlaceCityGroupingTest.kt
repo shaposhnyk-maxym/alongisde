@@ -9,6 +9,7 @@ import kotlin.time.Instant
 private fun place(
     id: String,
     city: String?,
+    countryCode: String? = null,
 ) = PlaceCandidate(
     id = id,
     tripId = "trip-1",
@@ -23,6 +24,7 @@ private fun place(
     createdAt = Instant.fromEpochMilliseconds(0),
     updatedAt = Instant.fromEpochMilliseconds(0),
     city = city,
+    countryCode = countryCode,
 )
 
 class PlaceCityGroupingTest {
@@ -52,6 +54,13 @@ class PlaceCityGroupingTest {
             ),
             groups,
         )
+    }
+
+    @Test
+    fun `a named group carries the countryCode of its places`() {
+        val places = listOf(place("1", "Lviv", countryCode = "UA"), place("2", "Lviv", countryCode = "UA"))
+
+        assertEquals(listOf(PlaceCityGroup("Lviv", places, countryCode = "UA")), places.groupedByCity())
     }
 
     @Test

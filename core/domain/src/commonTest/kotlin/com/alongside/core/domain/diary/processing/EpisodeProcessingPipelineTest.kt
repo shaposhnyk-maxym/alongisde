@@ -120,6 +120,37 @@ class EpisodeProcessingPipelineTest {
         }
 
     @Test
+    fun `geocoded city, cityPlaceId, and countryCode are carried onto the episode`() =
+        runTest {
+            val geocoding =
+                FakePlaceGeocodingClient(
+                    result =
+                        GeocodingResult.Found(
+                            placeName = "Rynok Square",
+                            city = "Lviv",
+                            cityPlaceId = "locality-place-id",
+                            countryCode = "UA",
+                        ),
+                )
+            val pipeline =
+                EpisodeProcessingPipeline(
+                    geocodingClient = geocoding,
+                    visionDescriptionClient = FakeEpisodeVisionDescriptionClient(),
+                    imageBytesLoader = { byteArrayOf(1) },
+                    photoUploadClient = FakePhotoUploadClient(),
+                    generateEpisodeId = { "episode-1" },
+                    clock = FixedClock,
+                )
+            val photos = listOf(photo("p1", 0), photo("p2", 10))
+
+            val episode = pipeline.process(diaryEntryId = "entry-1", photos = photos, languageTag = "en").single()
+
+            assertEquals("Lviv", episode.city)
+            assertEquals("locality-place-id", episode.cityPlaceId)
+            assertEquals("UA", episode.countryCode)
+        }
+
+    @Test
     fun `processes multiple clusters into multiple episodes`() =
         runTest {
             val ids = listOf("episode-1", "episode-2").iterator()

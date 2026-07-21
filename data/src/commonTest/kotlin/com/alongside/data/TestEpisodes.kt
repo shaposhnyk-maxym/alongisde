@@ -35,6 +35,9 @@ internal fun testEpisode(
     photos: List<Photo> = listOf(testPhoto()),
     syncStatus: SyncStatus = SyncStatus.PENDING,
     updatedAt: Instant = startTime,
+    city: String? = null,
+    cityPlaceId: String? = null,
+    countryCode: String? = null,
 ): Episode =
     Episode(
         id = id,
@@ -49,4 +52,7 @@ internal fun testEpisode(
         photos = photos,
         syncStatus = syncStatus,
         updatedAt = updatedAt,
+        city = city,
+        cityPlaceId = cityPlaceId,
+        countryCode = countryCode,
     )

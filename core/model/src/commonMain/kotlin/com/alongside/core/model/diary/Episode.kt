@@ -16,4 +16,7 @@ public data class Episode(
     val photos: List<Photo>,
     val syncStatus: SyncStatus,
     val updatedAt: Instant,
+    val city: String? = null,
+    val cityPlaceId: String? = null,
+    val countryCode: String? = null,
 )

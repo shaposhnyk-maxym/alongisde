@@ -20,6 +20,8 @@ internal fun testPlace(
     rating: Double? = null,
     category: String? = null,
     city: String? = null,
+    cityPlaceId: String? = null,
+    countryCode: String? = null,
     syncStatus: SyncStatus = SyncStatus.PENDING,
     createdAt: Instant = Instant.fromEpochMilliseconds(1_752_600_000_000),
     updatedAt: Instant = createdAt,
@@ -41,4 +43,6 @@ internal fun testPlace(
         rating = rating,
         category = category,
         city = city,
+        cityPlaceId = cityPlaceId,
+        countryCode = countryCode,
     )

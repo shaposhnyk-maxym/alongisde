@@ -4,6 +4,8 @@ import com.alongside.core.domain.diary.processing.GeocodingResult
 import com.alongside.core.domain.diary.processing.PlaceGeocodingClient
 import com.alongside.core.network.places.model.GeocodeResponse
 import com.alongside.core.network.places.model.cityName
+import com.alongside.core.network.places.model.countryCode
+import com.alongside.core.network.places.model.localityPlaceId
 import com.alongside.core.network.places.model.preferredPlaceName
 import kotlinx.coroutines.CancellationException
 
@@ -28,7 +30,12 @@ public class GooglePlacesGeocodingClient(
             "OK" -> {
                 val firstResult = results.firstOrNull()
                 if (firstResult != null) {
-                    GeocodingResult.Found(placeName = firstResult.preferredPlaceName(), city = firstResult.cityName())
+                    GeocodingResult.Found(
+                        placeName = firstResult.preferredPlaceName(),
+                        city = firstResult.cityName(),
+                        cityPlaceId = results.localityPlaceId(),
+                        countryCode = firstResult.countryCode(),
+                    )
                 } else {
                     GeocodingResult.NotFound
                 }

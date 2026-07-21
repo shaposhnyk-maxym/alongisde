@@ -33,6 +33,11 @@ public object EpisodeFirestoreMapper {
             "photos" to
                 FirestoreValue.ArrayValue(FirestoreArrayValue(episode.photos.map { it.toFirestoreValue() })),
             "updatedAt" to FirestoreValue.TimestampValue(episode.updatedAt.toString()),
+            "city" to (episode.city?.let { FirestoreValue.StringValue(it) } ?: FirestoreValue.NullValue),
+            "cityPlaceId" to
+                (episode.cityPlaceId?.let { FirestoreValue.StringValue(it) } ?: FirestoreValue.NullValue),
+            "countryCode" to
+                (episode.countryCode?.let { FirestoreValue.StringValue(it) } ?: FirestoreValue.NullValue),
         )
 
     public fun fromDocument(document: FirestoreDocument): Episode {
@@ -50,6 +55,9 @@ public object EpisodeFirestoreMapper {
             photos = fields.requirePhotos("photos"),
             syncStatus = SyncStatus.SYNCED,
             updatedAt = Instant.parse(fields.requireTimestamp("updatedAt")),
+            city = (fields["city"] as? FirestoreValue.StringValue)?.value,
+            cityPlaceId = (fields["cityPlaceId"] as? FirestoreValue.StringValue)?.value,
+            countryCode = (fields["countryCode"] as? FirestoreValue.StringValue)?.value,
         )
     }
 

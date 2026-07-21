@@ -100,6 +100,7 @@ public class PlaceImportPipeline
         ): PlaceImportResult.Imported {
             val placeId = generatePlaceId()
             val now = clock.now()
+            val geocoded = lookupGeocoding(details.latitude, details.longitude)
             return PlaceImportResult.Imported(
                 PlaceCandidate(
                     id = placeId,
@@ -117,19 +118,21 @@ public class PlaceImportPipeline
                     photos = uploadPhotos(placeId, details.photoRefs),
                     rating = details.rating,
                     category = details.category,
-                    city = lookupCity(details.latitude, details.longitude),
+                    city = geocoded?.city,
+                    cityPlaceId = geocoded?.cityPlaceId,
+                    countryCode = geocoded?.countryCode,
                 ),
             )
         }
 
-        // City is grouping metadata, not required for the place to import - same "enrichment can
-        // fail without failing the import" convention as photo upload above.
-        private suspend fun lookupCity(
+        // City/country are grouping/display metadata, not required for the place to import - same
+        // "enrichment can fail without failing the import" convention as photo upload above.
+        private suspend fun lookupGeocoding(
             latitude: Double,
             longitude: Double,
-        ): String? =
+        ): GeocodingResult.Found? =
             when (val result = placeGeocodingClient.reverseGeocode(latitude, longitude)) {
-                is GeocodingResult.Found -> result.city
+                is GeocodingResult.Found -> result
                 GeocodingResult.NotFound -> null
                 is GeocodingResult.Failure -> null
             }
