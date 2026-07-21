@@ -402,6 +402,8 @@ class EpisodeProcessingPipelineTest {
         photos: List<Photo>,
         description: String? = null,
         descriptionAttempts: Int = 1,
+        placeName: String? = "Rynok Square",
+        geocodeAttempts: Int = 1,
     ) = Episode(
         id = "episode-1",
         diaryEntryId = "entry-1",
@@ -409,12 +411,13 @@ class EpisodeProcessingPipelineTest {
         endTime = baseTime,
         latitude = 49.8397,
         longitude = 24.0297,
-        placeName = "Rynok Square",
+        placeName = placeName,
         description = description,
         descriptionAttempts = descriptionAttempts,
         photos = photos,
         syncStatus = SyncStatus.PENDING,
         updatedAt = FIXED_NOW,
+        geocodeAttempts = geocodeAttempts,
     )
 
     @Test
@@ -488,6 +491,118 @@ class EpisodeProcessingPipelineTest {
                 )
 
             assertEquals(episode, pipeline.retryIncomplete(episode, "en"))
+        }
+
+    @Test
+    fun `retryIncomplete re-geocodes a missing placeName and counts the attempt`() =
+        runTest {
+            val geocoding =
+                FakePlaceGeocodingClient(
+                    result =
+                        GeocodingResult.Found(
+                            placeName = "Rynok Square",
+                            city = "Lviv",
+                            cityPlaceId = "locality-place-id",
+                            countryCode = "UA",
+                        ),
+                )
+            val pipeline =
+                EpisodeProcessingPipeline(
+                    geocodingClient = geocoding,
+                    visionDescriptionClient = FakeEpisodeVisionDescriptionClient(),
+                    imageBytesLoader = { byteArrayOf(1) },
+                    photoUploadClient = FakePhotoUploadClient(),
+                    clock = FixedClock,
+                )
+            val episode =
+                incompleteEpisode(
+                    photos = listOf(photo("p1", 0).copy(remoteUrl = "https://storage/p1")),
+                    description = "already generated",
+                    placeName = null,
+                    geocodeAttempts = 1,
+                )
+
+            val retried = pipeline.retryIncomplete(episode, "en")
+
+            assertEquals("Rynok Square", retried.placeName)
+            assertEquals("Lviv", retried.city)
+            assertEquals("locality-place-id", retried.cityPlaceId)
+            assertEquals("UA", retried.countryCode)
+            assertEquals(2, retried.geocodeAttempts)
+            assertEquals(listOf(episode.latitude to episode.longitude), geocoding.queries)
+        }
+
+    @Test
+    fun `retryIncomplete feeds the freshly resolved placeName into a description retry in the same pass`() =
+        runTest {
+            val geocoding = FakePlaceGeocodingClient(result = GeocodingResult.Found("Rynok Square"))
+            val vision = FakeEpisodeVisionDescriptionClient()
+            val pipeline =
+                EpisodeProcessingPipeline(
+                    geocodingClient = geocoding,
+                    visionDescriptionClient = vision,
+                    imageBytesLoader = { byteArrayOf(1) },
+                    photoUploadClient = FakePhotoUploadClient(),
+                    clock = FixedClock,
+                )
+            val episode =
+                incompleteEpisode(
+                    photos = listOf(photo("p1", 0).copy(remoteUrl = "https://storage/p1")),
+                    description = null,
+                    placeName = null,
+                    geocodeAttempts = 1,
+                )
+
+            pipeline.retryIncomplete(episode, "en")
+
+            assertEquals("Rynok Square", vision.lastPlaceName)
+        }
+
+    @Test
+    fun `retryIncomplete still failing to geocode leaves placeName null without throwing`() =
+        runTest {
+            val pipeline =
+                EpisodeProcessingPipeline(
+                    geocodingClient = FakePlaceGeocodingClient(result = GeocodingResult.NotFound),
+                    visionDescriptionClient = FakeEpisodeVisionDescriptionClient(),
+                    imageBytesLoader = { byteArrayOf(1) },
+                    photoUploadClient = FakePhotoUploadClient(),
+                    clock = FixedClock,
+                )
+            val episode =
+                incompleteEpisode(
+                    photos = listOf(photo("p1", 0).copy(remoteUrl = "https://storage/p1")),
+                    description = "already generated",
+                    placeName = null,
+                    geocodeAttempts = 1,
+                )
+
+            val retried = pipeline.retryIncomplete(episode, "en")
+
+            assertNull(retried.placeName)
+        }
+
+    @Test
+    fun `retryIncomplete does not re-geocode an episode that already has a placeName`() =
+        runTest {
+            val geocoding = FakePlaceGeocodingClient()
+            val pipeline =
+                EpisodeProcessingPipeline(
+                    geocodingClient = geocoding,
+                    visionDescriptionClient = FakeEpisodeVisionDescriptionClient(),
+                    imageBytesLoader = { byteArrayOf(1) },
+                    photoUploadClient = FakePhotoUploadClient(),
+                    clock = FixedClock,
+                )
+            val episode =
+                incompleteEpisode(
+                    photos = listOf(photo("p1", 0)),
+                    description = "already generated",
+                )
+
+            pipeline.retryIncomplete(episode, "en")
+
+            assertEquals(emptyList(), geocoding.queries)
         }
 
     @Test

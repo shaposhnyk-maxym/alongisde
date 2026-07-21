@@ -24,6 +24,9 @@ internal interface TripDao {
     @Query("SELECT * FROM trips WHERE ownerId = :userId OR memberId = :userId LIMIT 1")
     fun observeByUserId(userId: String): Flow<TripEntity?>
 
+    @Query("SELECT * FROM trips WHERE ownerId = :userId OR memberId = :userId LIMIT 1")
+    suspend fun getByUserId(userId: String): TripEntity?
+
     @Query("DELETE FROM trips WHERE id = :id")
     suspend fun delete(id: String)
 }

@@ -19,4 +19,10 @@ public interface PairingRepository {
 
     /** The trip [userId] participates in (as owner or member), null while unpaired. */
     public fun observeActiveTrip(userId: String): Flow<Trip?>
+
+    /**
+     * One-shot equivalent of [observeActiveTrip] - safe to call without a long-lived observer
+     * already warming the local cache (see [PairingTripDataSource.getActiveTrip]).
+     */
+    public suspend fun getActiveTrip(userId: String): Trip?
 }

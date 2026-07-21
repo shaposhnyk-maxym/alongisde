@@ -34,12 +34,14 @@ internal fun testDiaryEntry(
         closedAt = closedAt,
     )
 
-/** Always finds the same place, regardless of who's asking - mirrors the data-layer fixture. */
-internal class FakeGeocodingClient : PlaceGeocodingClient {
+/** Finds the same scripted result for every call, regardless of who's asking - mirrors the data-layer fixture. */
+internal class FakeGeocodingClient(
+    private val result: GeocodingResult = GeocodingResult.Found("Rynok Square"),
+) : PlaceGeocodingClient {
     override suspend fun reverseGeocode(
         latitude: Double,
         longitude: Double,
-    ): GeocodingResult = GeocodingResult.Found("Rynok Square")
+    ): GeocodingResult = result
 }
 
 internal class FakeVisionClient : EpisodeVisionDescriptionClient {

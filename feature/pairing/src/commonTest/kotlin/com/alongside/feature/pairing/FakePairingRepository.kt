@@ -70,4 +70,6 @@ internal class FakePairingRepository : PairingRepository {
     }
 
     override fun observeActiveTrip(userId: String): Flow<Trip?> = activeTrip
+
+    override suspend fun getActiveTrip(userId: String): Trip? = activeTrip.value
 }

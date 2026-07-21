@@ -27,4 +27,5 @@ internal fun EpisodeWithPhotos.toDomain(): Episode =
         city = episode.city,
         cityPlaceId = episode.cityPlaceId,
         countryCode = episode.countryCode,
+        geocodeAttempts = episode.geocodeAttempts,
     )

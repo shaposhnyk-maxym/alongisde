@@ -94,6 +94,17 @@ class RoomPairingTripDataSourceTest {
         }
 
     @Test
+    fun `getActiveTrip matches owner or member and null for a stranger`() =
+        runTest {
+            val saved = trip(ownerId = "owner-1", memberId = "member-1")
+            dataSource.save(saved)
+
+            assertEquals(saved, dataSource.getActiveTrip("owner-1"))
+            assertEquals(saved, dataSource.getActiveTrip("member-1"))
+            assertNull(dataSource.getActiveTrip("stranger"))
+        }
+
+    @Test
     fun `observeByUserId emits again when the partner joins`() =
         runTest {
             val created = trip(ownerId = "owner-1", memberId = null)

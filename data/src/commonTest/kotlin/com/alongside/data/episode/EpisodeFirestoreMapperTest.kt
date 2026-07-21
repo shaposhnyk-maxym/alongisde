@@ -32,6 +32,7 @@ class EpisodeFirestoreMapperTest {
         assertEquals(FirestoreValue.StringValue("Wandering the old town"), fields["description"])
         assertEquals(FirestoreValue.IntegerValue(1), fields["descriptionAttempts"])
         assertEquals(FirestoreValue.TimestampValue("2026-07-18T12:30:00Z"), fields["updatedAt"])
+        assertEquals(FirestoreValue.IntegerValue(1), fields["geocodeAttempts"])
     }
 
     @Test
@@ -141,5 +142,20 @@ class EpisodeFirestoreMapperTest {
         assertNull(decoded.city)
         assertNull(decoded.cityPlaceId)
         assertNull(decoded.countryCode)
+    }
+
+    @Test
+    fun `fromDocument round trips geocodeAttempts`() {
+        val document = FirestoreDocument(fields = EpisodeFirestoreMapper.toFields(testEpisode(geocodeAttempts = 3)))
+
+        assertEquals(3, EpisodeFirestoreMapper.fromDocument(document).geocodeAttempts)
+    }
+
+    @Test
+    fun `fromDocument defaults geocodeAttempts to zero when the field is missing from an older document`() {
+        val fieldsWithoutGeocodeAttempts = EpisodeFirestoreMapper.toFields(testEpisode()) - "geocodeAttempts"
+        val document = FirestoreDocument(fields = fieldsWithoutGeocodeAttempts)
+
+        assertEquals(0, EpisodeFirestoreMapper.fromDocument(document).geocodeAttempts)
     }
 }

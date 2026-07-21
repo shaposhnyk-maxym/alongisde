@@ -99,48 +99,79 @@ public class EpisodeProcessingPipeline
                 city = geocoded?.city,
                 cityPlaceId = geocoded?.cityPlaceId,
                 countryCode = geocoded?.countryCode,
+                geocodeAttempts = 1,
             )
         }
 
         /**
          * Retries whatever's still incomplete on [episode] - a photo with no `remoteUrl` (its
-         * upload never succeeded, e.g. no network at capture time) gets a fresh upload attempt,
-         * and a missing `description` gets a fresh vision call - using [episode.photos] as-is, no
-         * re-clustering/re-geocoding. `descriptionAttempts` only increments when a description
-         * was actually attempted (i.e. was null going in); an upload-only retry doesn't count
-         * against it. Returns [episode] unchanged if nothing needed retrying or nothing changed.
+         * upload never succeeded, e.g. no network at capture time) gets a fresh upload attempt, a
+         * missing `description` gets a fresh vision call, and a missing `placeName` (reverse-
+         * geocoding never succeeded, e.g. no network at capture time either) gets a fresh
+         * geocoding call - using [episode.latitude]/[episode.longitude] as-is, no re-clustering.
+         * `descriptionAttempts`/`geocodeAttempts` only increment when that step was actually
+         * attempted (i.e. its result was null going in); an unrelated retry doesn't count against
+         * either. A freshly-resolved `placeName` feeds the description call below it, so a
+         * capture that failed both geocoding and description offline can recover a place-aware
+         * description in the same retry pass. Returns [episode] unchanged if nothing needed
+         * retrying or nothing changed.
          */
         public suspend fun retryIncomplete(
             episode: Episode,
             languageTag: String,
         ): Episode {
-            val retriedPhotos =
-                episode.photos.map { photo ->
-                    if (photo.remoteUrl != null) return@map photo
-                    val bytes = loadImageBytesOrNull(photo) ?: return@map photo
-                    when (val result = photoUploadClient.upload(photo, bytes)) {
-                        is PhotoUploadResult.Uploaded -> photo.copy(remoteUrl = result.remoteUrl)
-                        is PhotoUploadResult.Failure -> photo
-                    }
-                }
+            val retriedPhotos = retryPhotoUploads(episode.photos)
+            val geocodeWasAttempted = episode.placeName == null
+            val geocoded = if (geocodeWasAttempted) retryGeocode(episode) else null
+            val retriedPlaceName = geocoded?.placeName ?: episode.placeName
+
             val descriptionWasAttempted = episode.description == null
             val retriedDescription =
                 if (descriptionWasAttempted) {
-                    describeCluster(retriedPhotos, episode.placeName, languageTag)
+                    describeCluster(retriedPhotos, retriedPlaceName, languageTag)
                 } else {
                     episode.description
                 }
 
-            if (retriedPhotos == episode.photos && retriedDescription == episode.description) return episode
-            val newAttempts =
+            if (retriedPhotos == episode.photos &&
+                retriedDescription == episode.description &&
+                retriedPlaceName == episode.placeName
+            ) {
+                return episode
+            }
+            val newDescriptionAttempts =
                 if (descriptionWasAttempted) episode.descriptionAttempts + 1 else episode.descriptionAttempts
+            val newGeocodeAttempts =
+                if (geocodeWasAttempted) episode.geocodeAttempts + 1 else episode.geocodeAttempts
             return episode.copy(
                 photos = retriedPhotos,
                 description = retriedDescription,
-                descriptionAttempts = newAttempts,
+                descriptionAttempts = newDescriptionAttempts,
+                placeName = retriedPlaceName,
+                city = geocoded?.city ?: episode.city,
+                cityPlaceId = geocoded?.cityPlaceId ?: episode.cityPlaceId,
+                countryCode = geocoded?.countryCode ?: episode.countryCode,
+                geocodeAttempts = newGeocodeAttempts,
                 updatedAt = clock.now(),
             )
         }
+
+        private suspend fun retryPhotoUploads(photos: List<Photo>): List<Photo> =
+            photos.map { photo ->
+                if (photo.remoteUrl != null) return@map photo
+                val bytes = loadImageBytesOrNull(photo) ?: return@map photo
+                when (val result = photoUploadClient.upload(photo, bytes)) {
+                    is PhotoUploadResult.Uploaded -> photo.copy(remoteUrl = result.remoteUrl)
+                    is PhotoUploadResult.Failure -> photo
+                }
+            }
+
+        private suspend fun retryGeocode(episode: Episode): GeocodingResult.Found? =
+            when (val result = geocodingClient.reverseGeocode(episode.latitude, episode.longitude)) {
+                is GeocodingResult.Found -> result
+                GeocodingResult.NotFound -> null
+                is GeocodingResult.Failure -> null
+            }
 
         private suspend fun describeCluster(
             cluster: List<Photo>,

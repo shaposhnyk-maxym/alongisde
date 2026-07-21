@@ -165,6 +165,47 @@ class FirestorePairingTripDataSourceTest {
             collector.cancel()
         }
 
+    // --- getActiveTrip: the one-shot Worker path, no long-lived poller warming Room first ---
+
+    @Test
+    fun `getActiveTrip returns the local copy without touching remote when Room already has it`() =
+        runTest {
+            local.save(testTrip(id = "trip-1", ownerId = "owner-1"))
+
+            val found = dataSource.getActiveTrip("owner-1")
+
+            assertEquals("trip-1", found?.id)
+            assertEquals(0, remote.userIdLookups)
+        }
+
+    @Test
+    fun `getActiveTrip falls back to remote and caches it when the local cache is empty`() =
+        runTest {
+            // The scenario that broke retryAllIncompleteEpisodes/retryAllIncompletePlaces: a
+            // fresh install/local-data wipe leaves Room empty with no poller having run yet.
+            val remoteTrip = testTrip(id = "trip-r", ownerId = "owner-1")
+            remote.tripsByUserId["owner-1"] = remoteTrip
+
+            val found = dataSource.getActiveTrip("owner-1")
+
+            assertEquals(remoteTrip, found)
+            assertEquals(remoteTrip, local.getById("trip-r"))
+        }
+
+    @Test
+    fun `getActiveTrip returns null when both local and remote have nothing`() =
+        runTest {
+            assertNull(dataSource.getActiveTrip("owner-1"))
+        }
+
+    @Test
+    fun `getActiveTrip swallows a remote outage and returns null instead of throwing`() =
+        runTest {
+            remote.unreachable = true
+
+            assertNull(dataSource.getActiveTrip("owner-1"))
+        }
+
     // --- save ---
 
     @Test

@@ -20,6 +20,9 @@ public class InMemoryPairingTripDataSource : PairingTripDataSource {
             stored.values.firstOrNull { it.ownerId == userId || it.memberId == userId }
         }
 
+    override suspend fun getActiveTrip(userId: String): Trip? =
+        trips.value.values.firstOrNull { it.ownerId == userId || it.memberId == userId }
+
     override suspend fun save(trip: Trip) {
         trips.update { it + (trip.id to trip) }
     }

@@ -27,6 +27,7 @@ import com.alongside.core.database.entity.TripEntity
 import com.alongside.core.database.migration.MIGRATION_10_11
 import com.alongside.core.database.migration.MIGRATION_11_12
 import com.alongside.core.database.migration.MIGRATION_12_13
+import com.alongside.core.database.migration.MIGRATION_13_14
 import com.alongside.core.database.migration.MIGRATION_3_4
 import com.alongside.core.database.migration.MIGRATION_4_5
 import com.alongside.core.database.migration.MIGRATION_5_6
@@ -63,7 +64,7 @@ internal const val DATABASE_FILE_NAME = "alongside.db"
         AuthSessionEntity::class,
         SyncOperationEntity::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = true,
 )
 @TypeConverters(AlongsideTypeConverters::class, StringListTypeConverters::class, PlacePhotoListTypeConverters::class)
@@ -107,6 +108,7 @@ public fun getRoomDatabase(builder: RoomDatabase.Builder<AlongsideDatabase>): Al
             MIGRATION_10_11,
             MIGRATION_11_12,
             MIGRATION_12_13,
+            MIGRATION_13_14,
         ).build()
 
 /** Factory rather than a public [AuthSessionCacheImpl] - keeps the Room-backed impl an internal detail. */

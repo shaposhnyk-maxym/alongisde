@@ -62,4 +62,6 @@ public class DefaultPairingRepository
         }
 
         override fun observeActiveTrip(userId: String): Flow<Trip?> = dataSource.observeByUserId(userId)
+
+        override suspend fun getActiveTrip(userId: String): Trip? = dataSource.getActiveTrip(userId)
     }

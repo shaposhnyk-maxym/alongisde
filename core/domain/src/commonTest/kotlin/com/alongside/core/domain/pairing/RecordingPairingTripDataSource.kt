@@ -23,6 +23,9 @@ internal class RecordingPairingTripDataSource : PairingTripDataSource {
             stored.values.firstOrNull { it.ownerId == userId || it.memberId == userId }
         }
 
+    override suspend fun getActiveTrip(userId: String): Trip? =
+        trips.value.values.firstOrNull { it.ownerId == userId || it.memberId == userId }
+
     override suspend fun save(trip: Trip) {
         savedTrips += trip
         trips.update { it + (trip.id to trip) }

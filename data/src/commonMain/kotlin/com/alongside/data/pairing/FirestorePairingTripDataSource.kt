@@ -59,6 +59,20 @@ public class FirestorePairingTripDataSource(
             awaitClose { poller.cancel() }
         }
 
+    // Local-first, remote-fallback only on an empty cache - the opposite order from
+    // findByInviteCode. This is a one-shot call with no long-lived poller warming Room first
+    // (e.g. a Worker right after a fresh install/local-data wipe), so an empty local cache here
+    // must not be mistaken for "genuinely unpaired" - it may just not have synced yet.
+    override suspend fun getActiveTrip(userId: String): Trip? = localLookup.getActiveTrip(userId) ?: fromRemote(userId)
+
+    private suspend fun fromRemote(userId: String): Trip? =
+        try {
+            remote.findTripByUserId(userId)?.also { cacheRemote(it) }
+        } catch (e: FirestoreException) {
+            println("FirestorePairingTripDataSource: getActiveTrip fallback threw ${e::class.simpleName}: ${e.message}")
+            null
+        }
+
     override suspend fun save(trip: Trip) {
         trips.upsert(trip)
         pushPendingSync()

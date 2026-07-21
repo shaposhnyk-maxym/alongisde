@@ -1,6 +1,7 @@
 package com.alongside.feature.diary.presentation
 
 import com.alongside.core.domain.diary.processing.EpisodeProcessingPipeline
+import com.alongside.core.domain.diary.processing.GeocodingResult
 import com.alongside.core.domain.diary.processing.PhotoUploadResult
 import com.alongside.core.domain.work.BackgroundJobKind
 import com.alongside.core.model.SyncStatus
@@ -38,12 +39,13 @@ class DiaryCaptureCoordinatorTest {
     private fun coordinator(
         exifPhotoReader: FakeExifPhotoReader,
         photoUploadClient: FakePhotoUploadClient = FakePhotoUploadClient(),
+        geocodingClient: FakeGeocodingClient = FakeGeocodingClient(),
     ) = DiaryCaptureCoordinator(
         diaryEntryRepository = diaryEntryRepository,
         episodeRepository = episodeRepository,
         processingPipeline =
             EpisodeProcessingPipeline(
-                geocodingClient = FakeGeocodingClient(),
+                geocodingClient = geocodingClient,
                 visionDescriptionClient = FakeVisionClient(),
                 imageBytesLoader = { byteArrayOf(1) },
                 photoUploadClient = photoUploadClient,
@@ -66,6 +68,8 @@ class DiaryCaptureCoordinatorTest {
         descriptionAttempts: Int = 1,
         id: String = "episode-1",
         diaryEntryId: String = "entry-1",
+        placeName: String? = "Rynok Square",
+        geocodeAttempts: Int = 1,
     ) = Episode(
         id = id,
         diaryEntryId = diaryEntryId,
@@ -73,12 +77,13 @@ class DiaryCaptureCoordinatorTest {
         endTime = CAPTURE_FIXED_NOW,
         latitude = 1.0,
         longitude = 1.0,
-        placeName = "Rynok Square",
+        placeName = placeName,
         description = description,
         descriptionAttempts = descriptionAttempts,
         photos = photos,
         syncStatus = SyncStatus.PENDING,
         updatedAt = CAPTURE_FIXED_NOW,
+        geocodeAttempts = geocodeAttempts,
     )
 
     // The exact race this guards against: Orbit intents run concurrently and the reactive
@@ -214,6 +219,60 @@ class DiaryCaptureCoordinatorTest {
                     .single()
                     .remoteUrl,
             )
+        }
+
+    @Test
+    fun `retryIncompleteEpisodes re-geocodes a missing placeName`() =
+        runTest {
+            val underTest = coordinator(FakeExifPhotoReader(emptyMap()))
+            val episode =
+                incompleteEpisode(
+                    photos = listOf(photo("p1", remoteUrl = "https://storage/p1")),
+                    description = "already generated",
+                    placeName = null,
+                    geocodeAttempts = 1,
+                )
+
+            underTest.retryIncompleteEpisodes(listOf(episode))
+
+            assertEquals("Rynok Square", episodeRepository.upserted.single().placeName)
+        }
+
+    @Test
+    fun `retryIncompleteEpisodes gives up on a missing placeName past the attempt cap`() =
+        runTest {
+            val underTest = coordinator(FakeExifPhotoReader(emptyMap()))
+            val episode =
+                incompleteEpisode(
+                    photos = listOf(photo("p1", remoteUrl = "https://storage/p1")),
+                    description = "already generated",
+                    placeName = null,
+                    geocodeAttempts = 5,
+                )
+
+            underTest.retryIncompleteEpisodes(listOf(episode))
+
+            assertEquals(0, episodeRepository.upserted.size)
+        }
+
+    @Test
+    fun `capture enqueues EPISODE_RETRY when the resulting episode still needs geocoding retry`() =
+        runTest {
+            val underTest =
+                coordinator(
+                    FakeExifPhotoReader(mapOf("content://p1" to photo("p1"))),
+                    geocodingClient = FakeGeocodingClient(result = GeocodingResult.NotFound),
+                )
+
+            underTest.capture(
+                tripId = "trip-1",
+                userId = "user-1",
+                date = LocalDate(2026, 7, 19),
+                existingEntryId = null,
+                uris = listOf("content://p1"),
+            )
+
+            assertEquals(listOf(BackgroundJobKind.EPISODE_RETRY), backgroundWorkScheduler.scheduledOneOffs)
         }
 
     @Test

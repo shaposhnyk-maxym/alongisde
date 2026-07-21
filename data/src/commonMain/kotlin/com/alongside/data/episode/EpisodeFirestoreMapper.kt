@@ -38,6 +38,7 @@ public object EpisodeFirestoreMapper {
                 (episode.cityPlaceId?.let { FirestoreValue.StringValue(it) } ?: FirestoreValue.NullValue),
             "countryCode" to
                 (episode.countryCode?.let { FirestoreValue.StringValue(it) } ?: FirestoreValue.NullValue),
+            "geocodeAttempts" to FirestoreValue.IntegerValue(episode.geocodeAttempts.toLong()),
         )
 
     public fun fromDocument(document: FirestoreDocument): Episode {
@@ -58,6 +59,10 @@ public object EpisodeFirestoreMapper {
             city = (fields["city"] as? FirestoreValue.StringValue)?.value,
             cityPlaceId = (fields["cityPlaceId"] as? FirestoreValue.StringValue)?.value,
             countryCode = (fields["countryCode"] as? FirestoreValue.StringValue)?.value,
+            // Lenient, not requireInt like descriptionAttempts: this field shipped after
+            // descriptionAttempts, so documents already synced by earlier app versions lack it -
+            // treat a missing value as "no attempts yet" rather than throwing on old data.
+            geocodeAttempts = (fields["geocodeAttempts"] as? FirestoreValue.IntegerValue)?.value?.toInt() ?: 0,
         )
     }
 

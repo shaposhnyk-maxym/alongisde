@@ -36,7 +36,7 @@ public class PlaceRetryCoordinator(
      * places from scratch - there's no Container/reactive state to read from a background Worker.
      */
     public suspend fun retryAllIncompletePlaces(ownUserId: String) {
-        val trip = pairingRepository.observeActiveTrip(ownUserId).first() ?: return
+        val trip = pairingRepository.getActiveTrip(ownUserId) ?: return
         val places = placeCandidateRepository.observeByTrip(trip.id).first()
         retryIncompletePlaces(places)
     }

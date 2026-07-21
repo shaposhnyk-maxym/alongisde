@@ -22,6 +22,11 @@ private const val DEFAULT_LANGUAGE_TAG = "en"
 // capped by this - there's no separate per-photo attempt counter, nor a need for one.
 private const val MAX_DESCRIPTION_ATTEMPTS = 5
 
+// Same rationale as MAX_DESCRIPTION_ATTEMPTS, for reverse-geocoding: a still-missing placeName
+// means the geocoding client itself is the blocker, worth giving up on eventually rather than
+// retrying forever.
+private const val MAX_GEOCODE_ATTEMPTS = 5
+
 /**
  * The Timeline's capture write-path: EXIF read -> M10's processing pipeline -> persistence.
  * Split out from [DiaryTimelineContainer] purely to keep its constructor under detekt's
@@ -119,7 +124,7 @@ public class DiaryCaptureCoordinator(
      * lookups the Timeline itself uses.
      */
     public suspend fun retryAllIncompleteEpisodes(ownUserId: String) {
-        val trip = pairingRepository.observeActiveTrip(ownUserId).first() ?: return
+        val trip = pairingRepository.getActiveTrip(ownUserId) ?: return
         val ownEntries = diaryEntryRepository.observeByTrip(trip.id).first().filter { it.userId == ownUserId }
         val episodes = ownEntries.flatMap { entry -> episodeRepository.observeByDiaryEntry(entry.id).first() }
         retryIncompleteEpisodes(episodes)
@@ -127,5 +132,6 @@ public class DiaryCaptureCoordinator(
 
     private fun needsRetry(episode: Episode): Boolean =
         episode.photos.any { it.remoteUrl == null } ||
-            (episode.description == null && episode.descriptionAttempts < MAX_DESCRIPTION_ATTEMPTS)
+            (episode.description == null && episode.descriptionAttempts < MAX_DESCRIPTION_ATTEMPTS) ||
+            (episode.placeName == null && episode.geocodeAttempts < MAX_GEOCODE_ATTEMPTS)
 }

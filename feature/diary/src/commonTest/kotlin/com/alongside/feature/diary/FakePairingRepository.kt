@@ -45,4 +45,6 @@ internal class FakePairingRepository : PairingRepository {
     ): JoinTripResult = error("not used by the Timeline")
 
     override fun observeActiveTrip(userId: String): Flow<Trip?> = activeTrip
+
+    override suspend fun getActiveTrip(userId: String): Trip? = activeTrip.value
 }

@@ -113,4 +113,14 @@ class DefaultPairingRepositoryTest {
             assertEquals(trip, repository().observeActiveTrip("user-2").first())
             assertNull(repository().observeActiveTrip("stranger").first())
         }
+
+    @Test
+    fun `getActiveTrip delegates the one-shot lookup to the data source`() =
+        runTest {
+            val trip = pairingTestTrip(memberId = "user-2")
+            dataSource.save(trip)
+
+            assertEquals(trip, repository().getActiveTrip("owner-1"))
+            assertNull(repository().getActiveTrip("stranger"))
+        }
 }

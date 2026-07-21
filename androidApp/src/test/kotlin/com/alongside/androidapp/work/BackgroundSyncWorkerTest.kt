@@ -48,7 +48,6 @@ import com.alongside.feature.diary.capture.ExifPhotoReader
 import com.alongside.feature.diary.presentation.DiaryCaptureCoordinator
 import com.alongside.feature.places.presentation.PlaceRetryCoordinator
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
 import org.junit.After
@@ -67,7 +66,7 @@ import org.robolectric.annotation.Config
 import kotlin.time.Instant
 
 // Every stub below throws if actually invoked - each test only ever exercises the very first
-// dependency each coordinator/SyncCoordinator touches (PairingRepository.observeActiveTrip /
+// dependency each coordinator/SyncCoordinator touches (PairingRepository.getActiveTrip /
 // SyncOperationStore.loadAll), which short-circuits on a null trip / empty queue before anything
 // downstream is ever called. That's what makes a bare "was dispatch correct" check possible
 // without re-testing the coordinators' own retry logic (already covered by
@@ -195,9 +194,11 @@ private class SpyPairingRepository : PairingRepository {
         userId: String,
     ): JoinTripResult = error("not used by this test")
 
-    override fun observeActiveTrip(userId: String): Flow<Trip?> {
+    override fun observeActiveTrip(userId: String): Flow<Trip?> = error("not used by this test")
+
+    override suspend fun getActiveTrip(userId: String): Trip? {
         queriedUserId = userId
-        return flowOf(null)
+        return null
     }
 }
 

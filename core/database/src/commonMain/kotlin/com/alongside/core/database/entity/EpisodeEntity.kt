@@ -26,6 +26,7 @@ internal data class EpisodeEntity(
     val city: String? = null,
     val cityPlaceId: String? = null,
     val countryCode: String? = null,
+    @ColumnInfo(defaultValue = "0") val geocodeAttempts: Int = 0,
 )
 
 internal fun Episode.toEntity(): EpisodeEntity =
@@ -44,4 +45,5 @@ internal fun Episode.toEntity(): EpisodeEntity =
         city = city,
         cityPlaceId = cityPlaceId,
         countryCode = countryCode,
+        geocodeAttempts = geocodeAttempts,
     )
