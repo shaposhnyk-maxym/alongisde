@@ -7,6 +7,7 @@ import androidx.room.RoomDatabaseConstructor
 import androidx.room.TypeConverters
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.alongside.core.database.converter.AlongsideTypeConverters
+import com.alongside.core.database.converter.StringListTypeConverters
 import com.alongside.core.database.dao.AuthSessionDao
 import com.alongside.core.database.dao.DiaryEntryDao
 import com.alongside.core.database.dao.EpisodeDao
@@ -28,9 +29,11 @@ import com.alongside.core.database.migration.MIGRATION_5_6
 import com.alongside.core.database.migration.MIGRATION_6_7
 import com.alongside.core.database.migration.MIGRATION_7_8
 import com.alongside.core.database.migration.MIGRATION_8_9
+import com.alongside.core.database.migration.MIGRATION_9_10
 import com.alongside.core.database.repository.AuthSessionCacheImpl
 import com.alongside.core.database.repository.DiaryEntryRepositoryImpl
 import com.alongside.core.database.repository.EpisodeRepositoryImpl
+import com.alongside.core.database.repository.PlaceCandidateRepositoryImpl
 import com.alongside.core.database.repository.RoomPairingTripDataSource
 import com.alongside.core.database.repository.SyncOperationStoreImpl
 import com.alongside.core.database.repository.TripRepositoryImpl
@@ -39,6 +42,7 @@ import com.alongside.core.domain.auth.AuthSessionCache
 import com.alongside.core.domain.diary.DiaryEntryRepository
 import com.alongside.core.domain.diary.EpisodeRepository
 import com.alongside.core.domain.pairing.PairingTripDataSource
+import com.alongside.core.domain.place.PlaceCandidateRepository
 import com.alongside.core.domain.trip.TripRepository
 import kotlinx.coroutines.Dispatchers
 
@@ -55,10 +59,10 @@ internal const val DATABASE_FILE_NAME = "alongside.db"
         AuthSessionEntity::class,
         SyncOperationEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = true,
 )
-@TypeConverters(AlongsideTypeConverters::class)
+@TypeConverters(AlongsideTypeConverters::class, StringListTypeConverters::class)
 @ConstructedBy(AlongsideDatabaseConstructor::class)
 public abstract class AlongsideDatabase : RoomDatabase() {
     internal abstract fun tripDao(): TripDao
@@ -88,8 +92,15 @@ public fun getRoomDatabase(builder: RoomDatabase.Builder<AlongsideDatabase>): Al
     builder
         .setDriver(BundledSQLiteDriver())
         .setQueryCoroutineContext(Dispatchers.Default)
-        .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
-        .build()
+        .addMigrations(
+            MIGRATION_3_4,
+            MIGRATION_4_5,
+            MIGRATION_5_6,
+            MIGRATION_6_7,
+            MIGRATION_7_8,
+            MIGRATION_8_9,
+            MIGRATION_9_10,
+        ).build()
 
 /** Factory rather than a public [AuthSessionCacheImpl] - keeps the Room-backed impl an internal detail. */
 public fun AlongsideDatabase.authSessionCache(): AuthSessionCache = AuthSessionCacheImpl(this)
@@ -102,6 +113,9 @@ public fun AlongsideDatabase.diaryEntryRepository(): DiaryEntryRepository = Diar
 
 /** Room-backed local [EpisodeRepository] - the `data` module wraps it with sync-queue enqueueing. */
 public fun AlongsideDatabase.episodeRepository(): EpisodeRepository = EpisodeRepositoryImpl(this)
+
+/** Room-backed local [PlaceCandidateRepository] - not yet wired into sync-queue enqueueing (M13.1). */
+public fun AlongsideDatabase.placeCandidateRepository(): PlaceCandidateRepository = PlaceCandidateRepositoryImpl(this)
 
 /** Local (Room) side of pairing lookups - the `data` module composes it with the Firestore side. */
 public fun AlongsideDatabase.pairingTripLocalDataSource(): PairingTripDataSource = RoomPairingTripDataSource(this)

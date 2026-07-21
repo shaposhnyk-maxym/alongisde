@@ -98,6 +98,24 @@ class PlaceCandidateDaoTest {
         }
 
     @Test
+    fun `photoUrls rating and category round trip correctly`() =
+        runTest {
+            val place =
+                placeEntity().copy(
+                    photoUrls = listOf("https://storage/photo-1.jpg", "https://storage/photo-2.jpg"),
+                    rating = 4.3,
+                    category = "Restaurant",
+                )
+
+            dao.upsert(place)
+
+            val loaded = dao.getById(place.id)
+            assertEquals(listOf("https://storage/photo-1.jpg", "https://storage/photo-2.jpg"), loaded?.photoUrls)
+            assertEquals(4.3, loaded?.rating)
+            assertEquals("Restaurant", loaded?.category)
+        }
+
+    @Test
     fun `delete removes the place`() =
         runTest {
             val place = placeEntity()

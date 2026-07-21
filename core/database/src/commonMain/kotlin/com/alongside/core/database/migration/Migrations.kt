@@ -102,3 +102,22 @@ internal val MIGRATION_8_9: Migration =
             connection.execSQL("CREATE INDEX IF NOT EXISTS `index_photos_episodeId` ON `photos` (`episodeId`)")
         }
     }
+
+/**
+ * v9 -> v10 (M13.1): place_candidates gains photoUrls (newline-delimited re-hosted Storage URLs),
+ * rating (Google's 0.0-5.0 scale) and category (a localized free-text place type) - the fields a
+ * Google Maps share-link import actually needs to populate. `photoUrls` defaults to `''`
+ * (empty string, which [com.alongside.core.database.converter.AlongsideTypeConverters]
+ * round-trips as an empty list) rather than NULL, since the column is NOT NULL; `rating`/
+ * `category` are nullable with no DEFAULT, same shape as v6->v7's remoteUrl.
+ */
+internal val MIGRATION_9_10: Migration =
+    object : Migration(9, 10) {
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL(
+                "ALTER TABLE `place_candidates` ADD COLUMN `photoUrls` TEXT NOT NULL DEFAULT ''",
+            )
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `rating` REAL")
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `category` TEXT")
+        }
+    }
