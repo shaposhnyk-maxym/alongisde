@@ -5,6 +5,7 @@ import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.trip.Trip
 import com.alongside.core.network.queue.MaxAttemptsRetryPolicy
 import com.alongside.core.network.queue.SyncQueueProcessor
+import com.alongside.data.FakeBackgroundWorkScheduler
 import com.alongside.data.sync.FakeRemoteDocumentReader
 import com.alongside.data.sync.InMemorySyncOperationStore
 import com.alongside.data.sync.RecordingSyncNetworkClient
@@ -43,6 +44,7 @@ class FirestorePairingTripDataSourceTest {
         SyncingTripRepository(
             local = local,
             store = store,
+            backgroundWorkScheduler = FakeBackgroundWorkScheduler(),
             clock = FixedClock,
             generateOpId = { "op-${++nextOpId}" },
         )

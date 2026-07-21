@@ -24,7 +24,7 @@ public val diaryFeatureModule =
                 photoUploadClient = get(),
             )
         }
-        single { DiaryCaptureCoordinator(get(), get(), get(), get()) }
+        single { DiaryCaptureCoordinator(get(), get(), get(), get(), get(), get()) }
         single { DiaryTimelineDataSource(get(), get(), get(), get(), get()) }
         viewModel { DiaryTimelineContainer(get(), get(), get()) }
     }

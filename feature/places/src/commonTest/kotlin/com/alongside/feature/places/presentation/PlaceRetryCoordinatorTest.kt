@@ -27,12 +27,12 @@ private object RetryFixedClock : Clock {
     override fun now(): Instant = FIXED_NOW
 }
 
-class PlaceRetryDataSourceTest {
+class PlaceRetryCoordinatorTest {
     private val placeCandidateRepository = RecordingPlaceCandidateRepository()
     private val pairingRepository = FakePairingRepository(initialActiveTrip = fakeTrip())
 
-    private fun dataSource(photoBytesByRef: Map<String, ByteArray?> = mapOf("ref-2" to byteArrayOf(1))) =
-        PlaceRetryDataSource(
+    private fun coordinator(photoBytesByRef: Map<String, ByteArray?> = mapOf("ref-2" to byteArrayOf(1))) =
+        PlaceRetryCoordinator(
             pairingRepository = pairingRepository,
             placeCandidateRepository = placeCandidateRepository,
             pipeline =
@@ -46,22 +46,26 @@ class PlaceRetryDataSourceTest {
                 ),
         )
 
-    private fun placeCandidate(photos: List<PlacePhoto>) =
-        PlaceCandidate(
-            id = "place-1",
-            tripId = "trip-1",
-            name = "Lviv Coffee Manufacture",
-            latitude = 49.8397,
-            longitude = 24.0297,
-            note = null,
-            addedByUserId = "owner-1",
-            ownerSwipe = null,
-            memberSwipe = null,
-            syncStatus = SyncStatus.SYNCED,
-            createdAt = FIXED_NOW,
-            updatedAt = FIXED_NOW,
-            photos = photos,
-        )
+    private fun placeCandidate(
+        photos: List<PlacePhoto>,
+        id: String = "place-1",
+        tripId: String = "trip-1",
+        addedByUserId: String = "owner-1",
+    ) = PlaceCandidate(
+        id = id,
+        tripId = tripId,
+        name = "Lviv Coffee Manufacture",
+        latitude = 49.8397,
+        longitude = 24.0297,
+        note = null,
+        addedByUserId = addedByUserId,
+        ownerSwipe = null,
+        memberSwipe = null,
+        syncStatus = SyncStatus.SYNCED,
+        createdAt = FIXED_NOW,
+        updatedAt = FIXED_NOW,
+        photos = photos,
+    )
 
     @Test
     fun `retries a place with a photo missing its remoteUrl and persists the healed place`() =
@@ -75,7 +79,7 @@ class PlaceRetryDataSourceTest {
                         ),
                 )
 
-            dataSource().retryIncompletePlaces(listOf(incomplete))
+            coordinator().retryIncompletePlaces(listOf(incomplete))
 
             val healed = placeCandidateRepository.upserted.single()
             assertEquals(
@@ -93,7 +97,7 @@ class PlaceRetryDataSourceTest {
             val complete =
                 placeCandidate(photos = listOf(PlacePhoto(photoRef = "ref-1", remoteUrl = "https://storage/x")))
 
-            dataSource().retryIncompletePlaces(listOf(complete))
+            coordinator().retryIncompletePlaces(listOf(complete))
 
             assertTrue(placeCandidateRepository.upserted.isEmpty())
         }
@@ -103,7 +107,38 @@ class PlaceRetryDataSourceTest {
         runTest {
             val incomplete = placeCandidate(photos = listOf(PlacePhoto(photoRef = "ref-1", remoteUrl = null)))
 
-            dataSource(photoBytesByRef = mapOf("ref-1" to null)).retryIncompletePlaces(listOf(incomplete))
+            coordinator(photoBytesByRef = mapOf("ref-1" to null)).retryIncompletePlaces(listOf(incomplete))
+
+            assertTrue(placeCandidateRepository.upserted.isEmpty())
+        }
+
+    @Test
+    fun `retryAllIncompletePlaces retries only the active trip's incomplete places`() =
+        runTest {
+            pairingRepository.activeTrip.value = fakeTrip(id = "trip-1")
+            val incomplete =
+                placeCandidate(id = "place-1", tripId = "trip-1", photos = listOf(PlacePhoto(photoRef = "ref-2", remoteUrl = null)))
+            val complete =
+                placeCandidate(
+                    id = "place-2",
+                    tripId = "trip-1",
+                    photos = listOf(PlacePhoto(photoRef = "ref-x", remoteUrl = "https://storage/x")),
+                )
+            placeCandidateRepository.upsert(incomplete)
+            placeCandidateRepository.upsert(complete)
+            placeCandidateRepository.upserted.clear()
+
+            coordinator().retryAllIncompletePlaces("owner-1")
+
+            assertEquals(listOf("place-1"), placeCandidateRepository.upserted.map { it.id })
+        }
+
+    @Test
+    fun `retryAllIncompletePlaces is a no-op when there is no active trip`() =
+        runTest {
+            pairingRepository.activeTrip.value = null
+
+            coordinator().retryAllIncompletePlaces("owner-1")
 
             assertTrue(placeCandidateRepository.upserted.isEmpty())
         }

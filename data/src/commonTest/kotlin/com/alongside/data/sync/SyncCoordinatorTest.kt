@@ -6,6 +6,7 @@ import com.alongside.core.model.SyncStatus
 import com.alongside.core.network.firestore.model.FirestoreDocument
 import com.alongside.core.network.queue.MaxAttemptsRetryPolicy
 import com.alongside.core.network.queue.SyncQueueProcessor
+import com.alongside.data.FakeBackgroundWorkScheduler
 import com.alongside.data.testTrip
 import com.alongside.data.trip.RecordingTripRepository
 import com.alongside.data.trip.SyncingTripRepository
@@ -36,6 +37,7 @@ class SyncCoordinatorTest {
         SyncingTripRepository(
             local = local,
             store = store,
+            backgroundWorkScheduler = FakeBackgroundWorkScheduler(),
             clock = FixedClock,
             generateOpId = { "op-${++nextOpId}" },
         )

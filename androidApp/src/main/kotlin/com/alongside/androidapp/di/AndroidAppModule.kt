@@ -1,6 +1,7 @@
 package com.alongside.androidapp.di
 
 import android.content.Context
+import com.alongside.androidapp.work.AndroidWorkManagerScheduler
 import com.alongside.core.database.AlongsideDatabase
 import com.alongside.core.database.authSessionCache
 import com.alongside.core.database.getDatabaseBuilder
@@ -18,6 +19,7 @@ import com.alongside.core.domain.place.importing.PlaceImportPipeline
 import com.alongside.core.domain.place.importing.PlacePhotoClient
 import com.alongside.core.domain.place.importing.PlacePhotoUploadClient
 import com.alongside.core.domain.place.importing.ShareLinkRedirectResolver
+import com.alongside.core.domain.work.BackgroundWorkScheduler
 import com.alongside.core.network.auth.FirebaseAuthApi
 import com.alongside.core.network.auth.FirebaseAuthConfig
 import com.alongside.core.network.auth.FirebaseAuthSessionRepository
@@ -79,6 +81,7 @@ public fun androidAppModule(
         SessionFirestoreTokenProvider(get(), get<FirebaseAuthApi>().asIdTokenRefresher())
     }
     single { InviteCodeGenerator() }
+    single<BackgroundWorkScheduler> { AndroidWorkManagerScheduler(context) }
     // PairingTripDataSource comes from dataModule (Room + Firestore) since M9.
     single<PairingRepository> { DefaultPairingRepository(get(), get()) }
     single { GooglePlacesConfig(apiKey = googlePlacesApiKey) }

@@ -60,6 +60,9 @@ dependencies {
     implementation(versionCatalog.findLibrary("koin-compose-viewmodel").get())
     implementation(versionCatalog.findLibrary("ktor-client-core").get())
     implementation(versionCatalog.findLibrary("room-runtime").get())
+    implementation(versionCatalog.findLibrary("androidx-work-runtime-ktx").get())
     testImplementation(versionCatalog.findLibrary("junit").get())
     testImplementation(versionCatalog.findLibrary("robolectric").get())
+    testImplementation(versionCatalog.findLibrary("androidx-work-testing").get())
+    testImplementation(versionCatalog.findLibrary("kotlinx-datetime").get())
 }

@@ -2,7 +2,9 @@ package com.alongside.data.trip
 
 import com.alongside.core.database.sync.PersistedSyncOperationStatus
 import com.alongside.core.database.sync.PersistedSyncOperationType
+import com.alongside.core.domain.work.BackgroundJobKind
 import com.alongside.core.model.SyncStatus
+import com.alongside.data.FakeBackgroundWorkScheduler
 import com.alongside.data.sync.InMemorySyncOperationStore
 import com.alongside.data.sync.SyncOperationCodec
 import com.alongside.data.testTrip
@@ -21,11 +23,13 @@ private object FixedClock : Clock {
 class SyncingTripRepositoryTest {
     private val local = RecordingTripRepository()
     private val store = InMemorySyncOperationStore()
+    private val backgroundWorkScheduler = FakeBackgroundWorkScheduler()
     private var nextOpId = 0
     private val repository =
         SyncingTripRepository(
             local = local,
             store = store,
+            backgroundWorkScheduler = backgroundWorkScheduler,
             clock = FixedClock,
             generateOpId = { "op-${++nextOpId}" },
         )
@@ -82,5 +86,17 @@ class SyncingTripRepositoryTest {
             repository.upsert(testTrip())
 
             assertEquals(listOf("op-1", "op-2"), store.loadAll().map { it.id })
+        }
+
+    @Test
+    fun `upsert and delete each schedule a SYNC_QUEUE_FLUSH backstop`() =
+        runTest {
+            repository.upsert(testTrip())
+            repository.delete("trip-1")
+
+            assertEquals(
+                listOf(BackgroundJobKind.SYNC_QUEUE_FLUSH, BackgroundJobKind.SYNC_QUEUE_FLUSH),
+                backgroundWorkScheduler.scheduledOneOffs,
+            )
         }
 }

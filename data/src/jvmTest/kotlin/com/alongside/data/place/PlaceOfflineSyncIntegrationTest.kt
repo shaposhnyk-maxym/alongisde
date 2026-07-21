@@ -12,6 +12,7 @@ import com.alongside.core.network.firestore.model.FirestoreValue
 import com.alongside.core.network.queue.MaxAttemptsRetryPolicy
 import com.alongside.core.network.queue.SyncOperationType
 import com.alongside.core.network.queue.SyncQueueProcessor
+import com.alongside.data.FakeBackgroundWorkScheduler
 import com.alongside.data.sync.FakeRemoteDocumentReader
 import com.alongside.data.sync.RecordingSyncNetworkClient
 import com.alongside.data.sync.SyncCoordinator
@@ -59,6 +60,7 @@ class PlaceOfflineSyncIntegrationTest {
             SyncingPlaceCandidateRepository(
                 local = local,
                 store = database.syncOperationStore(),
+                backgroundWorkScheduler = FakeBackgroundWorkScheduler(),
                 clock = OfflineSyncClock,
                 generateOpId = { "op-${nextOpId++}" },
             )

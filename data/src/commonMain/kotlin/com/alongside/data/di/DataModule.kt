@@ -52,16 +52,32 @@ public val dataModule: Module =
         single<SyncOperationStore> { get<AlongsideDatabase>().syncOperationStore() }
         single<RemoteDocumentReader> { FirestoreRemoteDocumentReader(get()) }
         single<TripRepository> {
-            SyncingTripRepository(local = get<AlongsideDatabase>().tripRepository(), store = get())
+            SyncingTripRepository(
+                local = get<AlongsideDatabase>().tripRepository(),
+                store = get(),
+                backgroundWorkScheduler = get(),
+            )
         }
         single<DiaryEntryRepository> {
-            SyncingDiaryEntryRepository(local = get<AlongsideDatabase>().diaryEntryRepository(), store = get())
+            SyncingDiaryEntryRepository(
+                local = get<AlongsideDatabase>().diaryEntryRepository(),
+                store = get(),
+                backgroundWorkScheduler = get(),
+            )
         }
         single<EpisodeRepository> {
-            SyncingEpisodeRepository(local = get<AlongsideDatabase>().episodeRepository(), store = get())
+            SyncingEpisodeRepository(
+                local = get<AlongsideDatabase>().episodeRepository(),
+                store = get(),
+                backgroundWorkScheduler = get(),
+            )
         }
         single<PlaceCandidateRepository> {
-            SyncingPlaceCandidateRepository(local = get<AlongsideDatabase>().placeCandidateRepository(), store = get())
+            SyncingPlaceCandidateRepository(
+                local = get<AlongsideDatabase>().placeCandidateRepository(),
+                store = get(),
+                backgroundWorkScheduler = get(),
+            )
         }
         single<DiaryContentPuller> {
             FirestoreDiaryContentPuller(

@@ -7,6 +7,8 @@ import com.alongside.core.domain.place.PlaceCandidateRepository
 import com.alongside.core.domain.place.importing.PlaceImportPipeline
 import com.alongside.core.domain.place.importing.PlaceImportResult
 import com.alongside.core.domain.place.importing.extractShareUrl
+import com.alongside.core.domain.work.BackgroundJobKind
+import com.alongside.core.domain.work.BackgroundWorkScheduler
 import kotlinx.coroutines.flow.first
 import org.orbitmvi.orbit.Container
 import org.orbitmvi.orbit.ContainerHost
@@ -25,6 +27,7 @@ public class PlaceImportContainer(
     private val placeCandidateRepository: PlaceCandidateRepository,
     private val authSessionCache: AuthSessionCache,
     private val pairingRepository: PairingRepository,
+    private val backgroundWorkScheduler: BackgroundWorkScheduler,
 ) : ViewModel(),
     ContainerHost<PlaceImportState, PlaceImportSideEffect> {
     override val container: Container<PlaceImportState, PlaceImportSideEffect> =
@@ -70,6 +73,11 @@ public class PlaceImportContainer(
         intent {
             val place = state.place ?: return@intent
             placeCandidateRepository.upsert(place)
+            // Event-driven enqueue (docs/roadmap.md M12.11) - the periodic sweep is only a
+            // backstop for a missed enqueue, not the primary path.
+            if (place.needsRetry()) {
+                backgroundWorkScheduler.scheduleOneOff(BackgroundJobKind.PLACE_RETRY)
+            }
             postSideEffect(PlaceImportSideEffect.Imported)
         }
 

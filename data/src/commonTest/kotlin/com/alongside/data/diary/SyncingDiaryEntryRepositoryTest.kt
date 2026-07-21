@@ -2,7 +2,9 @@ package com.alongside.data.diary
 
 import com.alongside.core.database.sync.PersistedSyncOperationStatus
 import com.alongside.core.database.sync.PersistedSyncOperationType
+import com.alongside.core.domain.work.BackgroundJobKind
 import com.alongside.core.model.SyncStatus
+import com.alongside.data.FakeBackgroundWorkScheduler
 import com.alongside.data.sync.InMemorySyncOperationStore
 import com.alongside.data.sync.SyncOperationCodec
 import com.alongside.data.testDiaryEntry
@@ -21,11 +23,13 @@ private object FixedClock : Clock {
 class SyncingDiaryEntryRepositoryTest {
     private val local = RecordingDiaryEntryRepository()
     private val store = InMemorySyncOperationStore()
+    private val backgroundWorkScheduler = FakeBackgroundWorkScheduler()
     private var nextOpId = 0
     private val repository =
         SyncingDiaryEntryRepository(
             local = local,
             store = store,
+            backgroundWorkScheduler = backgroundWorkScheduler,
             clock = FixedClock,
             generateOpId = { "op-${++nextOpId}" },
         )
@@ -72,5 +76,17 @@ class SyncingDiaryEntryRepositoryTest {
             val record = store.loadAll().last()
             assertEquals(PersistedSyncOperationType.DELETE, record.type)
             assertEquals("entry-1", record.documentId)
+        }
+
+    @Test
+    fun `upsert and delete each schedule a SYNC_QUEUE_FLUSH backstop`() =
+        runTest {
+            repository.upsert(testDiaryEntry())
+            repository.delete("entry-1")
+
+            assertEquals(
+                listOf(BackgroundJobKind.SYNC_QUEUE_FLUSH, BackgroundJobKind.SYNC_QUEUE_FLUSH),
+                backgroundWorkScheduler.scheduledOneOffs,
+            )
         }
 }

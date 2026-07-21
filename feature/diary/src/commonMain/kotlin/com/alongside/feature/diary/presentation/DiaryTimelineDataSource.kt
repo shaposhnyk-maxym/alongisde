@@ -11,7 +11,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -25,17 +24,19 @@ public typealias EntriesAndEpisodes = Triple<Trip?, List<DiaryEntry>, Map<String
 
 private val TRIP_CONTENT_POLL_INTERVAL = 5.seconds
 
-// Deliberately much less frequent than TRIP_CONTENT_POLL_INTERVAL - this drives real Gemini
-// vision/Storage upload calls, not a cheap local Firestore query.
-private val INCOMPLETE_EPISODE_RETRY_POLL_INTERVAL = 30.seconds
-
 /**
  * Owns the Timeline's reactive read side (trip -> entries -> episodes, local Room only) plus the
- * remote trip-content pull loop (partner updates + own-gap fill, see [DiaryContentPuller]) and a
- * background retry loop for own episodes a capture-time hiccup left incomplete (see
- * [DiaryCaptureCoordinator.retryIncompleteEpisodes]) - split out from [DiaryTimelineContainer]
- * purely to keep its constructor under detekt's LongParameterList threshold, the same reasoning
- * [DiaryCaptureCoordinator] already documents for the write side.
+ * remote trip-content pull loop (partner updates + own-gap fill, see [DiaryContentPuller]) -
+ * split out from [DiaryTimelineContainer] purely to keep its constructor under detekt's
+ * LongParameterList threshold, the same reasoning [DiaryCaptureCoordinator] already documents
+ * for the write side.
+ *
+ * Own-episode retry (a capture-time hiccup leaving a photo/description incomplete) used to run
+ * as a 30s in-memory poll loop here - tied to this Container's lifetime, so it never ran once the
+ * app was backgrounded/killed. That's now WorkManager's job (docs/roadmap.md M12.11,
+ * [DiaryCaptureCoordinator.retryAllIncompleteEpisodes]), which survives process death. This class
+ * keeps only a one-shot foreground "nudge" (see [nudgeIncompleteEpisodesOnce]) - a cheap UX
+ * improvement for someone watching this exact screen, not a reliability mechanism.
  */
 public class DiaryTimelineDataSource(
     private val pairingRepository: PairingRepository,
@@ -50,7 +51,7 @@ public class DiaryTimelineDataSource(
         onUpdate: suspend (EntriesAndEpisodes) -> Unit,
     ) {
         val tripFlow = pairingRepository.observeActiveTrip(ownUserId)
-        val latest = MutableStateFlow<EntriesAndEpisodes?>(null)
+        var nudged = false
 
         coroutineScope {
             // A second, independent collection of tripFlow - accepted duplicate polling of the
@@ -65,13 +66,14 @@ public class DiaryTimelineDataSource(
                     .collectLatest { tripId -> if (tripId != null) pollTripContent(tripId, ownUserId) }
             }
 
-            launch { pollIncompleteEpisodes(ownUserId, latest) }
-
             tripFlow
                 .flatMapLatest { trip -> observeEntriesAndEpisodes(trip) }
-                .collect {
-                    latest.value = it
-                    onUpdate(it)
+                .collect { snapshot ->
+                    onUpdate(snapshot)
+                    if (!nudged && snapshot.second.isNotEmpty()) {
+                        nudged = true
+                        nudgeIncompleteEpisodesOnce(ownUserId, snapshot)
+                    }
                 }
         }
     }
@@ -87,17 +89,19 @@ public class DiaryTimelineDataSource(
         }
     }
 
-    private suspend fun pollIncompleteEpisodes(
+    // A single fire-once nudge (no delay/loop) reusing whatever episode list this screen already
+    // has in memory - papers over WorkManager's enqueue not being instant for someone actively
+    // watching their photo upload/description appear. Dies with this screen; the WorkManager path
+    // (event-driven enqueue + periodic sweep) is what actually guarantees healing happens at all.
+    private suspend fun nudgeIncompleteEpisodesOnce(
         ownUserId: String,
-        latest: MutableStateFlow<EntriesAndEpisodes?>,
+        snapshot: EntriesAndEpisodes,
     ) {
-        while (true) {
-            delay(INCOMPLETE_EPISODE_RETRY_POLL_INTERVAL)
-            val (_, entries, episodesByEntryId) = latest.value ?: continue
-            val ownEpisodes = entries.filter { it.userId == ownUserId }.flatMap { episodesByEntryId[it.id].orEmpty() }
-            runCatching { captureCoordinator.retryIncompleteEpisodes(ownEpisodes) }
-                .onFailure { println("DiaryTimelineDataSource: retryIncompleteEpisodes failed: $it") }
-        }
+        val (_, entries, episodesByEntryId) = snapshot
+        val ownEpisodes = entries.filter { it.userId == ownUserId }.flatMap { episodesByEntryId[it.id].orEmpty() }
+        if (ownEpisodes.isEmpty()) return
+        runCatching { captureCoordinator.retryIncompleteEpisodes(ownEpisodes) }
+            .onFailure { println("DiaryTimelineDataSource: retryIncompleteEpisodes nudge failed: $it") }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

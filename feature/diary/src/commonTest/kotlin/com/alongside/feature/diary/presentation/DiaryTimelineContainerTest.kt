@@ -2,8 +2,11 @@ package com.alongside.feature.diary.presentation
 
 import com.alongside.core.domain.diary.DayUnlockState
 import com.alongside.core.domain.diary.processing.EpisodeProcessingPipeline
+import com.alongside.core.model.SyncStatus
+import com.alongside.core.model.diary.Episode
 import com.alongside.core.model.diary.Photo
 import com.alongside.feature.diary.FakeAuthSessionCache
+import com.alongside.feature.diary.FakeBackgroundWorkScheduler
 import com.alongside.feature.diary.FakeDiaryContentPuller
 import com.alongside.feature.diary.FakeDiaryEntryRepository
 import com.alongside.feature.diary.FakeEpisodeRepository
@@ -57,6 +60,8 @@ class DiaryTimelineContainerTest {
                         clock = FixedClock,
                     ),
                 exifPhotoReader = exifPhotoReader,
+                pairingRepository = pairingRepository,
+                backgroundWorkScheduler = FakeBackgroundWorkScheduler(),
                 clock = FixedClock,
             )
         return DiaryTimelineContainer(
@@ -168,6 +173,44 @@ class DiaryTimelineContainerTest {
 
                 cancelAndIgnoreRemainingItems()
             }
+        }
+
+    @Test
+    fun `an incomplete own episode is nudged toward completion once the timeline loads`() =
+        runTest {
+            val trip =
+                fakeTrip(id = "trip-1", ownerId = "owner-1", memberId = "partner-1", startDate = FIXED_TODAY, endDate = FIXED_TODAY)
+            pairingRepository.activeTrip.value = trip
+            diaryEntryRepository.upsert(testDiaryEntry(id = "own-1", tripId = "trip-1", userId = "owner-1", date = FIXED_TODAY))
+            val incompletePhoto =
+                Photo(id = "p1", uri = "content://p1", takenAt = FIXED_NOW, latitude = 1.0, longitude = 1.0, remoteUrl = null)
+            episodeRepository.upsert(
+                Episode(
+                    id = "episode-1",
+                    diaryEntryId = "own-1",
+                    startTime = FIXED_NOW,
+                    endTime = FIXED_NOW,
+                    latitude = 1.0,
+                    longitude = 1.0,
+                    placeName = "Rynok Square",
+                    description = "already generated",
+                    descriptionAttempts = 1,
+                    photos = listOf(incompletePhoto),
+                    syncStatus = SyncStatus.PENDING,
+                    updatedAt = FIXED_NOW,
+                ),
+            )
+
+            containerUnderTest().test(this) {
+                runOnCreate()
+                awaitState() // today/ownUserId bootstrap
+                awaitState() // trip + entries + the still-incomplete episode
+
+                cancelAndIgnoreRemainingItems()
+            }
+
+            val healed = episodeRepository.upserted.last { it.id == "episode-1" }
+            assertEquals("https://storage/p1", healed.photos.single().remoteUrl)
         }
 
     @Test

@@ -21,6 +21,7 @@ import com.alongside.core.model.diary.Photo
 import com.alongside.core.network.firestore.model.FirestoreValue
 import com.alongside.core.network.queue.MaxAttemptsRetryPolicy
 import com.alongside.core.network.queue.SyncQueueProcessor
+import com.alongside.data.FakeBackgroundWorkScheduler
 import com.alongside.data.diary.DiaryEntryFirestoreMapper
 import com.alongside.data.diary.DiaryEntrySyncEntityBinding
 import com.alongside.data.diary.SyncingDiaryEntryRepository
@@ -101,6 +102,7 @@ class DiaryOfflineSyncIntegrationTest {
             SyncingDiaryEntryRepository(
                 local = localDiaryEntries,
                 store = database.syncOperationStore(),
+                backgroundWorkScheduler = FakeBackgroundWorkScheduler(),
                 clock = DiaryFixedClock,
                 generateOpId = { "op-${nextOpId++}" },
             )
@@ -108,6 +110,7 @@ class DiaryOfflineSyncIntegrationTest {
             SyncingEpisodeRepository(
                 local = localEpisodes,
                 store = database.syncOperationStore(),
+                backgroundWorkScheduler = FakeBackgroundWorkScheduler(),
                 clock = DiaryFixedClock,
                 generateOpId = { "op-${nextOpId++}" },
             )
