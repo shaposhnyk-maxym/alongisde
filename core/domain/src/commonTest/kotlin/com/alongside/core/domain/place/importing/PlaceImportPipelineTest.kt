@@ -67,7 +67,13 @@ private class FakePlacePhotoUploadClient(
 
 /** Fake [PlaceGeocodingClient] - scriptable, defaults to a found city. */
 private class FakePlaceGeocodingClient(
-    private val result: GeocodingResult = GeocodingResult.Found(placeName = "Lviv Coffee Manufacture", city = "Lviv"),
+    private val result: GeocodingResult =
+        GeocodingResult.Found(
+            placeName = "Lviv Coffee Manufacture",
+            city = "Lviv",
+            cityPlaceId = "locality-place-id",
+            countryCode = "UA",
+        ),
 ) : PlaceGeocodingClient {
     override suspend fun reverseGeocode(
         latitude: Double,
@@ -92,7 +98,13 @@ class PlaceImportPipelineTest {
         lookupResult: PlaceDetailsResult = FOUND_RESULT,
         photoBytesByRef: Map<String, ByteArray?> = mapOf("ref-1" to byteArrayOf(1), "ref-2" to byteArrayOf(2)),
         failUploadIndices: Set<Int> = emptySet(),
-        geocodingResult: GeocodingResult = GeocodingResult.Found(placeName = "Lviv Coffee Manufacture", city = "Lviv"),
+        geocodingResult: GeocodingResult =
+            GeocodingResult.Found(
+                placeName = "Lviv Coffee Manufacture",
+                city = "Lviv",
+                cityPlaceId = "locality-place-id",
+                countryCode = "UA",
+            ),
     ) = PlaceImportPipeline(
         redirectResolver = FakeShareLinkRedirectResolver(redirectResult),
         detailsLookupClient = FakePlaceDetailsLookupClient(lookupResult),
@@ -115,6 +127,8 @@ class PlaceImportPipelineTest {
             assertEquals(4.6, imported.place.rating)
             assertEquals("Coffee shop", imported.place.category)
             assertEquals("Lviv", imported.place.city)
+            assertEquals("locality-place-id", imported.place.cityPlaceId)
+            assertEquals("UA", imported.place.countryCode)
             assertEquals(
                 listOf(
                     PlacePhoto(photoRef = "ref-1", remoteUrl = "https://storage/place-photos/place-1/0"),
@@ -237,7 +251,7 @@ class PlaceImportPipelineTest {
         }
 
     @Test
-    fun `geocoding not finding a city still imports the place with a null city`() =
+    fun `geocoding not finding a city still imports the place with null city fields`() =
         runTest {
             val result =
                 pipeline(geocodingResult = GeocodingResult.NotFound)
@@ -245,11 +259,13 @@ class PlaceImportPipelineTest {
 
             val imported = assertIs<PlaceImportResult.Imported>(result)
             assertEquals(null, imported.place.city)
+            assertEquals(null, imported.place.cityPlaceId)
+            assertEquals(null, imported.place.countryCode)
             assertEquals("Lviv Coffee Manufacture", imported.place.name)
         }
 
     @Test
-    fun `geocoding failure still imports the place with a null city`() =
+    fun `geocoding failure still imports the place with null city fields`() =
         runTest {
             val result =
                 pipeline(geocodingResult = GeocodingResult.Failure(IllegalStateException("boom")))
@@ -257,6 +273,8 @@ class PlaceImportPipelineTest {
 
             val imported = assertIs<PlaceImportResult.Imported>(result)
             assertEquals(null, imported.place.city)
+            assertEquals(null, imported.place.cityPlaceId)
+            assertEquals(null, imported.place.countryCode)
         }
 
     private fun placeWithPhotos(photos: List<PlacePhoto>) =

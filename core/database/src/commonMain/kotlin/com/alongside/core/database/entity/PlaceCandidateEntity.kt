@@ -28,6 +28,8 @@ internal data class PlaceCandidateEntity(
     val rating: Double? = null,
     val category: String? = null,
     val city: String? = null,
+    val cityPlaceId: String? = null,
+    val countryCode: String? = null,
 )
 
 internal fun PlaceCandidateEntity.toDomain(): PlaceCandidate =
@@ -48,6 +50,8 @@ internal fun PlaceCandidateEntity.toDomain(): PlaceCandidate =
         rating = rating,
         category = category,
         city = city,
+        cityPlaceId = cityPlaceId,
+        countryCode = countryCode,
     )
 
 internal fun PlaceCandidate.toEntity(): PlaceCandidateEntity =
@@ -68,4 +72,6 @@ internal fun PlaceCandidate.toEntity(): PlaceCandidateEntity =
         rating = rating,
         category = category,
         city = city,
+        cityPlaceId = cityPlaceId,
+        countryCode = countryCode,
     )

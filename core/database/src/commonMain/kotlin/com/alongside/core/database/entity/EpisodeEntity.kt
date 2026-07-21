@@ -23,6 +23,9 @@ internal data class EpisodeEntity(
     // ALTER TABLE ... DEFAULT 'PENDING' leaves behind.
     @ColumnInfo(defaultValue = "PENDING") val syncStatus: SyncStatus,
     @ColumnInfo(defaultValue = "0") val updatedAt: Instant,
+    val city: String? = null,
+    val cityPlaceId: String? = null,
+    val countryCode: String? = null,
 )
 
 internal fun Episode.toEntity(): EpisodeEntity =
@@ -38,4 +41,7 @@ internal fun Episode.toEntity(): EpisodeEntity =
         descriptionAttempts = descriptionAttempts,
         syncStatus = syncStatus,
         updatedAt = updatedAt,
+        city = city,
+        cityPlaceId = cityPlaceId,
+        countryCode = countryCode,
     )

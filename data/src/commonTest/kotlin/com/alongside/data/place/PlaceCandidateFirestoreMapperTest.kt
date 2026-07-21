@@ -38,7 +38,7 @@ class PlaceCandidateFirestoreMapperTest {
     }
 
     @Test
-    fun `toFields writes null note swipes rating category and city as NullValue`() {
+    fun `toFields writes null note swipes rating category city cityPlaceId and countryCode as NullValue`() {
         val fields = PlaceCandidateFirestoreMapper.toFields(testPlace())
 
         assertEquals(FirestoreValue.NullValue, fields["note"])
@@ -47,6 +47,8 @@ class PlaceCandidateFirestoreMapperTest {
         assertEquals(FirestoreValue.NullValue, fields["rating"])
         assertEquals(FirestoreValue.NullValue, fields["category"])
         assertEquals(FirestoreValue.NullValue, fields["city"])
+        assertEquals(FirestoreValue.NullValue, fields["cityPlaceId"])
+        assertEquals(FirestoreValue.NullValue, fields["countryCode"])
     }
 
     @Test
@@ -79,7 +81,7 @@ class PlaceCandidateFirestoreMapperTest {
     }
 
     @Test
-    fun `fromDocument round trips a place including photos rating category and city and marks it SYNCED`() {
+    fun `fromDocument round trips a place including photos rating category city cityPlaceId and countryCode and marks it SYNCED`() {
         val place =
             testPlace(
                 createdAt = createdAt,
@@ -93,6 +95,8 @@ class PlaceCandidateFirestoreMapperTest {
                 rating = 4.6,
                 category = "Coffee shop",
                 city = "Lviv",
+                cityPlaceId = "locality-place-id",
+                countryCode = "UA",
             )
         val document = FirestoreDocument(fields = PlaceCandidateFirestoreMapper.toFields(place))
 
@@ -102,7 +106,7 @@ class PlaceCandidateFirestoreMapperTest {
     }
 
     @Test
-    fun `fromDocument reads NullValue note ownerSwipe memberSwipe rating category and city as null`() {
+    fun `fromDocument reads NullValue note ownerSwipe memberSwipe rating category city cityPlaceId and countryCode as null`() {
         val document = FirestoreDocument(fields = PlaceCandidateFirestoreMapper.toFields(testPlace()))
 
         val decoded = PlaceCandidateFirestoreMapper.fromDocument(document)
@@ -113,5 +117,7 @@ class PlaceCandidateFirestoreMapperTest {
         assertNull(decoded.rating)
         assertNull(decoded.category)
         assertNull(decoded.city)
+        assertNull(decoded.cityPlaceId)
+        assertNull(decoded.countryCode)
     }
 }

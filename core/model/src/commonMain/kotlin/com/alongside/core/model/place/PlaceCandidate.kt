@@ -20,4 +20,6 @@ public data class PlaceCandidate(
     val rating: Double? = null,
     val category: String? = null,
     val city: String? = null,
+    val cityPlaceId: String? = null,
+    val countryCode: String? = null,
 )

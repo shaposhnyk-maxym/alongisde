@@ -24,4 +24,7 @@ internal fun EpisodeWithPhotos.toDomain(): Episode =
         photos = photos.map { it.toDomain() },
         syncStatus = episode.syncStatus,
         updatedAt = episode.updatedAt,
+        city = episode.city,
+        cityPlaceId = episode.cityPlaceId,
+        countryCode = episode.countryCode,
     )

@@ -152,3 +152,24 @@ internal val MIGRATION_11_12: Migration =
             connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `city` TEXT")
         }
     }
+
+/**
+ * v12 -> v13: adds `cityPlaceId`/`countryCode` to `place_candidates`, and `city`/`cityPlaceId`/
+ * `countryCode` to `episodes` - both reverse-geocoded from the same `PlaceGeocodingClient` call
+ * each pipeline already makes (see `EpisodeProcessingPipeline.processCluster`,
+ * `PlaceImportPipeline.lookupGeocoding`). `cityPlaceId` is Google's own `place_id` for the
+ * locality-level geocoding result - a stable code for the city, usable later to re-localize its
+ * display name without a new geocoding request. `countryCode` is the ISO 3166-1 alpha-2 code from
+ * the `country`-typed address component. Nullable with no DEFAULT, same "no real data to backfill"
+ * shape as v11->v12's `city`.
+ */
+internal val MIGRATION_12_13: Migration =
+    object : Migration(12, 13) {
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL("ALTER TABLE `episodes` ADD COLUMN `city` TEXT")
+            connection.execSQL("ALTER TABLE `episodes` ADD COLUMN `cityPlaceId` TEXT")
+            connection.execSQL("ALTER TABLE `episodes` ADD COLUMN `countryCode` TEXT")
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `cityPlaceId` TEXT")
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `countryCode` TEXT")
+        }
+    }

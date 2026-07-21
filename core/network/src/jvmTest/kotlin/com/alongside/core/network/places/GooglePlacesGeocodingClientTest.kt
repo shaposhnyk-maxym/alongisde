@@ -63,6 +63,24 @@ class GooglePlacesGeocodingClientTest {
         }
 
     @Test
+    fun `OK status fills in countryCode and cityPlaceId from the full results list`() =
+        runBlocking {
+            val api = testGooglePlacesGeocodingApi { respondJson(MULTI_RESULT_RESPONSE_JSON) }
+            val client = GooglePlacesGeocodingClient(api)
+
+            val result = client.reverseGeocode(49.8397, 24.0297)
+
+            assertEquals(
+                GeocodingResult.Found(
+                    placeName = "Rynok Square",
+                    cityPlaceId = "locality-place-id",
+                    countryCode = "UA",
+                ),
+                result,
+            )
+        }
+
+    @Test
     fun `ZERO_RESULTS maps to NotFound`() =
         runBlocking {
             val api = testGooglePlacesGeocodingApi { respondJson("""{"results": [], "status": "ZERO_RESULTS"}""") }
@@ -103,3 +121,29 @@ class GooglePlacesGeocodingClientTest {
         }
     }
 }
+
+private val MULTI_RESULT_RESPONSE_JSON =
+    """
+    {
+      "results": [
+        {
+          "formatted_address": "Rynok Square, Lviv, Ukraine",
+          "place_id": "street-place-id",
+          "types": ["point_of_interest"],
+          "address_components": [
+            {"long_name": "Rynok Square", "short_name": "Rynok Sq", "types": ["point_of_interest"]},
+            {"long_name": "Ukraine", "short_name": "UA", "types": ["country", "political"]}
+          ]
+        },
+        {
+          "formatted_address": "Lviv, Ukraine",
+          "place_id": "locality-place-id",
+          "types": ["locality", "political"],
+          "address_components": [
+            {"long_name": "Lviv", "short_name": "Lviv", "types": ["locality", "political"]}
+          ]
+        }
+      ],
+      "status": "OK"
+    }
+    """.trimIndent()

@@ -48,6 +48,26 @@ class EpisodeFirestoreMapperTest {
     }
 
     @Test
+    fun `toFields writes null city cityPlaceId and countryCode as NullValue`() {
+        val fields = EpisodeFirestoreMapper.toFields(testEpisode())
+
+        assertEquals(FirestoreValue.NullValue, fields["city"])
+        assertEquals(FirestoreValue.NullValue, fields["cityPlaceId"])
+        assertEquals(FirestoreValue.NullValue, fields["countryCode"])
+    }
+
+    @Test
+    fun `toFields maps city cityPlaceId and countryCode when present`() {
+        val episode = testEpisode(city = "Lviv", cityPlaceId = "locality-place-id", countryCode = "UA")
+
+        val fields = EpisodeFirestoreMapper.toFields(episode)
+
+        assertEquals(FirestoreValue.StringValue("Lviv"), fields["city"])
+        assertEquals(FirestoreValue.StringValue("locality-place-id"), fields["cityPlaceId"])
+        assertEquals(FirestoreValue.StringValue("UA"), fields["countryCode"])
+    }
+
+    @Test
     fun `toFields embeds photos as an array of maps`() {
         val photos = listOf(testPhoto(id = "photo-1"), testPhoto(id = "photo-2"))
         val episode = testEpisode(photos = photos)
@@ -61,13 +81,16 @@ class EpisodeFirestoreMapperTest {
     }
 
     @Test
-    fun `fromDocument round trips an episode including photos and marks it SYNCED`() {
+    fun `fromDocument round trips an episode including photos city cityPlaceId and countryCode and marks it SYNCED`() {
         val episode =
             testEpisode(
                 startTime = startTime,
                 endTime = endTime,
                 updatedAt = updatedAt,
                 photos = listOf(testPhoto(id = "photo-1"), testPhoto(id = "photo-2")),
+                city = "Lviv",
+                cityPlaceId = "locality-place-id",
+                countryCode = "UA",
             )
         val document = FirestoreDocument(fields = EpisodeFirestoreMapper.toFields(episode))
 
@@ -107,5 +130,16 @@ class EpisodeFirestoreMapperTest {
 
         assertNull(decoded.placeName)
         assertNull(decoded.description)
+    }
+
+    @Test
+    fun `fromDocument reads NullValue city cityPlaceId and countryCode as null`() {
+        val document = FirestoreDocument(fields = EpisodeFirestoreMapper.toFields(testEpisode()))
+
+        val decoded = EpisodeFirestoreMapper.fromDocument(document)
+
+        assertNull(decoded.city)
+        assertNull(decoded.cityPlaceId)
+        assertNull(decoded.countryCode)
     }
 }

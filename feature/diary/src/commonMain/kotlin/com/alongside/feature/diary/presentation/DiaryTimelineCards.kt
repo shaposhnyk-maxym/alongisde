@@ -43,6 +43,7 @@ import com.alongside.core.ui.component.FullscreenPhotoViewer
 import com.alongside.core.ui.component.OverlineLabel
 import com.alongside.core.ui.component.OverlineLabelTone
 import com.alongside.core.ui.component.PaperCard
+import com.alongside.core.ui.format.countryCodeToFlagEmoji
 import com.alongside.core.ui.theme.AlongsideSpacing
 import com.alongside.core.ui.theme.alongsideColors
 import com.alongside.core.ui.theme.alongsideTypography
@@ -210,7 +211,8 @@ private fun EpisodeSection(
             key(episode.id) {
                 Spacer(Modifier.height(AlongsideSpacing.md))
                 episode.placeName?.let { placeName ->
-                    Text(text = placeName, style = MaterialTheme.typography.titleMedium)
+                    val flag = episode.countryCode?.let { " ${countryCodeToFlagEmoji(it)}" }.orEmpty()
+                    Text(text = "$placeName$flag", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(AlongsideSpacing.xs))
                 }
                 episode.description?.let { description ->
