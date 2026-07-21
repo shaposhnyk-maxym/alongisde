@@ -23,6 +23,9 @@ internal data class PlaceCandidateEntity(
     val syncStatus: SyncStatus,
     val createdAt: Instant,
     @ColumnInfo(defaultValue = "0") val updatedAt: Instant,
+    @ColumnInfo(defaultValue = "''") val photoUrls: List<String> = emptyList(),
+    val rating: Double? = null,
+    val category: String? = null,
 )
 
 internal fun PlaceCandidateEntity.toDomain(): PlaceCandidate =
@@ -39,6 +42,9 @@ internal fun PlaceCandidateEntity.toDomain(): PlaceCandidate =
         syncStatus = syncStatus,
         createdAt = createdAt,
         updatedAt = updatedAt,
+        photoUrls = photoUrls,
+        rating = rating,
+        category = category,
     )
 
 internal fun PlaceCandidate.toEntity(): PlaceCandidateEntity =
@@ -55,4 +61,7 @@ internal fun PlaceCandidate.toEntity(): PlaceCandidateEntity =
         syncStatus = syncStatus,
         createdAt = createdAt,
         updatedAt = updatedAt,
+        photoUrls = photoUrls,
+        rating = rating,
+        category = category,
     )

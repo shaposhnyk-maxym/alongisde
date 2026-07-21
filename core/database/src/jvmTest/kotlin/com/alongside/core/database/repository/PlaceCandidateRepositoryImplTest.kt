@@ -39,6 +39,9 @@ class PlaceCandidateRepositoryImplTest {
     private fun place(
         id: String = "place-1",
         tripId: String = "trip-1",
+        photoUrls: List<String> = emptyList(),
+        rating: Double? = null,
+        category: String? = null,
     ) = PlaceCandidate(
         id = id,
         tripId = tripId,
@@ -52,6 +55,9 @@ class PlaceCandidateRepositoryImplTest {
         syncStatus = SyncStatus.PENDING,
         createdAt = Instant.fromEpochMilliseconds(1_752_600_000_000),
         updatedAt = Instant.fromEpochMilliseconds(1_752_600_000_000),
+        photoUrls = photoUrls,
+        rating = rating,
+        category = category,
     )
 
     @Test
@@ -68,6 +74,21 @@ class PlaceCandidateRepositoryImplTest {
     fun `getById returns null for unknown id`() =
         runTest {
             assertNull(repository.getById("unknown"))
+        }
+
+    @Test
+    fun `upsert then getById round trips photoUrls rating and category`() =
+        runTest {
+            val place =
+                place(
+                    photoUrls = listOf("https://storage/photo-1.jpg"),
+                    rating = 4.7,
+                    category = "Gym",
+                )
+
+            repository.upsert(place)
+
+            assertEquals(place, repository.getById(place.id))
         }
 
     @Test

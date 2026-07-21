@@ -26,6 +26,12 @@ complexity:
   TooManyFunctions:
     active: true
     thresholdInFiles: 15
+  # MigrationTest.kt hand-rolls a fresh SQLiteConnection fixture (raw CREATE TABLE/INSERT SQL) for
+  # every prior schema version, per-version - the same repetitive-by-design shape M9's own doc
+  # comment in that file describes. It's long because there's one migration's worth of history to
+  # replay, not because any single test/function inside it is actually complex.
+  LargeClass:
+    excludes: ["**/migration/MigrationTest.kt"]
 
 style:
   # Вимкнено на старті — забагато шуму на ранньому етапі проєкту,

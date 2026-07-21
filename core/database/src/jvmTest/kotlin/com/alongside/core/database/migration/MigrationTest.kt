@@ -118,8 +118,15 @@ class MigrationTest {
             .databaseBuilder<AlongsideDatabase>(name = dbFile.absolutePath)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
-            .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
-            .build()
+            .addMigrations(
+                MIGRATION_3_4,
+                MIGRATION_4_5,
+                MIGRATION_5_6,
+                MIGRATION_6_7,
+                MIGRATION_7_8,
+                MIGRATION_8_9,
+                MIGRATION_9_10,
+            ).build()
 
     @Test
     fun `migration backfills updatedAt from createdAt on all three syncable tables`() =
@@ -176,8 +183,14 @@ class MigrationTest {
                     .databaseBuilder<AlongsideDatabase>(name = v4File.absolutePath)
                     .setDriver(BundledSQLiteDriver())
                     .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
-                    .build()
+                    .addMigrations(
+                        MIGRATION_4_5,
+                        MIGRATION_5_6,
+                        MIGRATION_6_7,
+                        MIGRATION_7_8,
+                        MIGRATION_8_9,
+                        MIGRATION_9_10,
+                    ).build()
             try {
                 val episode = database.episodeDao().getById("episode-1")
                 assertEquals(0, episode?.episode?.descriptionAttempts)
@@ -198,7 +211,7 @@ class MigrationTest {
                     .databaseBuilder<AlongsideDatabase>(name = v5File.absolutePath)
                     .setDriver(BundledSQLiteDriver())
                     .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+                    .addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
                     .build()
             try {
                 val episode = database.episodeDao().getById("episode-1")
@@ -221,7 +234,7 @@ class MigrationTest {
                     .databaseBuilder<AlongsideDatabase>(name = v6File.absolutePath)
                     .setDriver(BundledSQLiteDriver())
                     .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+                    .addMigrations(MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
                     .build()
             try {
                 val preMigrationEpisode = database.episodeDao().getById("episode-1")
@@ -256,7 +269,7 @@ class MigrationTest {
                     .databaseBuilder<AlongsideDatabase>(name = v7File.absolutePath)
                     .setDriver(BundledSQLiteDriver())
                     .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(MIGRATION_7_8, MIGRATION_8_9)
+                    .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
                     .build()
             try {
                 val preMigrationEntry = database.diaryEntryDao().getById("entry-1")
@@ -284,7 +297,7 @@ class MigrationTest {
                     .databaseBuilder<AlongsideDatabase>(name = v8File.absolutePath)
                     .setDriver(BundledSQLiteDriver())
                     .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(MIGRATION_8_9)
+                    .addMigrations(MIGRATION_8_9, MIGRATION_9_10)
                     .build()
             try {
                 val preMigrationEpisode = database.episodeDao().getById("episode-1")
@@ -305,6 +318,99 @@ class MigrationTest {
                 v8File.delete()
             }
         }
+
+    @Test
+    fun `migration 9 to 10 backfills empty photoUrls and null rating category, round trips new values`() =
+        runTest {
+            val v9File = File.createTempFile("migration-test-v9", ".db")
+            v9File.delete()
+            createVersion9Database(v9File)
+            val database =
+                Room
+                    .databaseBuilder<AlongsideDatabase>(name = v9File.absolutePath)
+                    .setDriver(BundledSQLiteDriver())
+                    .setQueryCoroutineContext(Dispatchers.IO)
+                    .addMigrations(MIGRATION_9_10)
+                    .build()
+            try {
+                val preMigrationPlace = database.placeCandidateDao().getById("place-1")
+                assertEquals(emptyList(), preMigrationPlace?.photoUrls)
+                assertEquals(null, preMigrationPlace?.rating)
+                assertEquals(null, preMigrationPlace?.category)
+
+                val updatedPlace =
+                    requireNotNull(preMigrationPlace).copy(
+                        photoUrls = listOf("https://storage/photo-1.jpg", "https://storage/photo-2.jpg"),
+                        rating = 4.3,
+                        category = "Restaurant",
+                    )
+                database.placeCandidateDao().upsert(updatedPlace)
+
+                val reloaded = database.placeCandidateDao().getById("place-1")
+                assertEquals(
+                    listOf("https://storage/photo-1.jpg", "https://storage/photo-2.jpg"),
+                    reloaded?.photoUrls,
+                )
+                assertEquals(4.3, reloaded?.rating)
+                assertEquals("Restaurant", reloaded?.category)
+            } finally {
+                database.close()
+                v9File.delete()
+            }
+        }
+
+    private fun createVersion9Database(file: File) {
+        val connection = BundledSQLiteDriver().open(file.absolutePath)
+        try {
+            connection.createVersion4SyncableTables()
+            connection.createVersion9AuxiliaryTables()
+            connection.insertVersion9Row()
+            connection.execSQL("PRAGMA user_version = 9")
+        } finally {
+            connection.close()
+        }
+    }
+
+    private fun SQLiteConnection.createVersion9AuxiliaryTables() {
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `episodes` (`id` TEXT NOT NULL, `diaryEntryId` TEXT NOT NULL, " +
+                "`startTime` INTEGER NOT NULL, `endTime` INTEGER NOT NULL, `latitude` REAL NOT NULL, " +
+                "`longitude` REAL NOT NULL, `placeName` TEXT, `description` TEXT, " +
+                "`descriptionAttempts` INTEGER NOT NULL, `syncStatus` TEXT NOT NULL DEFAULT 'PENDING', " +
+                "`updatedAt` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))",
+        )
+        execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_episodes_diaryEntryId` ON `episodes` (`diaryEntryId`)",
+        )
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `photos` (`id` TEXT NOT NULL, `episodeId` TEXT NOT NULL, " +
+                "`uri` TEXT NOT NULL, `takenAt` INTEGER NOT NULL, `latitude` REAL NOT NULL, " +
+                "`longitude` REAL NOT NULL, `remoteUrl` TEXT, PRIMARY KEY(`id`, `episodeId`), " +
+                "FOREIGN KEY(`episodeId`) REFERENCES `episodes`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        )
+        execSQL("CREATE INDEX IF NOT EXISTS `index_photos_episodeId` ON `photos` (`episodeId`)")
+        execSQL("ALTER TABLE `diary_entries` ADD COLUMN `closedAt` INTEGER")
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `push_tokens` (`userId` TEXT NOT NULL, `token` TEXT NOT NULL, " +
+                "`platform` TEXT NOT NULL, `syncStatus` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`userId`))",
+        )
+        execSQL(
+            "CREATE TABLE IF NOT EXISTS `auth_session` (`id` TEXT NOT NULL, `uid` TEXT NOT NULL, " +
+                "`email` TEXT, `displayName` TEXT, `photoUrl` TEXT, `idToken` TEXT NOT NULL, " +
+                "`refreshToken` TEXT, `expiresInSeconds` INTEGER NOT NULL, `issuedAt` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`id`))",
+        )
+    }
+
+    private fun SQLiteConnection.insertVersion9Row() {
+        execSQL(
+            "INSERT INTO place_candidates (id, tripId, name, latitude, longitude, note, addedByUserId, " +
+                "ownerSwipe, memberSwipe, syncStatus, createdAt, updatedAt) " +
+                "VALUES ('place-1', 'trip-1', 'Cafe', 49.0, 24.0, NULL, 'owner-1', NULL, NULL, " +
+                "'PENDING', 333, 333)",
+        )
+    }
 
     private suspend fun assertPhotoIds(
         database: AlongsideDatabase,

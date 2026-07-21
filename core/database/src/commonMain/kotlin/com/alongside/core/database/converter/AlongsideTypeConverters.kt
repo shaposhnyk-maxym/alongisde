@@ -38,3 +38,14 @@ internal object AlongsideTypeConverters {
     @TypeConverter
     fun toPushPlatform(value: String?): PushPlatform? = value?.let { PushPlatform.valueOf(it) }
 }
+
+/** Split into its own object, not [AlongsideTypeConverters], purely to stay under detekt's TooManyFunctions. */
+internal object StringListTypeConverters {
+    // Newline-delimited, not JSON: this module has no kotlinx.serialization dependency, and every
+    // element here is a URL (never contains a newline), so a plain join/split is sufficient.
+    @TypeConverter
+    fun fromStringList(values: List<String>): String = values.joinToString(separator = "\n")
+
+    @TypeConverter
+    fun toStringList(value: String): List<String> = if (value.isEmpty()) emptyList() else value.split("\n")
+}
