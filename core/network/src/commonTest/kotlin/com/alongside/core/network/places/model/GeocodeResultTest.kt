@@ -134,7 +134,7 @@ class GeocodeResultTest {
     }
 
     @Test
-    fun `cityName is null when nothing in the cascade is tagged, unlike preferredPlaceName's formatted-address fallback`() {
+    fun `cityName is null when nothing in the cascade is tagged unlike preferredPlaceName's formatted-address fallback`() {
         val result =
             GeocodeResult(
                 formattedAddress = "Somewhere, Country",

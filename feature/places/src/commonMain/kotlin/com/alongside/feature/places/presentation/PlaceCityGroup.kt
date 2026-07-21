@@ -18,7 +18,8 @@ public fun List<PlaceCandidate>.groupedByCity(): List<PlaceCityGroup> {
     val namedGroups =
         named
             .groupBy { requireNotNull(it.city) }
-            .toSortedMap()
+            .entries
+            .sortedBy { it.key }
             .map { (city, places) -> PlaceCityGroup(city, places) }
     return if (unnamed.isEmpty()) namedGroups else namedGroups + PlaceCityGroup(city = null, places = unnamed)
 }
