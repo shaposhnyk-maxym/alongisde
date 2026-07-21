@@ -12,7 +12,7 @@ import kotlin.test.assertNull
  */
 class GoogleMapsShareLinkParserTest {
     @Test
-    fun `parses a real resolved link with name, address and feature id but no coordinates`() {
+    fun `parses a real resolved link with name address and feature id but no coordinates`() {
         val url =
             "https://www.google.com/maps/place/Global+Solar,+%D0%A2%D0%B8%D0%B2%D1%80%D1%96%D0%B2%D1%81%D1%8C%D0%BA" +
                 "%D0%B5+%D1%88%D0%BE%D1%81%D0%B5,+1,+%D0%92%D1%96%D0%BD%D0%BD%D0%B8%D1%86%D1%8F,+%D0%92%D1%96%D0%BD" +
@@ -29,7 +29,7 @@ class GoogleMapsShareLinkParserTest {
     }
 
     @Test
-    fun `parses a resolved link that includes an @lat,lng,zoom segment`() {
+    fun `parses a resolved link that includes a lat lng zoom segment`() {
         val url = "https://www.google.com/maps/place/Rynok+Square/@49.8397,24.0297,17z/data=!4m2!3m1!1s0xabc:0xdef"
 
         val result = GoogleMapsShareLinkParser.parse(url)
