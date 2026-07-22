@@ -4,6 +4,7 @@ import com.alongside.core.model.place.SwipeDirection
 import com.alongside.feature.matcher.FakeAuthSessionCache
 import com.alongside.feature.matcher.FakePairingRepository
 import com.alongside.feature.matcher.FakePlaceCandidateRepository
+import com.alongside.feature.matcher.FakePlaceContentPuller
 import com.alongside.feature.matcher.FakePlaceSwipeRepository
 import com.alongside.feature.matcher.fakeCandidate
 import com.alongside.feature.matcher.fakeSwipe
@@ -33,6 +34,7 @@ class MatcherContainerTest {
             placeSwipeRepository = placeSwipeRepository,
             pairingRepository = pairingRepository,
             authSessionCache = FakeAuthSessionCache(testAuthSession(uid)),
+            placeContentPuller = FakePlaceContentPuller(),
             clock = FixedClock,
         )
 
@@ -198,6 +200,31 @@ class MatcherContainerTest {
 
                 assertEquals(emptyList(), loaded.deck)
                 assertEquals(listOf("place-1"), loaded.matches.map { it.id })
+
+                cancelAndIgnoreRemainingItems()
+            }
+        }
+
+    @Test
+    fun `an already-matched candidate at container creation does not re-fire Matched`() =
+        // Regression: a fresh MatcherContainer (e.g. re-navigating to this tab tears down and
+        // recreates the ViewModel) must not treat its first content load - which can already
+        // contain long-settled matches from Room - as a brand-new match worth a banner for.
+        runTest {
+            pairingRepository.activeTrip.value = fakeTrip()
+            placeCandidateRepository.seed(fakeCandidate("place-1"))
+            placeSwipeRepository.seed(
+                fakeSwipe("place-1", "member-1", SwipeDirection.LIKE),
+                fakeSwipe("place-1", "owner-1", SwipeDirection.LIKE),
+            )
+
+            containerUnderTest(uid = "owner-1").test(this) {
+                runOnCreate()
+                awaitState()
+                val loaded = awaitState()
+
+                assertEquals(listOf("place-1"), loaded.matches.map { it.id })
+                expectNoItems()
 
                 cancelAndIgnoreRemainingItems()
             }

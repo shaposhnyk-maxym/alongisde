@@ -20,6 +20,7 @@ import com.alongside.core.domain.diary.processing.VisionDescriptionResult
 import com.alongside.core.domain.pairing.JoinTripResult
 import com.alongside.core.domain.pairing.PairingRepository
 import com.alongside.core.domain.place.PlaceCandidateRepository
+import com.alongside.core.domain.place.PlaceContentPuller
 import com.alongside.core.domain.place.importing.PlaceDetailsLookupClient
 import com.alongside.core.domain.place.importing.PlaceDetailsResult
 import com.alongside.core.domain.place.importing.PlaceImportPipeline
@@ -46,6 +47,7 @@ import com.alongside.data.sync.RemoteDocumentReader
 import com.alongside.data.sync.SyncCoordinator
 import com.alongside.feature.diary.capture.ExifPhotoReader
 import com.alongside.feature.diary.presentation.DiaryCaptureCoordinator
+import com.alongside.feature.places.presentation.PlaceContentPullCoordinator
 import com.alongside.feature.places.presentation.PlaceRetryCoordinator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.runBlocking
@@ -134,6 +136,14 @@ private fun unusedPlaceCandidateRepository() =
         override fun observeByTrip(tripId: String): Flow<List<PlaceCandidate>> = error("not reached in this test")
 
         override suspend fun delete(id: String) = error("not reached in this test")
+    }
+
+private fun unusedPlaceContentPuller() =
+    object : PlaceContentPuller {
+        override suspend fun pullTripContent(
+            tripId: String,
+            ownUserId: String,
+        ) = error("not reached in this test")
     }
 
 private fun unusedPlaceImportPipeline() =
@@ -248,6 +258,7 @@ private fun testAuthSession(uid: String) =
 class BackgroundSyncWorkerTest {
     private val diaryPairingRepository = SpyPairingRepository()
     private val placePairingRepository = SpyPairingRepository()
+    private val placeContentPullPairingRepository = SpyPairingRepository()
     private val syncOperationStore = SpySyncOperationStore()
 
     private val diaryCaptureCoordinator =
@@ -265,6 +276,12 @@ class BackgroundSyncWorkerTest {
             pairingRepository = placePairingRepository,
             placeCandidateRepository = unusedPlaceCandidateRepository(),
             pipeline = unusedPlaceImportPipeline(),
+        )
+
+    private val placeContentPullCoordinator =
+        PlaceContentPullCoordinator(
+            pairingRepository = placeContentPullPairingRepository,
+            placeContentPuller = unusedPlaceContentPuller(),
         )
 
     private val syncCoordinator =
@@ -286,6 +303,7 @@ class BackgroundSyncWorkerTest {
                     single<AuthSessionCache> { authSessionCache }
                     single { diaryCaptureCoordinator }
                     single { placeRetryCoordinator }
+                    single { placeContentPullCoordinator }
                     single { syncCoordinator }
                 },
             )
@@ -339,16 +357,30 @@ class BackgroundSyncWorkerTest {
             assertTrue(syncOperationStore.loadAllCalled)
             assertEquals(null, diaryPairingRepository.queriedUserId)
             assertEquals(null, placePairingRepository.queriedUserId)
+            assertEquals(null, placeContentPullPairingRepository.queriedUserId)
         }
 
     @Test
-    fun `no job kind runs a periodic sweep across all three kinds`() =
+    fun `PLACE_CONTENT_PULL dispatches to the place content pull coordinator only`() =
+        runBlocking {
+            val result = worker(workDataOf(KEY_JOB_KIND to BackgroundJobKind.PLACE_CONTENT_PULL.name)).doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            assertEquals("uid-1", placeContentPullPairingRepository.queriedUserId)
+            assertEquals(null, diaryPairingRepository.queriedUserId)
+            assertEquals(null, placePairingRepository.queriedUserId)
+            assertFalse(syncOperationStore.loadAllCalled)
+        }
+
+    @Test
+    fun `no job kind runs a periodic sweep across all four kinds`() =
         runBlocking {
             val result = worker().doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
             assertEquals("uid-1", diaryPairingRepository.queriedUserId)
             assertEquals("uid-1", placePairingRepository.queriedUserId)
+            assertEquals("uid-1", placeContentPullPairingRepository.queriedUserId)
             assertTrue(syncOperationStore.loadAllCalled)
         }
 

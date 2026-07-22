@@ -1,5 +1,8 @@
 package com.alongside.app
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,6 +34,7 @@ import com.alongside.app.navigation.Settings
 import com.alongside.app.navigation.Timeline
 import com.alongside.core.domain.onboarding.OnboardingCompletionCache
 import com.alongside.core.ui.component.AlongsideTextButton
+import com.alongside.core.ui.component.ScreenHeader
 import com.alongside.feature.auth.GoogleAuthProvider
 import com.alongside.feature.auth.presentation.AuthContainer
 import com.alongside.feature.auth.presentation.AuthScreen
@@ -166,12 +170,19 @@ public fun AlongsideApp(
                 }
                 entry<Home> {
                     MainTabScreen(tab = MainTab.HOME, backStack = backStack) {
-                        PlaceholderScreen(
-                            title = "Home",
-                            note = "Countdown to the meeting, today's diary day and fresh matches will gather here.",
-                        ) {
-                            AlongsideTextButton(text = "Settings", onClick = { backStack.add(Settings) })
-                            AlongsideTextButton(text = "Recap", onClick = { backStack.add(Recap) })
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            ScreenHeader(title = "Alongside")
+                            Box(modifier = Modifier.weight(1f).fillMaxSize()) {
+                                PlaceholderScreen(
+                                    title = "Home",
+                                    note =
+                                        "Countdown to the meeting, today's diary day and " +
+                                            "fresh matches will gather here.",
+                                ) {
+                                    AlongsideTextButton(text = "Settings", onClick = { backStack.add(Settings) })
+                                    AlongsideTextButton(text = "Recap", onClick = { backStack.add(Recap) })
+                                }
+                            }
                         }
                     }
                 }

@@ -1,7 +1,7 @@
 package com.alongside.core.domain.work
 
 /** Reliability job kinds that can be handed off to a durable background scheduler. */
-public enum class BackgroundJobKind { EPISODE_RETRY, PLACE_RETRY, SYNC_QUEUE_FLUSH }
+public enum class BackgroundJobKind { EPISODE_RETRY, PLACE_RETRY, SYNC_QUEUE_FLUSH, PLACE_CONTENT_PULL }
 
 /**
  * Seam over whatever platform mechanism survives app closure/process death/device reboot

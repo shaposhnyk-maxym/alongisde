@@ -7,6 +7,7 @@ import com.alongside.core.domain.auth.AuthSessionCache
 import com.alongside.core.domain.work.BackgroundJobKind
 import com.alongside.data.sync.SyncCoordinator
 import com.alongside.feature.diary.presentation.DiaryCaptureCoordinator
+import com.alongside.feature.places.presentation.PlaceContentPullCoordinator
 import com.alongside.feature.places.presentation.PlaceRetryCoordinator
 import kotlinx.coroutines.CancellationException
 import org.koin.core.component.KoinComponent
@@ -41,6 +42,7 @@ internal class BackgroundSyncWorker(
     private val authSessionCache: AuthSessionCache by inject()
     private val diaryCaptureCoordinator: DiaryCaptureCoordinator by inject()
     private val placeRetryCoordinator: PlaceRetryCoordinator by inject()
+    private val placeContentPullCoordinator: PlaceContentPullCoordinator by inject()
     private val syncCoordinator: SyncCoordinator by inject()
 
     @Suppress("TooGenericExceptionCaught")
@@ -80,6 +82,7 @@ internal class BackgroundSyncWorker(
             BackgroundJobKind.EPISODE_RETRY -> diaryCaptureCoordinator.retryAllIncompleteEpisodes(ownUserId)
             BackgroundJobKind.PLACE_RETRY -> placeRetryCoordinator.retryAllIncompletePlaces(ownUserId)
             BackgroundJobKind.SYNC_QUEUE_FLUSH -> syncCoordinator.sync()
+            BackgroundJobKind.PLACE_CONTENT_PULL -> placeContentPullCoordinator.pullActiveTripContent(ownUserId)
         }
     }
 }

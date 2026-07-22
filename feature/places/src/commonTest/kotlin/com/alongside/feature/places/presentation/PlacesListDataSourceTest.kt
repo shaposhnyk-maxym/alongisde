@@ -3,6 +3,7 @@ package com.alongside.feature.places.presentation
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.place.PlaceCandidate
 import com.alongside.feature.places.FakePairingRepository
+import com.alongside.feature.places.FakePlaceContentPuller
 import com.alongside.feature.places.RecordingPlaceCandidateRepository
 import com.alongside.feature.places.fakeTrip
 import kotlinx.coroutines.launch
@@ -35,7 +36,7 @@ class PlacesListDataSourceTest {
     fun `no active trip observes an empty list`() =
         runTest {
             val pairingRepository = FakePairingRepository(initialActiveTrip = null)
-            val dataSource = PlacesListDataSource(pairingRepository, placeCandidateRepository)
+            val dataSource = PlacesListDataSource(pairingRepository, placeCandidateRepository, FakePlaceContentPuller())
             val updates = mutableListOf<List<PlaceCandidate>>()
 
             backgroundScope.launch { dataSource.observe("uid-1") { updates += it } }
@@ -48,7 +49,7 @@ class PlacesListDataSourceTest {
     fun `an active trip forwards observeByTrip's places`() =
         runTest {
             val pairingRepository = FakePairingRepository(initialActiveTrip = fakeTrip(id = "trip-1"))
-            val dataSource = PlacesListDataSource(pairingRepository, placeCandidateRepository)
+            val dataSource = PlacesListDataSource(pairingRepository, placeCandidateRepository, FakePlaceContentPuller())
             placeCandidateRepository.upsert(place(id = "place-1", tripId = "trip-1"))
             val updates = mutableListOf<List<PlaceCandidate>>()
 
@@ -62,7 +63,7 @@ class PlacesListDataSourceTest {
     fun `trip changing switches to the new trip's places`() =
         runTest {
             val pairingRepository = FakePairingRepository(initialActiveTrip = fakeTrip(id = "trip-1"))
-            val dataSource = PlacesListDataSource(pairingRepository, placeCandidateRepository)
+            val dataSource = PlacesListDataSource(pairingRepository, placeCandidateRepository, FakePlaceContentPuller())
             placeCandidateRepository.upsert(place(id = "place-1", tripId = "trip-1"))
             placeCandidateRepository.upsert(place(id = "place-2", tripId = "trip-2"))
             val updates = mutableListOf<List<PlaceCandidate>>()
