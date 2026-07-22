@@ -6,11 +6,13 @@ import com.alongside.core.database.AlongsideDatabase
 import com.alongside.core.database.authSessionCache
 import com.alongside.core.database.getDatabaseBuilder
 import com.alongside.core.database.getRoomDatabase
+import com.alongside.core.database.onboardingCompletionCache
 import com.alongside.core.domain.auth.AuthSessionCache
 import com.alongside.core.domain.auth.AuthSessionRepository
 import com.alongside.core.domain.diary.processing.EpisodeVisionDescriptionClient
 import com.alongside.core.domain.diary.processing.PhotoUploadClient
 import com.alongside.core.domain.diary.processing.PlaceGeocodingClient
+import com.alongside.core.domain.onboarding.OnboardingCompletionCache
 import com.alongside.core.domain.pairing.DefaultPairingRepository
 import com.alongside.core.domain.pairing.InviteCodeGenerator
 import com.alongside.core.domain.pairing.PairingRepository
@@ -77,6 +79,7 @@ public fun androidAppModule(
     single<AuthSessionRepository> { FirebaseAuthSessionRepository(get()) }
     single { getRoomDatabase(getDatabaseBuilder(context)) }
     single<AuthSessionCache> { get<AlongsideDatabase>().authSessionCache() }
+    single<OnboardingCompletionCache> { get<AlongsideDatabase>().onboardingCompletionCache() }
     single<FirestoreTokenProvider> {
         SessionFirestoreTokenProvider(get(), get<FirebaseAuthApi>().asIdTokenRefresher())
     }

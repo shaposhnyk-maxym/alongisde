@@ -8,5 +8,5 @@ import org.koin.dsl.module
 /** OnboardingContainer needs a [PermissionController] at creation time - callers pass it via `parametersOf`. */
 public val onboardingFeatureModule =
     module {
-        viewModel { (controller: PermissionController) -> OnboardingContainer(controller) }
+        viewModel { (controller: PermissionController) -> OnboardingContainer(controller, get()) }
     }

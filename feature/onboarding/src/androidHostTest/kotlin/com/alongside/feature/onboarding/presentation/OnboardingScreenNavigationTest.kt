@@ -5,6 +5,7 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.alongside.core.ui.theme.AlongsideTheme
+import com.alongside.feature.onboarding.FakeOnboardingCompletionCache
 import com.alongside.feature.onboarding.FakePermissionController
 import com.alongside.feature.onboarding.OnboardingPermission
 import com.alongside.feature.onboarding.PermissionStatus
@@ -85,7 +86,7 @@ class OnboardingScreenNavigationTest {
     }
 
     private fun setContent(controller: FakePermissionController) {
-        val container = OnboardingContainer(controller)
+        val container = OnboardingContainer(controller, FakeOnboardingCompletionCache())
         composeTestRule.setContent {
             AlongsideTheme {
                 OnboardingScreen(container)

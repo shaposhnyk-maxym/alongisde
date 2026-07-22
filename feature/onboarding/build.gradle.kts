@@ -13,6 +13,7 @@ kotlin {
 kotlin {
     sourceSets {
         commonMain.dependencies {
+            implementation(projects.core.domain)
             implementation(projects.core.ui)
             implementation(libs.findLibrary("orbit-core").get())
             implementation(libs.findLibrary("orbit-viewmodel").get())
@@ -28,6 +29,7 @@ kotlin {
         // (see RoborazziConventionPlugin.kt) - OnboardingScreenNavigationTest/
         // OnboardingPermissionRecoveryTest need core:ui's AlongsideTheme directly.
         getByName("androidHostTest").dependencies {
+            implementation(projects.core.domain)
             implementation(projects.core.ui)
             implementation(libs.findLibrary("orbit-core").get())
             implementation(libs.findLibrary("orbit-viewmodel").get())

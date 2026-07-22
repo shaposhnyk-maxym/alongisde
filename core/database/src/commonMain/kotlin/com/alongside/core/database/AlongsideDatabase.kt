@@ -12,6 +12,7 @@ import com.alongside.core.database.converter.StringListTypeConverters
 import com.alongside.core.database.dao.AuthSessionDao
 import com.alongside.core.database.dao.DiaryEntryDao
 import com.alongside.core.database.dao.EpisodeDao
+import com.alongside.core.database.dao.OnboardingCompletionDao
 import com.alongside.core.database.dao.PlaceCandidateDao
 import com.alongside.core.database.dao.PlaceSwipeDao
 import com.alongside.core.database.dao.PushTokenDao
@@ -20,6 +21,7 @@ import com.alongside.core.database.dao.TripDao
 import com.alongside.core.database.entity.AuthSessionEntity
 import com.alongside.core.database.entity.DiaryEntryEntity
 import com.alongside.core.database.entity.EpisodeEntity
+import com.alongside.core.database.entity.OnboardingCompletionEntity
 import com.alongside.core.database.entity.PhotoEntity
 import com.alongside.core.database.entity.PlaceCandidateEntity
 import com.alongside.core.database.entity.PlaceSwipeEntity
@@ -31,6 +33,7 @@ import com.alongside.core.database.migration.MIGRATION_11_12
 import com.alongside.core.database.migration.MIGRATION_12_13
 import com.alongside.core.database.migration.MIGRATION_13_14
 import com.alongside.core.database.migration.MIGRATION_14_15
+import com.alongside.core.database.migration.MIGRATION_15_16
 import com.alongside.core.database.migration.MIGRATION_3_4
 import com.alongside.core.database.migration.MIGRATION_4_5
 import com.alongside.core.database.migration.MIGRATION_5_6
@@ -41,6 +44,7 @@ import com.alongside.core.database.migration.MIGRATION_9_10
 import com.alongside.core.database.repository.AuthSessionCacheImpl
 import com.alongside.core.database.repository.DiaryEntryRepositoryImpl
 import com.alongside.core.database.repository.EpisodeRepositoryImpl
+import com.alongside.core.database.repository.OnboardingCompletionImpl
 import com.alongside.core.database.repository.PlaceCandidateRepositoryImpl
 import com.alongside.core.database.repository.PlaceSwipeRepositoryImpl
 import com.alongside.core.database.repository.RoomPairingTripDataSource
@@ -50,6 +54,7 @@ import com.alongside.core.database.sync.SyncOperationStore
 import com.alongside.core.domain.auth.AuthSessionCache
 import com.alongside.core.domain.diary.DiaryEntryRepository
 import com.alongside.core.domain.diary.EpisodeRepository
+import com.alongside.core.domain.onboarding.OnboardingCompletionCache
 import com.alongside.core.domain.pairing.PairingTripDataSource
 import com.alongside.core.domain.place.PlaceCandidateRepository
 import com.alongside.core.domain.place.PlaceSwipeRepository
@@ -69,8 +74,9 @@ internal const val DATABASE_FILE_NAME = "alongside.db"
         PushTokenEntity::class,
         AuthSessionEntity::class,
         SyncOperationEntity::class,
+        OnboardingCompletionEntity::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = true,
 )
 @TypeConverters(AlongsideTypeConverters::class, StringListTypeConverters::class, PlacePhotoListTypeConverters::class)
@@ -91,6 +97,8 @@ public abstract class AlongsideDatabase : RoomDatabase() {
     internal abstract fun authSessionDao(): AuthSessionDao
 
     internal abstract fun syncOperationDao(): SyncOperationDao
+
+    internal abstract fun onboardingCompletionDao(): OnboardingCompletionDao
 }
 
 @Suppress("NO_ACTUAL_FOR_EXPECT")
@@ -118,10 +126,14 @@ public fun getRoomDatabase(builder: RoomDatabase.Builder<AlongsideDatabase>): Al
             MIGRATION_12_13,
             MIGRATION_13_14,
             MIGRATION_14_15,
+            MIGRATION_15_16,
         ).build()
 
 /** Factory rather than a public [AuthSessionCacheImpl] - keeps the Room-backed impl an internal detail. */
 public fun AlongsideDatabase.authSessionCache(): AuthSessionCache = AuthSessionCacheImpl(this)
+
+/** Factory rather than a public [OnboardingCompletionImpl] - keeps the Room-backed impl an internal detail. */
+public fun AlongsideDatabase.onboardingCompletionCache(): OnboardingCompletionCache = OnboardingCompletionImpl(this)
 
 /** Room-backed local [TripRepository] - the `data` module wraps it with sync-queue enqueueing. */
 public fun AlongsideDatabase.tripRepository(): TripRepository = TripRepositoryImpl(this)

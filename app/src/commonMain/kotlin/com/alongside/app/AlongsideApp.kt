@@ -5,6 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavBackStack
@@ -28,6 +29,7 @@ import com.alongside.app.navigation.Places
 import com.alongside.app.navigation.Recap
 import com.alongside.app.navigation.Settings
 import com.alongside.app.navigation.Timeline
+import com.alongside.core.domain.onboarding.OnboardingCompletionCache
 import com.alongside.core.ui.component.AlongsideTextButton
 import com.alongside.feature.auth.GoogleAuthProvider
 import com.alongside.feature.auth.presentation.AuthContainer
@@ -47,10 +49,12 @@ import com.alongside.feature.places.presentation.PlaceImportContainer
 import com.alongside.feature.places.presentation.PlaceImportScreen
 import com.alongside.feature.places.presentation.PlacesListContainer
 import com.alongside.feature.places.presentation.PlacesListScreen
+import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import org.orbitmvi.orbit.compose.collectSideEffect
@@ -86,6 +90,12 @@ private val NavKeySavedStateConfiguration =
  * stacked on top. Destinations whose feature module hasn't landed yet render
  * [PlaceholderScreen]s, so the whole graph is walkable today and features slot into their
  * entries milestone by milestone.
+ *
+ * The back stack always cold-starts at [Login], but each gate advances past itself the moment
+ * its own condition is already satisfied: a cached session skips straight past Login,
+ * [OnboardingCompletionCache] (checked here, once, right after sign-in) skips Onboarding once
+ * it's ever been completed, and an existing trip record skips Pairing - so a normal relaunch
+ * lands on [Home], not back at the start of the gate.
  *
  * [googleAuthProvider] and [permissionController] are the two Activity/platform-bound seams
  * the auth gate needs - constructed by the platform entry point (MainActivity / iOS host)
@@ -125,8 +135,15 @@ public fun AlongsideApp(
             entryProvider {
                 entry<Login> {
                     val container = koinViewModel<AuthContainer> { parametersOf(googleAuthProvider) }
+                    val onboardingCompletionCache = koinInject<OnboardingCompletionCache>()
+                    val scope = rememberCoroutineScope()
                     container.collectSideEffect { effect ->
-                        if (effect is AuthSideEffect.SignedIn) backStack.resetTo(Onboarding)
+                        if (effect is AuthSideEffect.SignedIn) {
+                            scope.launch {
+                                val target = if (onboardingCompletionCache.isCompleted()) Pairing else Onboarding
+                                backStack.resetTo(target)
+                            }
+                        }
                     }
                     AuthScreen(container)
                 }

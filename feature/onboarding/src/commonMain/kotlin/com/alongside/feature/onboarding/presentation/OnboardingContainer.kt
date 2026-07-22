@@ -1,6 +1,7 @@
 package com.alongside.feature.onboarding.presentation
 
 import androidx.lifecycle.ViewModel
+import com.alongside.core.domain.onboarding.OnboardingCompletionCache
 import com.alongside.feature.onboarding.OnboardingPermission
 import com.alongside.feature.onboarding.PermissionController
 import com.alongside.feature.onboarding.PermissionStatus
@@ -13,6 +14,7 @@ import kotlin.coroutines.resume
 
 public class OnboardingContainer(
     private val permissionController: PermissionController,
+    private val onboardingCompletionCache: OnboardingCompletionCache,
 ) : ViewModel(),
     ContainerHost<OnboardingState, OnboardingSideEffect> {
     override val container: Container<OnboardingState, OnboardingSideEffect> =
@@ -72,6 +74,7 @@ public class OnboardingContainer(
 
     private suspend fun Syntax<OnboardingState, OnboardingSideEffect>.completeIfDone() {
         if (state.currentStep == null) {
+            onboardingCompletionCache.markCompleted()
             postSideEffect(OnboardingSideEffect.Completed)
         }
     }
