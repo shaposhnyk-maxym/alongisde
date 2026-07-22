@@ -22,6 +22,7 @@ kotlin {
             implementation(projects.feature.pairing)
             implementation(projects.feature.diary)
             implementation(projects.feature.places)
+            implementation(projects.feature.matcher)
             implementation(libs.findLibrary("navigation3-runtime").get())
             implementation(libs.findLibrary("orbit-core").get())
             implementation(libs.findLibrary("orbit-viewmodel").get())

@@ -18,6 +18,8 @@ kotlin {
             implementation(libs.findLibrary("orbit-core").get())
             implementation(libs.findLibrary("orbit-viewmodel").get())
             implementation(libs.findLibrary("orbit-compose").get())
+            implementation(libs.findLibrary("kotlinx-datetime").get())
+            implementation(compose.materialIconsExtended)
         }
         commonTest.dependencies {
             implementation(libs.findLibrary("orbit-test").get())
@@ -35,6 +37,7 @@ kotlin {
             implementation(libs.findLibrary("orbit-compose").get())
             implementation(libs.findLibrary("orbit-test").get())
             implementation(libs.findLibrary("kotlinx-datetime").get())
+            implementation(compose.materialIconsExtended)
         }
     }
 }

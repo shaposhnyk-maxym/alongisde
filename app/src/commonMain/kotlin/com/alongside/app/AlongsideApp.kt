@@ -36,6 +36,9 @@ import com.alongside.feature.auth.presentation.AuthSideEffect
 import com.alongside.feature.diary.presentation.DiaryTimelineContainer
 import com.alongside.feature.diary.presentation.DiaryTimelineIntent
 import com.alongside.feature.diary.presentation.DiaryTimelineScreen
+import com.alongside.feature.matcher.presentation.MatchListScreen
+import com.alongside.feature.matcher.presentation.MatcherContainer
+import com.alongside.feature.matcher.presentation.MatcherScreen
 import com.alongside.feature.onboarding.PermissionController
 import com.alongside.feature.onboarding.presentation.OnboardingContainer
 import com.alongside.feature.onboarding.presentation.OnboardingScreen
@@ -200,18 +203,14 @@ public fun AlongsideApp(
                 }
                 entry<Matcher> {
                     MainTabScreen(tab = MainTab.MATCHER, backStack = backStack) {
-                        PlaceholderScreen(
-                            title = "Matcher",
-                            note = "Swipe on places until you both say yes - feature:matcher.",
-                        )
+                        val container = koinViewModel<MatcherContainer>()
+                        MatcherScreen(container)
                     }
                 }
                 entry<MatchList> {
                     MainTabScreen(tab = MainTab.MATCH_LIST, backStack = backStack) {
-                        PlaceholderScreen(
-                            title = "Matches",
-                            note = "Every place you both said yes to - feature:matcher.",
-                        )
+                        val container = koinViewModel<MatcherContainer>()
+                        MatchListScreen(container)
                     }
                 }
                 entry<Settings> {

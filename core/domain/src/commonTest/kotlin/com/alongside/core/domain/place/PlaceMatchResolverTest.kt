@@ -61,4 +61,34 @@ class PlaceMatchResolverTest {
             resolveMatchStatus(ownerSwipe = SwipeDirection.DISLIKE, memberSwipe = SwipeDirection.LIKE),
         )
     }
+
+    @Test
+    fun `neither side has swiped is my turn`() {
+        assertEquals(true, isMyTurn(mine = null, theirs = null))
+    }
+
+    @Test
+    fun `partner already swiped and I have not is my turn`() {
+        assertEquals(true, isMyTurn(mine = null, theirs = SwipeDirection.LIKE))
+    }
+
+    @Test
+    fun `I already swiped and partner has not is not my turn`() {
+        assertEquals(false, isMyTurn(mine = SwipeDirection.LIKE, theirs = null))
+    }
+
+    @Test
+    fun `both swiped and disagree is my turn to reconsider`() {
+        assertEquals(true, isMyTurn(mine = SwipeDirection.DISLIKE, theirs = SwipeDirection.LIKE))
+    }
+
+    @Test
+    fun `both swiped like is not my turn`() {
+        assertEquals(false, isMyTurn(mine = SwipeDirection.LIKE, theirs = SwipeDirection.LIKE))
+    }
+
+    @Test
+    fun `both swiped dislike is not my turn`() {
+        assertEquals(false, isMyTurn(mine = SwipeDirection.DISLIKE, theirs = SwipeDirection.DISLIKE))
+    }
 }

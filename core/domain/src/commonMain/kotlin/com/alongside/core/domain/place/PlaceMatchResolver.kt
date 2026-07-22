@@ -16,3 +16,13 @@ public fun resolveMatchStatus(
         else -> MatchStatus.PENDING
     }
 }
+
+/**
+ * Whether a PENDING candidate still needs *my* decision - true if I haven't swiped yet, or if
+ * we've both swiped and disagree (a split, offered back for reconsideration). False only when
+ * I've already decided and I'm just waiting on the other side.
+ */
+public fun isMyTurn(
+    mine: SwipeDirection?,
+    theirs: SwipeDirection?,
+): Boolean = mine == null || (theirs != null && theirs != mine)
