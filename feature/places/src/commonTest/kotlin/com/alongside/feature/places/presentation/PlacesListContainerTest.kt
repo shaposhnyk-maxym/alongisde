@@ -4,6 +4,7 @@ import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.place.PlaceCandidate
 import com.alongside.feature.places.FakeAuthSessionCache
 import com.alongside.feature.places.FakePairingRepository
+import com.alongside.feature.places.FakePlaceContentPuller
 import com.alongside.feature.places.RecordingPlaceCandidateRepository
 import com.alongside.feature.places.fakeTrip
 import com.alongside.feature.places.testAuthSession
@@ -32,7 +33,8 @@ class PlacesListContainerTest {
     private val placeCandidateRepository = RecordingPlaceCandidateRepository()
     private val pairingRepository = FakePairingRepository(initialActiveTrip = fakeTrip(id = "trip-1"))
     private val authSessionCache = FakeAuthSessionCache(testAuthSession("uid-1"))
-    private val placesListDataSource = PlacesListDataSource(pairingRepository, placeCandidateRepository)
+    private val placesListDataSource =
+        PlacesListDataSource(pairingRepository, placeCandidateRepository, FakePlaceContentPuller())
 
     private fun containerUnderTest() = PlacesListContainer(authSessionCache, placesListDataSource)
 

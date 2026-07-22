@@ -6,5 +6,5 @@ import org.koin.dsl.module
 
 public val matcherFeatureModule =
     module {
-        viewModel { MatcherContainer(get(), get(), get(), get()) }
+        viewModel { MatcherContainer(get(), get(), get(), get(), get()) }
     }

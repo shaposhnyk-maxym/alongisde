@@ -8,50 +8,6 @@
 
 ---
 
-## Матчер/Places: свайп/картка партнера не з'являється на другому пристрої
-
-**Знайдено:** 2026-07-22 (живе тестування, реальний пристрій)
-
-**Симптом:** місце показалось у Matcher на одному пристрої, юзер його
-задізлайкав — але на пристрої партнера це місце (і сам факт свайпу)
-жодного разу не з'явилось, хоча обоє мають побачити картку, поки не
-вирішать обидва.
-
-**Корінна причина:** в застосунку взагалі немає inbound-синку
-(Firestore → Room) для `placeCandidates`/`placeSwipes`. Є тільки:
-- **push** (пристрій → Firestore): `SyncCoordinator`
-  (`data/.../sync/SyncCoordinator.kt`) дренажить локальну чергу
-  pending-writes і пушить — це працює, тому свайп із пристрою
-  користувача пішов коректно.
-- **pull** (Firestore → інший пристрій): існує **тільки для Diary**
-  (`FirestoreDiaryContentPuller`,
-  `data/.../diary/FirestoreContentPuller.kt`), і той тригериться лише
-  foreground 5-секундним polling-лупом, поки відкритий Timeline-екран
-  (`DiaryTimelineDataSource.pollTripContent`,
-  `feature/diary/.../DiaryTimelineDataSource.kt:81-90`). Ані
-  `feature:places`, ані `feature:matcher` такого пулера не мають —
-  обидва лише читають локальний Room через `observeByTrip(tripId)`.
-- Жодна Cloud Function не слухає `placeCandidates`/`placeSwipes` —
-  єдина існуюча (`onDiaryEntryWritten`,
-  `functions/src/symmetricUnlock.ts`) шле FCM тільки для
-  diary "day ready".
-- `BackgroundWorkScheduler`'s періодичний job (кожні 15 хв) покриває
-  тільки push/retry-сторону (`EPISODE_RETRY`, `PLACE_RETRY`,
-  `SYNC_QUEUE_FLUSH`) — жодного pull-виклику.
-
-**Важливо:** це не регресія з M14/M15 — `MatcherContainer`'s логіка
-(`deck`/`myTurnDeck`/`isMyTurn`) коректна й покрита тестами. Дефект
-був уже прихований у M13.2 (Places), просто ніхто не тестував Places
-на двох пристроях — `docs/manual-checklists.md`'s M13.2-чекліст
-повністю single-device.
-
-**Що робити:** новий Matcher/Places content puller (за зразком
-`FirestoreDiaryContentPuller`) + вмикання його в
-`BackgroundWorkScheduler`'s періодичний job (не тільки foreground,
-на відміну від Diary) — окремий мілстоун, не швидкий фікс.
-
----
-
 ## Онбордінг повторюється на кожному холодному старті
 
 **Знайдено:** 2026-07-22 (живе тестування, реальний пристрій; помічено

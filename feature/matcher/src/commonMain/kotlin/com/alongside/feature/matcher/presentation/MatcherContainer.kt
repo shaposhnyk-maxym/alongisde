@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import com.alongside.core.domain.auth.AuthSessionCache
 import com.alongside.core.domain.pairing.PairingRepository
 import com.alongside.core.domain.place.PlaceCandidateRepository
+import com.alongside.core.domain.place.PlaceContentPuller
 import com.alongside.core.domain.place.PlaceSwipeRepository
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.place.PlaceCandidate
@@ -11,15 +12,22 @@ import com.alongside.core.model.place.PlaceSwipe
 import com.alongside.core.model.place.SwipeDirection
 import com.alongside.core.model.trip.Trip
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import org.orbitmvi.orbit.Container
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.syntax.Syntax
 import org.orbitmvi.orbit.viewmodel.container
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
 
 private data class TripContent(
     val trip: Trip?,
@@ -27,11 +35,14 @@ private data class TripContent(
     val swipes: List<PlaceSwipe>,
 )
 
+private val TRIP_CONTENT_POLL_INTERVAL = 5.seconds
+
 public class MatcherContainer(
     private val placeCandidateRepository: PlaceCandidateRepository,
     private val placeSwipeRepository: PlaceSwipeRepository,
     private val pairingRepository: PairingRepository,
     private val authSessionCache: AuthSessionCache,
+    private val placeContentPuller: PlaceContentPuller,
     private val clock: Clock = Clock.System,
 ) : ViewModel(),
     ContainerHost<MatcherState, MatcherSideEffect> {
@@ -49,16 +60,45 @@ public class MatcherContainer(
         val uid = authSessionCache.get()?.user?.uid ?: return
         reduce { state.copy(ownUserId = uid) }
 
-        pairingRepository
-            .observeActiveTrip(uid)
-            .flatMapLatest { trip -> observeTripContent(trip) }
-            .collect { content ->
-                val previousMatchIds = state.matches.map { it.id }.toSet()
-                reduce { state.copy(trip = content.trip, candidates = content.candidates, swipes = content.swipes) }
-                state.matches
-                    .filter { it.id !in previousMatchIds }
-                    .forEach { postSideEffect(MatcherSideEffect.Matched(it)) }
+        val tripFlow = pairingRepository.observeActiveTrip(uid)
+
+        coroutineScope {
+            // A second, independent collection of tripFlow - accepted duplicate polling of the
+            // underlying pairing poll loop in exchange for clean cancellation: distinctUntilChanged
+            // + collectLatest means exactly one trip-content poll loop runs at a time, automatically
+            // replaced (not stacked) when the active trip changes, and stopped when it goes null.
+            // The periodic WorkManager sweep (PlaceContentPullCoordinator) is the backstop for when
+            // this screen isn't open.
+            launch {
+                tripFlow
+                    .map { it?.id }
+                    .distinctUntilChanged()
+                    .collectLatest { tripId -> if (tripId != null) pollTripContent(tripId, uid) }
             }
+
+            tripFlow
+                .flatMapLatest { trip -> observeTripContent(trip) }
+                .collect { content ->
+                    val previousMatchIds = state.matches.map { it.id }.toSet()
+                    reduce {
+                        state.copy(trip = content.trip, candidates = content.candidates, swipes = content.swipes)
+                    }
+                    state.matches
+                        .filter { it.id !in previousMatchIds }
+                        .forEach { postSideEffect(MatcherSideEffect.Matched(it)) }
+                }
+        }
+    }
+
+    private suspend fun pollTripContent(
+        tripId: String,
+        ownUserId: String,
+    ) {
+        while (true) {
+            runCatching { placeContentPuller.pullTripContent(tripId, ownUserId) }
+                .onFailure { println("MatcherContainer: pullTripContent failed: $it") }
+            delay(TRIP_CONTENT_POLL_INTERVAL)
+        }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

@@ -4,6 +4,7 @@ import com.alongside.core.model.place.SwipeDirection
 import com.alongside.feature.matcher.FakeAuthSessionCache
 import com.alongside.feature.matcher.FakePairingRepository
 import com.alongside.feature.matcher.FakePlaceCandidateRepository
+import com.alongside.feature.matcher.FakePlaceContentPuller
 import com.alongside.feature.matcher.FakePlaceSwipeRepository
 import com.alongside.feature.matcher.fakeCandidate
 import com.alongside.feature.matcher.fakeSwipe
@@ -33,6 +34,7 @@ class MatcherContainerTest {
             placeSwipeRepository = placeSwipeRepository,
             pairingRepository = pairingRepository,
             authSessionCache = FakeAuthSessionCache(testAuthSession(uid)),
+            placeContentPuller = FakePlaceContentPuller(),
             clock = FixedClock,
         )
 

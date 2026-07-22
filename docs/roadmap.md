@@ -2384,6 +2384,70 @@ Recap (standalone).html` (Screen 17/18): картка в стилі "paper" з
 
 ---
 
+### M15.5 — Matcher/Places: крос-пристрій pull-синк ✅ done
+
+Фікс `docs/known-issues.md`'s "Матчер/Places: свайп/картка партнера не
+з'являється на другому пристрої" (знайдено 2026-07-22, живе
+двопристроєве тестування). Корінна причина: `placeCandidates`/
+`placeSwipes` мали лише **push**-синк (`SyncCoordinator` дренажить
+локальну чергу власних pending-writes) — жодного **inbound pull**
+(Firestore → Room), на відміну від Diary (M12.5's
+`DiaryContentPuller`/`FirestoreDiaryContentPuller`).
+
+**Accept:**
+- [x] `FirestorePlaceContentPullerTest` (`data/src/jvmTest`, 6 тестів,
+  той самий Ktor `MockEngine`-підхід, що `FirestoreDiaryContentPullerTest`):
+  партнерський candidate/swipe підтягується разом; власний, якого
+  немає локально, підтягується; власний, що вже є локально, ніколи не
+  перезаписується (захищає in-flight локальний edit — напр.
+  photo-retry на `PlaceCandidate` чи ще не запушений swipe); відсутність
+  ремоут-документів нічого не підтягує; незмінений партнерський запис
+  не перезаписується повторно (уникає зайвої Room Flow-інвалідації);
+  змінений партнерський запис перезаписується
+- [x] `PlaceContentPullCoordinatorTest` (`feature:places`, 2): активний
+  трип → пуллер викликається з правильними `(tripId, ownUserId)`;
+  немає активного трипу → пуллер не викликається
+- [x] `BackgroundSyncWorkerTest`: новий `PLACE_CONTENT_PULL`-кейс
+  (дзеркалить `EPISODE_RETRY`/`PLACE_RETRY`), і періодичний
+  sweep-тест оновлено на "усі чотири види"
+
+**Дизайн (mirrors M12.5's `DiaryContentPuller`):**
+- `PlaceCandidate.addedByUserId`/`PlaceSwipe.userId` — та сама
+  own-vs-partner асиметрія, що `DiaryEntry.userId`: власні записи
+  підтягуються лише як заповнення локальної прогалини (ніколи не
+  перезаписуються — не чіпає pending локальний edit); партнерські —
+  завжди перезаписуються з ремоуту, але пропускаються, якщо ідентичні
+  локальним (той самий Flow-інвалідація guard, що
+  `FirestoreDiaryContentPuller.upsertEntryIfChanged`)
+- На відміну від Diary (два рівні: `diaryEntries` → `episodes`), обидві
+  колекції (`placeCandidates`, `placeSwipes`) вже плоскі й
+  `tripId`-scoped — пуллер робить два незалежні плоскі запити, без
+  вкладеності
+- **Дві навмисні розбіжності з Diary's пуллером** (за прямим запитом
+  користувача): (1) той самий foreground 5s poll-loop, що
+  `DiaryTimelineDataSource`, підключено і в `MatcherContainer`, і в
+  `PlacesListDataSource` (обидва екрани показують ту саму пару
+  колекцій); (2) **новий `BackgroundJobKind.PLACE_CONTENT_PULL`**
+  зареєстровано в `BackgroundSyncWorker`'s періодичному 15-хв sweep
+  (`PlaceContentPullCoordinator`, той самий "resolve active trip"
+  ідіом, що `DiaryCaptureCoordinator.retryAllIncompleteEpisodes`) —
+  Diary досі покладається лише на foreground-полінг; Matcher/Places
+  тепер переживають закриття застосунку, а не лише відкритий екран.
+  Жодної зміни в `AndroidWorkManagerScheduler` не знадобилось —
+  періодичний sweep уже й так проганяє `BackgroundJobKind.entries`
+  повністю.
+- Firestore rules для `placeCandidates`/`placeSwipes` вже дозволяли
+  цей `runQuery` по `tripId` для будь-якого `isTripMember` (готово ще
+  з M9/M14) — жодної зміни в `firebase/firestore.rules` не знадобилось.
+
+**Відомо, ще не зроблено:** реальний двопристроєвий мануальний смоук
+(свайп на пристрої A з'являється на пристрої B без відкриття
+Matcher/Places на ньому, тобто саме через WorkManager-шлях, а не
+foreground-полінг) — не виконаний з цього середовища, лишається
+пунктом мануального чекліста перед наступним релізним мілстоуном.
+
+---
+
 ### M16 — Places: custom add & management — скасовано (рішення користувача, 2026-07-22)
 
 Ручне CRUD-додавання місця (без share-лінка) визнано зайвим — імпорт

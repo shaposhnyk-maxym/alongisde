@@ -1,5 +1,6 @@
 package com.alongside.feature.places.di
 
+import com.alongside.feature.places.presentation.PlaceContentPullCoordinator
 import com.alongside.feature.places.presentation.PlaceImportContainer
 import com.alongside.feature.places.presentation.PlaceRetryCoordinator
 import com.alongside.feature.places.presentation.PlacesListContainer
@@ -12,6 +13,7 @@ public val placesFeatureModule =
     module {
         viewModel { (shareText: String) -> PlaceImportContainer(shareText, get(), get(), get(), get(), get()) }
         single { PlaceRetryCoordinator(get(), get(), get()) }
-        single { PlacesListDataSource(get(), get()) }
+        single { PlaceContentPullCoordinator(get(), get()) }
+        single { PlacesListDataSource(get(), get(), get()) }
         viewModel { PlacesListContainer(get(), get()) }
     }

@@ -14,6 +14,7 @@ import com.alongside.core.domain.diary.DiaryEntryRepository
 import com.alongside.core.domain.diary.EpisodeRepository
 import com.alongside.core.domain.pairing.PairingTripDataSource
 import com.alongside.core.domain.place.PlaceCandidateRepository
+import com.alongside.core.domain.place.PlaceContentPuller
 import com.alongside.core.domain.place.PlaceSwipeRepository
 import com.alongside.core.domain.trip.TripRepository
 import com.alongside.core.network.firestore.FirestoreApi
@@ -28,6 +29,7 @@ import com.alongside.data.episode.SyncingEpisodeRepository
 import com.alongside.data.pairing.FirestorePairingRemoteDataSource
 import com.alongside.data.pairing.FirestorePairingTripDataSource
 import com.alongside.data.pairing.PairingRemoteDataSource
+import com.alongside.data.place.FirestorePlaceContentPuller
 import com.alongside.data.place.PlaceCandidateSyncEntityBinding
 import com.alongside.data.place.PlaceSwipeSyncEntityBinding
 import com.alongside.data.place.SyncingPlaceCandidateRepository
@@ -95,6 +97,13 @@ public val dataModule: Module =
                 api = get(),
                 localDiaryEntryRepository = get<AlongsideDatabase>().diaryEntryRepository(),
                 localEpisodeRepository = get<AlongsideDatabase>().episodeRepository(),
+            )
+        }
+        single<PlaceContentPuller> {
+            FirestorePlaceContentPuller(
+                api = get(),
+                localPlaceCandidateRepository = get<AlongsideDatabase>().placeCandidateRepository(),
+                localPlaceSwipeRepository = get<AlongsideDatabase>().placeSwipeRepository(),
             )
         }
         // bind SyncEntityBinding::class, not single<SyncEntityBinding> { ... } - three
