@@ -37,11 +37,15 @@ public class AuthContainer(
     // attempt the user never triggered, so it falls back to the normal idle/sign-in-button state
     // rather than surfacing an error banner.
     private suspend fun Syntax<AuthState, AuthSideEffect>.restoreSession() {
-        val cached = authSessionCache.get() ?: return
+        val cached = authSessionCache.get()
+        if (cached == null) {
+            reduce { state.copy(isRestoringSession = false) }
+            return
+        }
         if (cached.isExpired()) {
             refreshExpiredSession()
         } else {
-            reduce { state.copy(session = cached) }
+            reduce { state.copy(session = cached, isRestoringSession = false) }
             // Every path that ends signed-in posts SignedIn - the nav graph advances past
             // Login on it, so a restored session must fire it just like a fresh sign-in.
             postSideEffect(AuthSideEffect.SignedIn)
@@ -54,16 +58,18 @@ public class AuthContainer(
         if (googleIdToken == null) {
             println("AuthContainer: silent session restore failed at the provider - $result")
             authSessionCache.clear()
+            reduce { state.copy(isRestoringSession = false) }
             return
         }
         try {
             val session = authSessionRepository.signInWithGoogle(googleIdToken)
             authSessionCache.save(session)
-            reduce { state.copy(session = session) }
+            reduce { state.copy(session = session, isRestoringSession = false) }
             postSideEffect(AuthSideEffect.SignedIn)
         } catch (e: AuthException) {
             println("AuthContainer: silent session restore failed during token exchange: ${e.message}")
             authSessionCache.clear()
+            reduce { state.copy(isRestoringSession = false) }
         }
     }
 

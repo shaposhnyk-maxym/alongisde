@@ -74,27 +74,32 @@ internal fun AuthContent(
     InkGradientBackground(modifier = modifier.fillMaxSize()) {
         HeroBackdrop(modifier = Modifier.fillMaxSize())
 
-        Column(
-            modifier =
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
-                    .padding(start = 20.dp, end = 20.dp, bottom = 40.dp),
-            verticalArrangement = Arrangement.spacedBy(AlongsideSpacing.xxl),
-        ) {
-            FadeUpReveal(initiallyRevealed = !animateEntrance) {
-                BrandBlock(modifier = Modifier.padding(horizontal = AlongsideSpacing.sm))
-            }
-
-            state.error?.let { error ->
-                DotBanner(text = error.toMessage(), modifier = Modifier.fillMaxWidth())
-            }
-
-            FadeUpReveal(
-                delayMillis = CARD_REVEAL_DELAY_MILLIS,
-                initiallyRevealed = !animateEntrance,
+        // While a cached session is still being checked/silently refreshed, showing the sign-in
+        // button would flash it in front of an already-authenticated user for one frame before
+        // the nav graph advances past Login - simplest fix is to just not draw it yet.
+        if (!state.isRestoringSession) {
+            Column(
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(start = 20.dp, end = 20.dp, bottom = 40.dp),
+                verticalArrangement = Arrangement.spacedBy(AlongsideSpacing.xxl),
             ) {
-                SignInCard(state = state, onSignInClick = onSignInClick)
+                FadeUpReveal(initiallyRevealed = !animateEntrance) {
+                    BrandBlock(modifier = Modifier.padding(horizontal = AlongsideSpacing.sm))
+                }
+
+                state.error?.let { error ->
+                    DotBanner(text = error.toMessage(), modifier = Modifier.fillMaxWidth())
+                }
+
+                FadeUpReveal(
+                    delayMillis = CARD_REVEAL_DELAY_MILLIS,
+                    initiallyRevealed = !animateEntrance,
+                ) {
+                    SignInCard(state = state, onSignInClick = onSignInClick)
+                }
             }
         }
     }
@@ -249,10 +254,23 @@ private val PreviewSize = Modifier.size(360.dp, 640.dp)
 
 @Preview
 @Composable
+private fun AuthScreenRestoringPreview() {
+    AlongsideTheme {
+        AuthContent(
+            state = AuthState(isRestoringSession = true),
+            onSignInClick = {},
+            modifier = PreviewSize,
+            animateEntrance = false,
+        )
+    }
+}
+
+@Preview
+@Composable
 private fun AuthScreenIdlePreview() {
     AlongsideTheme {
         AuthContent(
-            state = AuthState(),
+            state = AuthState(isRestoringSession = false),
             onSignInClick = {},
             modifier = PreviewSize,
             animateEntrance = false,
@@ -265,7 +283,7 @@ private fun AuthScreenIdlePreview() {
 private fun AuthScreenLoadingPreview() {
     AlongsideTheme {
         AuthContent(
-            state = AuthState(isSigningIn = true),
+            state = AuthState(isRestoringSession = false, isSigningIn = true),
             onSignInClick = {},
             modifier = PreviewSize,
             animateEntrance = false,
@@ -278,7 +296,7 @@ private fun AuthScreenLoadingPreview() {
 private fun AuthScreenErrorPreview() {
     AlongsideTheme {
         AuthContent(
-            state = AuthState(error = AuthError.NETWORK),
+            state = AuthState(isRestoringSession = false, error = AuthError.NETWORK),
             onSignInClick = {},
             modifier = PreviewSize,
             animateEntrance = false,
@@ -305,7 +323,7 @@ private fun AuthScreenSignedInPreview() {
                 issuedAt = Clock.System.now(),
             )
         AuthContent(
-            state = AuthState(session = session),
+            state = AuthState(isRestoringSession = false, session = session),
             onSignInClick = {},
             modifier = PreviewSize,
             animateEntrance = false,
