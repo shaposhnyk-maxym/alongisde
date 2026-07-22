@@ -3,7 +3,6 @@ package com.alongside.data.place
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.place.PlaceCandidate
 import com.alongside.core.model.place.PlacePhoto
-import com.alongside.core.model.place.SwipeDirection
 import com.alongside.core.network.firestore.model.FirestoreArrayValue
 import com.alongside.core.network.firestore.model.FirestoreDocument
 import com.alongside.core.network.firestore.model.FirestoreMapValue
@@ -28,8 +27,6 @@ public object PlaceCandidateFirestoreMapper {
             "longitude" to FirestoreValue.DoubleValue(place.longitude),
             "note" to (place.note?.let { FirestoreValue.StringValue(it) } ?: FirestoreValue.NullValue),
             "addedByUserId" to FirestoreValue.StringValue(place.addedByUserId),
-            "ownerSwipe" to place.ownerSwipe.toFirestoreValue(),
-            "memberSwipe" to place.memberSwipe.toFirestoreValue(),
             "createdAt" to FirestoreValue.TimestampValue(place.createdAt.toString()),
             "updatedAt" to FirestoreValue.TimestampValue(place.updatedAt.toString()),
             "photos" to FirestoreValue.ArrayValue(FirestoreArrayValue(place.photos.map { it.toFirestoreValue() })),
@@ -50,8 +47,6 @@ public object PlaceCandidateFirestoreMapper {
             longitude = fields.requireDouble("longitude"),
             note = (fields["note"] as? FirestoreValue.StringValue)?.value,
             addedByUserId = fields.requireString("addedByUserId"),
-            ownerSwipe = fields.toSwipeDirection("ownerSwipe"),
-            memberSwipe = fields.toSwipeDirection("memberSwipe"),
             syncStatus = SyncStatus.SYNCED,
             createdAt = Instant.parse(fields.requireTimestamp("createdAt")),
             updatedAt = Instant.parse(fields.requireTimestamp("updatedAt")),
@@ -63,12 +58,6 @@ public object PlaceCandidateFirestoreMapper {
             countryCode = (fields["countryCode"] as? FirestoreValue.StringValue)?.value,
         )
     }
-
-    private fun SwipeDirection?.toFirestoreValue(): FirestoreValue =
-        this?.let { FirestoreValue.StringValue(it.name) } ?: FirestoreValue.NullValue
-
-    private fun Map<String, FirestoreValue>.toSwipeDirection(key: String): SwipeDirection? =
-        (this[key] as? FirestoreValue.StringValue)?.value?.let { SwipeDirection.valueOf(it) }
 
     private fun PlacePhoto.toFirestoreValue(): FirestoreValue =
         FirestoreValue.MapValue(

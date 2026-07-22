@@ -11,8 +11,6 @@ public data class PlaceCandidate(
     val longitude: Double,
     val note: String?,
     val addedByUserId: String,
-    val ownerSwipe: SwipeDirection?,
-    val memberSwipe: SwipeDirection?,
     val syncStatus: SyncStatus,
     val createdAt: Instant,
     val updatedAt: Instant,

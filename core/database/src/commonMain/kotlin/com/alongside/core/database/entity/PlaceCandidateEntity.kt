@@ -7,7 +7,6 @@ import androidx.room.PrimaryKey
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.place.PlaceCandidate
 import com.alongside.core.model.place.PlacePhoto
-import com.alongside.core.model.place.SwipeDirection
 import kotlin.time.Instant
 
 @Entity(tableName = "place_candidates", indices = [Index("tripId")])
@@ -19,8 +18,6 @@ internal data class PlaceCandidateEntity(
     val longitude: Double,
     val note: String?,
     val addedByUserId: String,
-    val ownerSwipe: SwipeDirection?,
-    val memberSwipe: SwipeDirection?,
     val syncStatus: SyncStatus,
     val createdAt: Instant,
     @ColumnInfo(defaultValue = "0") val updatedAt: Instant,
@@ -41,8 +38,6 @@ internal fun PlaceCandidateEntity.toDomain(): PlaceCandidate =
         longitude = longitude,
         note = note,
         addedByUserId = addedByUserId,
-        ownerSwipe = ownerSwipe,
-        memberSwipe = memberSwipe,
         syncStatus = syncStatus,
         createdAt = createdAt,
         updatedAt = updatedAt,
@@ -63,8 +58,6 @@ internal fun PlaceCandidate.toEntity(): PlaceCandidateEntity =
         longitude = longitude,
         note = note,
         addedByUserId = addedByUserId,
-        ownerSwipe = ownerSwipe,
-        memberSwipe = memberSwipe,
         syncStatus = syncStatus,
         createdAt = createdAt,
         updatedAt = updatedAt,

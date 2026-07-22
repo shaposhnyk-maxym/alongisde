@@ -189,3 +189,51 @@ internal val MIGRATION_13_14: Migration =
             connection.execSQL("ALTER TABLE `episodes` ADD COLUMN `geocodeAttempts` INTEGER NOT NULL DEFAULT 0")
         }
     }
+
+/**
+ * v14 -> v15 (M14 design revision): `place_candidates.ownerSwipe`/`memberSwipe` replaced by a new
+ * `place_swipes` table - one row per (candidateId, userId), written only by that user. The old
+ * shape had both trip members writing different fields of the SAME shared document, synced whole-
+ * document (Room `REPLACE`, Firestore full-document push) - two people swiping near-simultaneously
+ * offline could push stale full snapshots that silently clobber each other's not-yet-synced swipe.
+ * The new shape makes that structurally impossible: a swipe record's owner is baked into its id
+ * (`"$candidateId::$userId"`), so no two users ever write the same document.
+ *
+ * SQLite can't `DROP COLUMN` in the versions this app targets, so `place_candidates` is recreated
+ * without the two columns (same "rename -> create -> copy -> drop" shape as `MIGRATION_8_9`).
+ * No real data is lost: Matcher never shipped, so every existing `ownerSwipe`/`memberSwipe` value
+ * in any real database is `NULL`.
+ */
+internal val MIGRATION_14_15: Migration =
+    object : Migration(14, 15) {
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL("ALTER TABLE `place_candidates` RENAME TO `place_candidates_old`")
+            connection.execSQL(
+                "CREATE TABLE `place_candidates` (`id` TEXT NOT NULL, `tripId` TEXT NOT NULL, " +
+                    "`name` TEXT NOT NULL, `latitude` REAL NOT NULL, `longitude` REAL NOT NULL, " +
+                    "`note` TEXT, `addedByUserId` TEXT NOT NULL, `syncStatus` TEXT NOT NULL, " +
+                    "`createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL DEFAULT 0, " +
+                    "`photos` TEXT NOT NULL DEFAULT '', `rating` REAL, `category` TEXT, `city` TEXT, " +
+                    "`cityPlaceId` TEXT, `countryCode` TEXT, PRIMARY KEY(`id`))",
+            )
+            connection.execSQL(
+                "INSERT INTO `place_candidates` (id, tripId, name, latitude, longitude, note, " +
+                    "addedByUserId, syncStatus, createdAt, updatedAt, photos, rating, category, city, " +
+                    "cityPlaceId, countryCode) SELECT id, tripId, name, latitude, longitude, note, " +
+                    "addedByUserId, syncStatus, createdAt, updatedAt, photos, rating, category, city, " +
+                    "cityPlaceId, countryCode FROM `place_candidates_old`",
+            )
+            connection.execSQL("DROP TABLE `place_candidates_old`")
+            connection.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_place_candidates_tripId` ON `place_candidates` (`tripId`)",
+            )
+
+            connection.execSQL(
+                "CREATE TABLE IF NOT EXISTS `place_swipes` (`id` TEXT NOT NULL, `tripId` TEXT NOT NULL, " +
+                    "`candidateId` TEXT NOT NULL, `userId` TEXT NOT NULL, `direction` TEXT NOT NULL, " +
+                    "`swipedAt` INTEGER NOT NULL, `syncStatus` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, " +
+                    "PRIMARY KEY(`id`))",
+            )
+            connection.execSQL("CREATE INDEX IF NOT EXISTS `index_place_swipes_tripId` ON `place_swipes` (`tripId`)")
+        }
+    }

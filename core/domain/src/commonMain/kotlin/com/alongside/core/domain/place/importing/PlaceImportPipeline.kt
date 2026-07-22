@@ -110,8 +110,6 @@ public class PlaceImportPipeline
                     longitude = details.longitude,
                     note = null,
                     addedByUserId = addedByUserId,
-                    ownerSwipe = null,
-                    memberSwipe = null,
                     syncStatus = SyncStatus.PENDING,
                     createdAt = now,
                     updatedAt = now,

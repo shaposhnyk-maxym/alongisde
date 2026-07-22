@@ -2,7 +2,6 @@ package com.alongside.data.place
 
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.place.PlacePhoto
-import com.alongside.core.model.place.SwipeDirection
 import com.alongside.core.network.firestore.model.FirestoreDocument
 import com.alongside.core.network.firestore.model.FirestoreValue
 import com.alongside.data.testPlace
@@ -38,27 +37,15 @@ class PlaceCandidateFirestoreMapperTest {
     }
 
     @Test
-    fun `toFields writes null note swipes rating category city cityPlaceId and countryCode as NullValue`() {
+    fun `toFields writes null note rating category city cityPlaceId and countryCode as NullValue`() {
         val fields = PlaceCandidateFirestoreMapper.toFields(testPlace())
 
         assertEquals(FirestoreValue.NullValue, fields["note"])
-        assertEquals(FirestoreValue.NullValue, fields["ownerSwipe"])
-        assertEquals(FirestoreValue.NullValue, fields["memberSwipe"])
         assertEquals(FirestoreValue.NullValue, fields["rating"])
         assertEquals(FirestoreValue.NullValue, fields["category"])
         assertEquals(FirestoreValue.NullValue, fields["city"])
         assertEquals(FirestoreValue.NullValue, fields["cityPlaceId"])
         assertEquals(FirestoreValue.NullValue, fields["countryCode"])
-    }
-
-    @Test
-    fun `toFields writes swipes as their enum name`() {
-        val place = testPlace(ownerSwipe = SwipeDirection.LIKE, memberSwipe = SwipeDirection.DISLIKE)
-
-        val fields = PlaceCandidateFirestoreMapper.toFields(place)
-
-        assertEquals(FirestoreValue.StringValue("LIKE"), fields["ownerSwipe"])
-        assertEquals(FirestoreValue.StringValue("DISLIKE"), fields["memberSwipe"])
     }
 
     @Test
@@ -86,7 +73,6 @@ class PlaceCandidateFirestoreMapperTest {
             testPlace(
                 createdAt = createdAt,
                 updatedAt = updatedAt,
-                ownerSwipe = SwipeDirection.LIKE,
                 photos =
                     listOf(
                         PlacePhoto(photoRef = "places/abc/photos/photo-1", remoteUrl = "https://storage/photo-1"),
@@ -106,14 +92,12 @@ class PlaceCandidateFirestoreMapperTest {
     }
 
     @Test
-    fun `fromDocument reads NullValue note ownerSwipe memberSwipe rating category city cityPlaceId and countryCode as null`() {
+    fun `fromDocument reads NullValue note rating category city cityPlaceId and countryCode as null`() {
         val document = FirestoreDocument(fields = PlaceCandidateFirestoreMapper.toFields(testPlace()))
 
         val decoded = PlaceCandidateFirestoreMapper.fromDocument(document)
 
         assertNull(decoded.note)
-        assertNull(decoded.ownerSwipe)
-        assertNull(decoded.memberSwipe)
         assertNull(decoded.rating)
         assertNull(decoded.category)
         assertNull(decoded.city)

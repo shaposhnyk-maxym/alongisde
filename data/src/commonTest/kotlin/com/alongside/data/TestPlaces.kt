@@ -3,6 +3,7 @@ package com.alongside.data
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.place.PlaceCandidate
 import com.alongside.core.model.place.PlacePhoto
+import com.alongside.core.model.place.PlaceSwipe
 import com.alongside.core.model.place.SwipeDirection
 import kotlin.time.Instant
 
@@ -14,8 +15,6 @@ internal fun testPlace(
     longitude: Double = 24.0297,
     note: String? = null,
     addedByUserId: String = "owner-1",
-    ownerSwipe: SwipeDirection? = null,
-    memberSwipe: SwipeDirection? = null,
     photos: List<PlacePhoto> = emptyList(),
     rating: Double? = null,
     category: String? = null,
@@ -34,8 +33,6 @@ internal fun testPlace(
         longitude = longitude,
         note = note,
         addedByUserId = addedByUserId,
-        ownerSwipe = ownerSwipe,
-        memberSwipe = memberSwipe,
         syncStatus = syncStatus,
         createdAt = createdAt,
         updatedAt = updatedAt,
@@ -45,4 +42,25 @@ internal fun testPlace(
         city = city,
         cityPlaceId = cityPlaceId,
         countryCode = countryCode,
+    )
+
+internal fun testPlaceSwipe(
+    id: String = "place-1::owner-1",
+    tripId: String = "trip-1",
+    candidateId: String = "place-1",
+    userId: String = "owner-1",
+    direction: SwipeDirection = SwipeDirection.LIKE,
+    swipedAt: Instant = Instant.fromEpochMilliseconds(1_752_600_000_000),
+    syncStatus: SyncStatus = SyncStatus.PENDING,
+    updatedAt: Instant = swipedAt,
+): PlaceSwipe =
+    PlaceSwipe(
+        id = id,
+        tripId = tripId,
+        candidateId = candidateId,
+        userId = userId,
+        direction = direction,
+        swipedAt = swipedAt,
+        syncStatus = syncStatus,
+        updatedAt = updatedAt,
     )

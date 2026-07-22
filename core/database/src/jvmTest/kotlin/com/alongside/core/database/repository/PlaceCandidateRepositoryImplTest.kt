@@ -6,7 +6,6 @@ import com.alongside.core.database.AlongsideDatabase
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.place.PlaceCandidate
 import com.alongside.core.model.place.PlacePhoto
-import com.alongside.core.model.place.SwipeDirection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -52,8 +51,6 @@ class PlaceCandidateRepositoryImplTest {
         longitude = 24.0297,
         note = null,
         addedByUserId = "owner-1",
-        ownerSwipe = SwipeDirection.LIKE,
-        memberSwipe = null,
         syncStatus = SyncStatus.PENDING,
         createdAt = Instant.fromEpochMilliseconds(1_752_600_000_000),
         updatedAt = Instant.fromEpochMilliseconds(1_752_600_000_000),

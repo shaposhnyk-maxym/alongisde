@@ -7,10 +7,12 @@ import com.alongside.core.database.entity.DiaryEntryEntity
 import com.alongside.core.database.entity.EpisodeEntity
 import com.alongside.core.database.entity.PhotoEntity
 import com.alongside.core.database.entity.PlaceCandidateEntity
+import com.alongside.core.database.entity.PlaceSwipeEntity
 import com.alongside.core.database.entity.PushTokenEntity
 import com.alongside.core.database.entity.SyncOperationEntity
 import com.alongside.core.database.entity.TripEntity
 import com.alongside.core.model.SyncStatus
+import com.alongside.core.model.place.SwipeDirection
 import com.alongside.core.model.push.PushPlatform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
@@ -82,6 +84,16 @@ class DatabaseCreationTest {
             database.placeCandidateDao().upsert(place)
 
             assertEquals(place, database.placeCandidateDao().getById(place.id))
+        }
+
+    @Test
+    fun `place swipes table round trips a row from a freshly created database`() =
+        runTest {
+            val swipe = placeSwipe()
+
+            database.placeSwipeDao().upsert(swipe)
+
+            assertEquals(swipe, database.placeSwipeDao().getById(swipe.id))
         }
 
     @Test
@@ -172,10 +184,20 @@ class DatabaseCreationTest {
             longitude = 24.0297,
             note = null,
             addedByUserId = "owner-1",
-            ownerSwipe = null,
-            memberSwipe = null,
             syncStatus = SyncStatus.PENDING,
             createdAt = createdAt,
+            updatedAt = createdAt,
+        )
+
+    private fun placeSwipe() =
+        PlaceSwipeEntity(
+            id = "place-1::owner-1",
+            tripId = "trip-1",
+            candidateId = "place-1",
+            userId = "owner-1",
+            direction = SwipeDirection.LIKE,
+            swipedAt = createdAt,
+            syncStatus = SyncStatus.PENDING,
             updatedAt = createdAt,
         )
 
