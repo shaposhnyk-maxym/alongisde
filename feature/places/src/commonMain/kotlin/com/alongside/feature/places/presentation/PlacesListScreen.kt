@@ -45,7 +45,7 @@ internal fun PlacesListContent(
 ) {
     InkBackground(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            ScreenHeader(title = "Places", modifier = Modifier.padding(AlongsideSpacing.lg))
+            ScreenHeader(title = "Places")
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 when {
                     state.isLoading ->

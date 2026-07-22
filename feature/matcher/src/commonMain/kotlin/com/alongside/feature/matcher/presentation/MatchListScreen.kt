@@ -5,10 +5,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -55,9 +53,8 @@ internal fun MatchListContent(
     modifier: Modifier = Modifier,
 ) {
     InkBackground(modifier = modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize().padding(AlongsideSpacing.xl)) {
+        Column(modifier = Modifier.fillMaxSize()) {
             ScreenHeader(title = "Our Matches")
-            Spacer(modifier = Modifier.height(AlongsideSpacing.lg))
             if (state.matches.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(text = "No matches yet - swipe on some places together.")
@@ -72,7 +69,7 @@ internal fun MatchListContent(
 @Composable
 private fun MatchesByCity(groups: List<PlaceCityGroup>) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().padding(horizontal = AlongsideSpacing.xl),
         verticalArrangement = Arrangement.spacedBy(AlongsideSpacing.md),
     ) {
         groups.forEach { group ->

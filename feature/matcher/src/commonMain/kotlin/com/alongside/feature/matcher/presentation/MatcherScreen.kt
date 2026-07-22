@@ -112,7 +112,7 @@ internal fun MatcherContent(
     }
 
     InkBackground(modifier = modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize().padding(AlongsideSpacing.xl)) {
+        Column(modifier = Modifier.fillMaxSize()) {
             ScreenHeader(title = "Matcher") {
                 Text(
                     text = "${queue.size} left",
@@ -120,9 +120,8 @@ internal fun MatcherContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Spacer(modifier = Modifier.height(AlongsideSpacing.lg))
             Box(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = AlongsideSpacing.xl),
                 contentAlignment = Alignment.Center,
             ) {
                 if (top != null) {
@@ -153,7 +152,14 @@ internal fun MatcherContent(
             if (top != null) {
                 Spacer(modifier = Modifier.height(AlongsideSpacing.lg))
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                start = AlongsideSpacing.xl,
+                                end = AlongsideSpacing.xl,
+                                bottom = AlongsideSpacing.xl,
+                            ),
                     horizontalArrangement = Arrangement.spacedBy(AlongsideSpacing.xxl, Alignment.CenterHorizontally),
                 ) {
                     CircleIconButton(

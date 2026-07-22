@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.AlertDialog
@@ -67,8 +66,8 @@ internal fun DiaryTimelineContent(
     val selectedDay = (items.getOrNull(pagerState.currentPage) as? DiaryTimelineItem.Day)?.card
 
     InkGradientBackground(modifier = modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
-            ScreenHeader(title = "Timeline", modifier = Modifier.padding(horizontal = AlongsideSpacing.xl))
+        Column(modifier = Modifier.fillMaxSize()) {
+            ScreenHeader(title = "Timeline")
             Box(modifier = Modifier.weight(1f).fillMaxSize()) {
                 if (items.isNotEmpty()) {
                     HorizontalPager(
