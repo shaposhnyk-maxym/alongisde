@@ -81,6 +81,22 @@ class DayUnlockStateTest {
             resolveDayUnlockState(own = DiaryDayStatus.PENDING_SYNC, partner = DiaryDayStatus.PENDING_SYNC),
         )
     }
+
+    @Test
+    fun `own missed stays locked even if partner is ready`() {
+        assertEquals(
+            DayUnlockState.LOCKED,
+            resolveDayUnlockState(own = DiaryDayStatus.MISSED, partner = DiaryDayStatus.READY),
+        )
+    }
+
+    @Test
+    fun `partner missed stays locked even if own is ready`() {
+        assertEquals(
+            DayUnlockState.LOCKED,
+            resolveDayUnlockState(own = DiaryDayStatus.READY, partner = DiaryDayStatus.MISSED),
+        )
+    }
 }
 
 class DiaryDayStatusTest {
@@ -97,48 +113,83 @@ class DiaryDayStatusTest {
         )
 
     @Test
-    fun `null entry is not ready`() {
-        assertEquals(DiaryDayStatus.NOT_READY, diaryDayStatus(null, today))
+    fun `null entry for today or the future is not ready`() {
+        assertEquals(DiaryDayStatus.NOT_READY, diaryDayStatus(null, date = today, today = today, hasEpisodes = false))
+    }
+
+    @Test
+    fun `null entry whose day has already passed is missed`() {
+        val date = today
+        val laterToday = today.plus(1, DateTimeUnit.DAY)
+        assertEquals(DiaryDayStatus.MISSED, diaryDayStatus(null, date = date, today = laterToday, hasEpisodes = false))
     }
 
     @Test
     fun `pending entry is pending sync`() {
+        val pending = fixture.copy(syncStatus = SyncStatus.PENDING)
         assertEquals(
             DiaryDayStatus.PENDING_SYNC,
-            diaryDayStatus(fixture.copy(syncStatus = SyncStatus.PENDING), today),
+            diaryDayStatus(pending, date = today, today = today, hasEpisodes = false),
         )
     }
 
     @Test
     fun `syncing entry is pending sync`() {
+        val syncing = fixture.copy(syncStatus = SyncStatus.SYNCING)
         assertEquals(
             DiaryDayStatus.PENDING_SYNC,
-            diaryDayStatus(fixture.copy(syncStatus = SyncStatus.SYNCING), today),
+            diaryDayStatus(syncing, date = today, today = today, hasEpisodes = false),
         )
     }
 
     @Test
     fun `failed entry is pending sync`() {
+        val failed = fixture.copy(syncStatus = SyncStatus.FAILED)
         assertEquals(
             DiaryDayStatus.PENDING_SYNC,
-            diaryDayStatus(fixture.copy(syncStatus = SyncStatus.FAILED), today),
+            diaryDayStatus(failed, date = today, today = today, hasEpisodes = false),
         )
     }
 
     @Test
     fun `synced entry for today that is not closed is open`() {
-        assertEquals(DiaryDayStatus.OPEN, diaryDayStatus(fixture.copy(syncStatus = SyncStatus.SYNCED), today))
+        val synced = fixture.copy(syncStatus = SyncStatus.SYNCED)
+        assertEquals(DiaryDayStatus.OPEN, diaryDayStatus(synced, date = today, today = today, hasEpisodes = false))
     }
 
     @Test
     fun `synced entry that is explicitly closed is ready`() {
         val closed = fixture.copy(syncStatus = SyncStatus.SYNCED, closedAt = Instant.fromEpochMilliseconds(1))
-        assertEquals(DiaryDayStatus.READY, diaryDayStatus(closed, today))
+        assertEquals(DiaryDayStatus.READY, diaryDayStatus(closed, date = today, today = today, hasEpisodes = false))
     }
 
     @Test
-    fun `synced entry whose date has already passed is ready without an explicit close`() {
+    fun `synced entry that is explicitly closed is ready even if its day has passed with no episodes`() {
+        val closed = fixture.copy(syncStatus = SyncStatus.SYNCED, closedAt = Instant.fromEpochMilliseconds(1))
+        val laterToday = today.plus(1, DateTimeUnit.DAY)
+        assertEquals(
+            DiaryDayStatus.READY,
+            diaryDayStatus(closed, date = today, today = laterToday, hasEpisodes = false),
+        )
+    }
+
+    @Test
+    fun `synced entry whose date has already passed with episodes is ready without an explicit close`() {
         val yesterday = fixture.copy(syncStatus = SyncStatus.SYNCED)
-        assertEquals(DiaryDayStatus.READY, diaryDayStatus(yesterday, today = today.plus(1, DateTimeUnit.DAY)))
+        val laterToday = today.plus(1, DateTimeUnit.DAY)
+        assertEquals(
+            DiaryDayStatus.READY,
+            diaryDayStatus(yesterday, date = today, today = laterToday, hasEpisodes = true),
+        )
+    }
+
+    @Test
+    fun `synced entry whose date has already passed with no episodes is missed`() {
+        val yesterday = fixture.copy(syncStatus = SyncStatus.SYNCED)
+        val laterToday = today.plus(1, DateTimeUnit.DAY)
+        assertEquals(
+            DiaryDayStatus.MISSED,
+            diaryDayStatus(yesterday, date = today, today = laterToday, hasEpisodes = false),
+        )
     }
 }

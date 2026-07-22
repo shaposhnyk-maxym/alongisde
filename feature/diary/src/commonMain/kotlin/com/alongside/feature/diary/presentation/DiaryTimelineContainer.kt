@@ -47,8 +47,11 @@ public class DiaryTimelineContainer(
         }
     }
 
-    // date is whichever day is centered in the carousel, not necessarily today - restricting
-    // capture to today/the trip's range is a deliberate follow-up (docs/roadmap.md M12.6).
+    // date is whichever day is centered in the carousel, not necessarily today - the UI already
+    // hides "Add Photos" once that date has passed (docs/roadmap.md M12.12), and
+    // DiaryCaptureCoordinator.capture() defensively no-ops for a past date too, in case some
+    // other entry point ever reaches this without going through that UI gate. Restricting to the
+    // trip's own date range (can't backdate before it started) remains a follow-up.
     private fun processCapturedPhotos(
         date: LocalDate,
         uris: List<String>,

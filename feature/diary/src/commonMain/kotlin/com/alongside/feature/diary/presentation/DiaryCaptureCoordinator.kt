@@ -12,6 +12,8 @@ import com.alongside.core.model.diary.Episode
 import com.alongside.feature.diary.capture.ExifPhotoReader
 import kotlinx.coroutines.flow.first
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 import kotlin.time.Clock
 
 private const val DEFAULT_LANGUAGE_TAG = "en"
@@ -52,6 +54,12 @@ public class DiaryCaptureCoordinator(
         date: LocalDate,
     ): String = "$tripId::$userId::$date"
 
+    /**
+     * Defensive, not the primary guard - the Timeline UI already hides "Add Photos" once a day's
+     * date has passed (docs/roadmap.md M12.12: `MISSED` is computed, not stored, so a backdated
+     * capture would just flip a missed day back to `READY`). This is belt-and-suspenders for any
+     * other entry point that might one day reach `capture()` without going through that UI gate.
+     */
     public suspend fun capture(
         tripId: String,
         userId: String,
@@ -59,6 +67,12 @@ public class DiaryCaptureCoordinator(
         existingEntryId: String?,
         uris: List<String>,
     ) {
+        val today = clock.todayIn(TimeZone.currentSystemDefault())
+        if (date < today) {
+            println("DiaryCaptureCoordinator: rejected capture for a past day ($date < $today)")
+            return
+        }
+
         val entryId = existingEntryId ?: deterministicNewEntryId(tripId, userId, date)
 
         // Persisted up front, before any processing - a photo-read or per-cluster failure below

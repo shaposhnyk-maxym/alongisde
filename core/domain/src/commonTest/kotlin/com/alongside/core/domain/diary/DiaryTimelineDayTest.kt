@@ -2,6 +2,7 @@ package com.alongside.core.domain.diary
 
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.diary.DiaryEntry
+import com.alongside.core.model.diary.Episode
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -23,6 +24,24 @@ private fun entry(
     createdAt = Instant.fromEpochMilliseconds(0),
     updatedAt = Instant.fromEpochMilliseconds(0),
     closedAt = closedAt,
+)
+
+private fun episode(
+    id: String,
+    diaryEntryId: String,
+) = Episode(
+    id = id,
+    diaryEntryId = diaryEntryId,
+    startTime = Instant.fromEpochMilliseconds(0),
+    endTime = Instant.fromEpochMilliseconds(0),
+    latitude = 0.0,
+    longitude = 0.0,
+    placeName = "Rynok Square",
+    description = "Wandering the old town",
+    descriptionAttempts = 1,
+    photos = emptyList(),
+    syncStatus = SyncStatus.SYNCED,
+    updatedAt = Instant.fromEpochMilliseconds(0),
 )
 
 class DiaryTimelineDayTest {
@@ -127,7 +146,25 @@ class DiaryTimelineDayTest {
     }
 
     @Test
-    fun `a synced entry whose date has already passed is READY even without an explicit close`() {
+    fun `a synced entry whose date has already passed is READY when it has at least one episode`() {
+        val date = LocalDate(2026, 7, 19)
+        val ownEntry = entry(id = "own-1", userId = "own", date = date, syncStatus = SyncStatus.SYNCED)
+
+        val days =
+            buildDiaryTimelineDays(
+                tripStartDate = date,
+                tripEndDate = date,
+                today = LocalDate(2026, 7, 20),
+                ownEntries = listOf(ownEntry),
+                partnerEntries = emptyList(),
+                episodesByDiaryEntryId = mapOf(ownEntry.id to listOf(episode(id = "ep-1", diaryEntryId = ownEntry.id))),
+            )
+
+        assertEquals(DiaryDayStatus.READY, days.single().ownStatus)
+    }
+
+    @Test
+    fun `a synced entry whose date has already passed is MISSED when it has no episodes`() {
         val date = LocalDate(2026, 7, 19)
         val ownEntry = entry(id = "own-1", userId = "own", date = date, syncStatus = SyncStatus.SYNCED)
 
@@ -140,7 +177,24 @@ class DiaryTimelineDayTest {
                 partnerEntries = emptyList(),
             )
 
-        assertEquals(DiaryDayStatus.READY, days.single().ownStatus)
+        assertEquals(DiaryDayStatus.MISSED, days.single().ownStatus)
+    }
+
+    @Test
+    fun `a day with no entry at all whose date has already passed is MISSED`() {
+        val date = LocalDate(2026, 7, 19)
+
+        val days =
+            buildDiaryTimelineDays(
+                tripStartDate = date,
+                tripEndDate = date,
+                today = LocalDate(2026, 7, 20),
+                ownEntries = emptyList(),
+                partnerEntries = emptyList(),
+            )
+
+        assertEquals(DiaryDayStatus.MISSED, days.single().ownStatus)
+        assertEquals(DiaryDayStatus.MISSED, days.single().partnerStatus)
     }
 
     @Test

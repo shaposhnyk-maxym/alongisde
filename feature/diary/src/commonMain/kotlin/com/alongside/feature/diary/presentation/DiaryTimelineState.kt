@@ -19,11 +19,14 @@ import kotlin.time.Instant
  * [DiaryTimelineState.processingOwnDate] is set, driven live by the Container's in-flight call to
  * `EpisodeProcessingPipeline` (docs/roadmap.md M12: agreed with the user to wire this for real
  * rather than leave it preview-only, unlike M10/M11's still-unbuilt capture entry point).
+ * [MISSED] (docs/roadmap.md M12.12) is permanent, unlike the other two "still waiting" variants -
+ * it never resolves into UNLOCKED on its own.
  */
 public enum class DiaryDayWaitingState {
     PARTNER_CAPTURING,
     WAITING_FOR_SYNC,
     GENERATING_TEXT,
+    MISSED,
 }
 
 @Immutable
@@ -70,6 +73,7 @@ public data class DiaryTimelineState(
                     today = today,
                     ownEntries = ownEntries,
                     partnerEntries = partnerEntries,
+                    episodesByDiaryEntryId = episodesByDiaryEntryId,
                 )
             val dayItems =
                 days.map { day ->
@@ -79,7 +83,8 @@ public data class DiaryTimelineState(
                             unlockState == DayUnlockState.UNLOCKED -> null
                             day.date == processingOwnDate -> DiaryDayWaitingState.GENERATING_TEXT
                             else ->
-                                when (resolveDayLockReason(day.partnerStatus)) {
+                                when (resolveDayLockReason(day.ownStatus, day.partnerStatus)) {
+                                    DiaryDayLockReason.MISSED -> DiaryDayWaitingState.MISSED
                                     DiaryDayLockReason.PARTNER_CAPTURING -> DiaryDayWaitingState.PARTNER_CAPTURING
                                     DiaryDayLockReason.WAITING_FOR_SYNC -> DiaryDayWaitingState.WAITING_FOR_SYNC
                                 }

@@ -116,6 +116,24 @@ private fun LockedGeneratingTextPreview() {
 
 @Preview
 @Composable
+private fun LockedMissedPreview() {
+    ItemPreview(
+        DiaryTimelineItem.Day(
+            DiaryDayCard(
+                date = LocalDate(2026, 7, 19),
+                dayIndex = 3,
+                unlockState = DayUnlockState.LOCKED,
+                waitingState = DiaryDayWaitingState.MISSED,
+                ownEpisodes = emptyList(),
+                partnerEpisodes = emptyList(),
+                ownClosedAt = null,
+            ),
+        ),
+    )
+}
+
+@Preview
+@Composable
 private fun UnlockedDayPreview() {
     ItemPreview(
         DiaryTimelineItem.Day(

@@ -144,7 +144,11 @@ private fun LockedDayCard(
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(AlongsideSpacing.xl))
-            PulsingDot()
+            // MISSED is permanent, not "still in progress" - a pulsing dot would misleadingly
+            // suggest this day could still resolve on its own (docs/roadmap.md M12.12).
+            if (waitingState != DiaryDayWaitingState.MISSED) {
+                PulsingDot()
+            }
         }
     }
 }
@@ -154,6 +158,7 @@ private fun DiaryDayWaitingState.headline(): String =
         DiaryDayWaitingState.PARTNER_CAPTURING -> "Your partner is still out there"
         DiaryDayWaitingState.WAITING_FOR_SYNC -> "Almost there"
         DiaryDayWaitingState.GENERATING_TEXT -> "Writing today's page"
+        DiaryDayWaitingState.MISSED -> "This day has passed"
     }
 
 private fun DiaryDayWaitingState.explanation(): String =
@@ -164,6 +169,8 @@ private fun DiaryDayWaitingState.explanation(): String =
             "Both sides are in, just waiting for the network to confirm."
         DiaryDayWaitingState.GENERATING_TEXT ->
             "Turning today's photos into a diary entry."
+        DiaryDayWaitingState.MISSED ->
+            "No photos were added before it ended, so it's locked for good."
     }
 
 @Composable

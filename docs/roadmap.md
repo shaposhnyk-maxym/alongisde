@@ -1948,7 +1948,7 @@ jobscheduler`-перевірка periodic sweep окремо НЕ виконув
 
 ---
 
-### M12.12 — Пропущений день (Missed Day): дата минула без записів — назавжди (заплановано, не реалізовано)
+### M12.12 — Пропущений день (Missed Day): дата минула без записів — назавжди ✅ done, мануальна двопристроєва перевірка не проводилась (див. нижче)
 
 Продуктовий фідбек від користувача (2026-07-21): поточний
 auto-close-by-date-lapse (`entry.date < today` → `READY`, M12.6) не
@@ -1966,72 +1966,61 @@ auto-close-by-date-lapse (`entry.date < today` → `READY`, M12.6) не
 одна сторона пропустила — обом партнерам треба було працювати над
 результатом (завантажувати фото) саме того дня.
 
-**Accept (чернетка, уточнити перед реалізацією):**
-- `core:domain`: новий стан `DiaryDayStatus.MISSED` (окремий від
-  `NOT_READY`/`READY` — не "ще може статись", а "вже не станеться").
-  `diaryDayStatus(entry, today)` отримує додатковий параметр (напр.
-  `hasEpisodes: Boolean`) — сама функція лишається чистою, дані
-  постачає викликач (нижче). Пропоноване рішення:
-  - `entry == null && date < today` (тут `date` — дата самого дня в
-    поїздці, не `entry.date`, якого нема) → `MISSED` замість вічного
-    `NOT_READY` без фіналу
-  - `entry != null && closedAt != null` → `READY` без змін (явне
-    закриття завжди перемагає, дата не має значення)
-  - `entry != null && entry.date < today`: якщо `hasEpisodes` →
-    `READY` (як зараз, auto-close-by-date-lapse не чіпаємо для
-    дня, де реально щось знято); якщо не `hasEpisodes` → `MISSED`
-  - інакше (сьогодні чи майбутнє, ще не закрито) → `OPEN`, без змін
-  - `resolveDayUnlockState` **не змінюється** — `MISSED != READY`,
-    тож день з пропущеною стороною просто ніколи не розблоковується;
-    вся суть мілстоуна в цьому, без нової умови в unlock-функції
-- **Дані про епізоди вже зібрані на рівень вище, нового Room/Firestore
-  запиту не потрібно** — `DiaryTimelineState.episodesByDiaryEntryId`
-  (`feature/diary/.../DiaryTimelineState.kt:58`, зібрано в
-  `DiaryTimelineDataSource.observeEntriesAndEpisodes`) вже містить
-  повний список епізодів на entry; `hasEpisodes` = перевірка
-  `.isEmpty()` на цій вже наявній мапі. `DiaryTimelineDay`/
-  `buildDiaryTimelineDays` (`core/domain/.../DiaryTimelineDay.kt`)
-  отримують `ownHasEpisodes`/`partnerHasEpisodes` як новий вхідний
-  параметр
-- `resolveDayLockReason` (`core/domain/.../DiaryDayLockReason.kt`) —
-  зараз дивиться тільки на `partner` (свідомо, за коментарем: "чи сама
-  сторона теж не готова, не міняє того, на що чекає глядач"). Це
-  припущення ламається для `MISSED` — якщо ВЛАСНА сторона пропустила
-  день, копірайтинг має сказати "ти пропустив(-ла)", не "партнер ще
-  знімає". Ймовірно потребує сигнатури `resolveDayLockReason(own,
-  partner)` і нового варіанту (`DiaryDayLockReason.MISSED` чи
-  окремо `OWN_MISSED`/`PARTNER_MISSED`) — уточнити при реалізації
-- **Закриває явно занотоване в M12.6 "майбутнє обмеження"**: "Add
-  Photos" ховається для дня, чия дата вже минула (не тільки не
-  `today`, як тоді залишили для тестової зручності) — без цього
-  користувач міг би задньою датою довантажити фото в уже `MISSED`
-  день і статус перерахувався б назад у `READY` (`MISSED` — обчислюваний,
-  не збережений стан). `DiaryCaptureCoordinator.capture()` додатково
-  захисно відхиляє capture у минулий день (belt-and-suspenders,
-  на випадок інших entry-точок у capture, не тільки кнопки)
-- Новий візуальний стан day-картки для `MISSED` (окремо для "я
-  пропустив" і "партнер пропустив") — тимчасовий copy, як і M12.6's
-  англійський плейсхолдер, узгодити остаточний текст при реалізації;
-  нові screenshot-голдени
-- Тести: `diaryDayStatus` — новий кейс (дата минула, `hasEpisodes =
-  false` → `MISSED`; дата минула, `hasEpisodes = true` → `READY` без
-  змін); `buildDiaryTimelineDays` прокидає `hasEpisodes` правильно;
-  `resolveDayUnlockState`/`resolveDayLockReason` — `MISSED` ніколи не
-  розблоковує день, копірайтинг відрізняє "я"/"партнер"; `DiaryCaptureCoordinator`
-  — capture у минулий день відхиляється
-- Мануальна перевірка (два пристрої): одна сторона знімає фото за
-  "сьогодні", інша — ні; перемотати системну дату вперед на
-  пристроях (чи почекати) → пропущена сторона показує `MISSED`,
-  день ніколи не розблоковується навіть після синку; спроба
-  довантажити фото в минулий день заблокована на UI
+Два питання з початкової чернетки узгоджені з користувачем перед
+реалізацією: `MISSED` застосовується і коли `entry == null`, і коли
+`entry` існує з нульовими епізодами (обидва випадки); `resolveDayLockReason`
+для MISSED — один узагальнений варіант `MISSED`, без розрізнення
+"я пропустив"/"партнер пропустив" (простіший API, generic копірайтинг).
 
-**Відкриті питання (уточнити перед реалізацією):**
-- Чи виключати `MISSED`-дні з майбутнього Recap (окремий, ще не
-  запланований мілстоун) — поза скоупом тут, занотувати на майбутнє
-- Чи `MISSED` застосовується і коли `entry == null` (взагалі нічого не
-  знято тим днем), чи тільки коли `entry` існує з нульовими епізодами
-  — запропоновано вище "обидва випадки", але не узгоджено остаточно
-- Точний copy/дизайн `MISSED`-картки
+**Accept:**
+- [x] `core:domain`: новий стан `DiaryDayStatus.MISSED`.
+  `diaryDayStatus(entry, date, today, hasEpisodes)` — функція лишається
+  чистою, дані постачає викликач:
+  - `entry == null && date < today` → `MISSED`
+  - `entry != null && closedAt != null` → `READY` (явне закриття
+    завжди перемагає, незалежно від `hasEpisodes`/дати)
+  - `entry != null && entry.date < today`: `READY` якщо `hasEpisodes`,
+    інакше `MISSED`
+  - інакше → `OPEN`, без змін
+  - `resolveDayUnlockState` лишився БЕЗ ЗМІН — `MISSED != READY`, день
+    з пропущеною стороною просто ніколи не розблоковується
+- [x] `DiaryTimelineDay` отримав `ownHasEpisodes`/`partnerHasEpisodes:
+  Boolean`; `buildDiaryTimelineDays` отримав новий параметр
+  `episodesByDiaryEntryId: Map<String, List<Episode>> = emptyMap()`
+  (уже зібраний рівнем вище в `DiaryTimelineState`, нового
+  Room/Firestore запиту не знадобилось) — `hasEpisodes` за день
+  обчислюється як `.isNotEmpty()` на цій мапі
+- [x] `resolveDayLockReason(own, partner)` — нова сигнатура, новий
+  варіант `DiaryDayLockReason.MISSED` (виграє над
+  `PARTNER_CAPTURING`/`WAITING_FOR_SYNC`, якщо MISSED хоч одна сторона)
+- [x] "Add Photos"/"Close Day" ховаються для дня, чия дата вже минула
+  (`DiaryTimelineScreen.kt`'s `CaptureButtonArea`-гейт), закриваючи
+  явно занотоване в M12.6 "майбутнє обмеження". `DiaryCaptureCoordinator.capture()`
+  додатково захисно відхиляє capture у минулий день
+  (belt-and-suspenders, не первинний захист)
+- [x] Новий візуальний стан day-картки `DiaryDayWaitingState.MISSED`
+  (`LockedDayCard` в `DiaryTimelineCards.kt`) — без `PulsingDot()`
+  (той натякає "ще триває", що неправдиво для назавжди пропущеного
+  дня). Тимчасовий англійський copy ("This day has passed" / "No
+  photos were added before it ended, so it's locked for good"),
+  остаточний текст — окрема задача, як і M12.6's плейсхолдери. Новий
+  Roborazzi-голден (`LockedMissedPreview`)
+- [x] Тести: `diaryDayStatus` — нові кейси (`entry == null` до/після
+  дати; `hasEpisodes` true/false на минулій даті; `closedAt` перемагає
+  завжди); `buildDiaryTimelineDays` прокидає `hasEpisodes` з мапи;
+  `resolveDayUnlockState`/`resolveDayLockReason` — `MISSED` (будь-яка
+  сторона) ніколи не розблоковує день; `DiaryCaptureCoordinator` —
+  capture у минулий день відхиляється (нічого не персистується),
+  capture на сьогодні/майбутнє — ні; Compose UI-тест —
+  "Add Photos"/"Close Day" зникають для минулого дня
+- [ ] Мануальна перевірка (два реальні пристрої, перемотування
+  системної дати) — **НЕ проводилась**. Ризик низький (чиста доменна
+  логіка, повністю покрита юніт-тестами, і той самий Compose-шлях, що
+  вже верифікований в M12.6/M12.9), але чекбокс лишається чесно
+  відкритим, а не позначеним заднім числом
+
+**Занотовано на майбутнє**: чи виключати `MISSED`-дні з майбутнього
+Recap (окремий, ще не запланований мілстоун) — поза скоупом тут.
 
 ---
 

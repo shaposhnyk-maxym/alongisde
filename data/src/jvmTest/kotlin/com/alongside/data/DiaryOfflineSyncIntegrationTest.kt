@@ -177,8 +177,12 @@ class DiaryOfflineSyncIntegrationTest {
     private suspend fun assertUnlockState(expected: DayUnlockState) {
         val own = diaryEntryRepository.getById("entry-own")
         val partner = diaryEntryRepository.getById("entry-partner")
-        assertEquals(expected, resolveDayUnlockState(diaryDayStatus(own, TODAY), diaryDayStatus(partner, TODAY)))
-        assertEquals(expected == DayUnlockState.UNLOCKED, shouldTriggerPartnerReadyPush(own, partner, TODAY))
+        val ownStatus = diaryDayStatus(own, date = TODAY, today = TODAY, hasEpisodes = true)
+        val partnerStatus = diaryDayStatus(partner, date = TODAY, today = TODAY, hasEpisodes = true)
+        assertEquals(expected, resolveDayUnlockState(ownStatus, partnerStatus))
+        val pushTriggered =
+            shouldTriggerPartnerReadyPush(own, partner, TODAY, ownHasEpisodes = true, partnerHasEpisodes = true)
+        assertEquals(expected == DayUnlockState.UNLOCKED, pushTriggered)
     }
 
     @Test

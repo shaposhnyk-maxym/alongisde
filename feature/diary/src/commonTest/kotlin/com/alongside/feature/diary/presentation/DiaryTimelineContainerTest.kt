@@ -151,6 +151,34 @@ class DiaryTimelineContainerTest {
         }
 
     @Test
+    fun `a past day with no episodes on either side shows as missed`() =
+        runTest {
+            val yesterday = FIXED_TODAY.plus(-1, DateTimeUnit.DAY)
+            val trip =
+                fakeTrip(
+                    id = "trip-1",
+                    ownerId = "owner-1",
+                    memberId = "partner-1",
+                    startDate = yesterday,
+                    endDate = FIXED_TODAY,
+                )
+            pairingRepository.activeTrip.value = trip
+
+            containerUnderTest().test(this) {
+                runOnCreate()
+                awaitState() // today/ownUserId bootstrap
+                val loaded = awaitState()
+
+                val missedDay = assertIs<DiaryTimelineItem.Day>(loaded.items[0]).card
+                assertEquals(yesterday, missedDay.date)
+                assertEquals(DayUnlockState.LOCKED, missedDay.unlockState)
+                assertEquals(DiaryDayWaitingState.MISSED, missedDay.waitingState)
+
+                cancelAndIgnoreRemainingItems()
+            }
+        }
+
+    @Test
     fun `the countdown shows while the reunion day is still ahead`() =
         runTest {
             val trip =
