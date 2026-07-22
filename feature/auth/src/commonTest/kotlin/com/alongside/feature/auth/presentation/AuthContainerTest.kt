@@ -161,7 +161,7 @@ class AuthContainerTest {
 
             container.test(this) {
                 runOnCreate()
-                expectState { copy(session = testSession) }
+                expectState { copy(session = testSession, isRestoringSession = false) }
                 expectSideEffect(AuthSideEffect.SignedIn)
             }
         }
@@ -184,14 +184,14 @@ class AuthContainerTest {
 
             container.test(this) {
                 runOnCreate()
-                expectState { copy(session = refreshedSession) }
+                expectState { copy(session = refreshedSession, isRestoringSession = false) }
                 expectSideEffect(AuthSideEffect.SignedIn)
             }
             assertEquals(refreshedSession, cache.current)
         }
 
     @Test
-    fun `silent refresh failing at the provider clears the cache and stays idle without an error banner`() =
+    fun `silent refresh failing at the provider clears the cache and stops restoring without an error banner`() =
         runTest {
             val expiredSession = testSession.copy(issuedAt = Clock.System.now() - 120.minutes)
             val cache = FakeAuthSessionCache(initial = expiredSession)
@@ -207,15 +207,16 @@ class AuthContainerTest {
 
             container.test(this) {
                 runOnCreate()
-                // No state change - the cache is cleared, but a background restore attempt
-                // shouldn't surface an error banner the user never asked to see.
+                // Only isRestoringSession flips - a background restore attempt shouldn't
+                // surface an error banner the user never asked to see.
+                expectState { copy(isRestoringSession = false) }
             }
             assertNull(cache.current)
             assertTrue(cache.wasCleared)
         }
 
     @Test
-    fun `silent refresh failing during token exchange clears the cache and stays idle without an error banner`() =
+    fun `silent refresh failing during token exchange clears the cache and stops restoring without an error banner`() =
         runTest {
             val expiredSession = testSession.copy(issuedAt = Clock.System.now() - 120.minutes)
             val cache = FakeAuthSessionCache(initial = expiredSession)
@@ -231,8 +232,25 @@ class AuthContainerTest {
 
             container.test(this) {
                 runOnCreate()
+                expectState { copy(isRestoringSession = false) }
             }
             assertNull(cache.current)
             assertTrue(cache.wasCleared)
+        }
+
+    @Test
+    fun `restoring with nothing cached flips isRestoringSession to false without a side effect`() =
+        runTest {
+            val container =
+                AuthContainer(
+                    FakeGoogleAuthProvider(GoogleSignInResult.Failure("should not be called")),
+                    FakeAuthSessionRepository.failure(AuthException.Unknown()),
+                    FakeAuthSessionCache(),
+                )
+
+            container.test(this) {
+                runOnCreate()
+                expectState { copy(isRestoringSession = false) }
+            }
         }
 }
