@@ -36,6 +36,7 @@ private fun previewMatch(
     city: String?,
     rating: Double?,
     category: String?,
+    countryCode: String? = null,
 ) = PlaceCandidate(
     id = id,
     tripId = "trip-1",
@@ -51,6 +52,7 @@ private fun previewMatch(
     rating = rating,
     category = category,
     city = city,
+    countryCode = countryCode,
 )
 
 private fun mutualLikeSwipes(candidateId: String) =
@@ -75,9 +77,30 @@ private fun previewSwipe(
 
 private val PREVIEW_MATCHES =
     listOf(
-        previewMatch(id = "1", name = "Rynok Square", city = "Lviv", rating = 4.8, category = "Landmark"),
-        previewMatch(id = "2", name = "Lviv Coffee Mine", city = "Lviv", rating = 4.5, category = "Coffee shop"),
-        previewMatch(id = "3", name = "Roshen Fountain", city = "Vinnytsia", rating = null, category = null),
+        previewMatch(
+            id = "1",
+            name = "Rynok Square",
+            city = "Lviv",
+            rating = 4.8,
+            category = "Landmark",
+            countryCode = "UA",
+        ),
+        previewMatch(
+            id = "2",
+            name = "Lviv Coffee Mine",
+            city = "Lviv",
+            rating = 4.5,
+            category = "Coffee shop",
+            countryCode = "UA",
+        ),
+        previewMatch(
+            id = "3",
+            name = "Roshen Fountain",
+            city = "Vinnytsia",
+            rating = null,
+            category = null,
+            countryCode = "UA",
+        ),
     )
 
 @Composable

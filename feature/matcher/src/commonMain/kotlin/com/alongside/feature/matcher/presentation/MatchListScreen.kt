@@ -27,13 +27,17 @@ import androidx.compose.ui.unit.dp
 import com.alongside.core.model.place.PlaceCandidate
 import com.alongside.core.ui.component.InkBackground
 import com.alongside.core.ui.component.MediaListRow
+import com.alongside.core.ui.component.OverlineLabel
+import com.alongside.core.ui.component.OverlineLabelTone
 import com.alongside.core.ui.component.PaperCard
+import com.alongside.core.ui.format.countryCodeToFlagEmoji
 import com.alongside.core.ui.theme.AlongsideSpacing
 import org.orbitmvi.orbit.compose.collectAsState
 import kotlin.math.round
 
 private val MatchBadgeSize = 26.dp
 private val MatchBadgeIconSize = 14.dp
+private const val OTHER_CITY_LABEL = "Other"
 
 @Composable
 public fun MatchListScreen(
@@ -58,13 +62,27 @@ internal fun MatchListContent(
                     Text(text = "No matches yet - swipe on some places together.")
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(AlongsideSpacing.md),
-                ) {
-                    items(state.matches, key = { it.id }) { place -> MatchRow(place) }
-                }
+                MatchesByCity(state.matches.groupedByCity())
             }
+        }
+    }
+}
+
+@Composable
+private fun MatchesByCity(groups: List<PlaceCityGroup>) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(AlongsideSpacing.md),
+    ) {
+        groups.forEach { group ->
+            item(key = "header-${group.city ?: OTHER_CITY_LABEL}") {
+                val flag = group.countryCode?.let { " ${countryCodeToFlagEmoji(it)}" }.orEmpty()
+                OverlineLabel(
+                    text = "${(group.city ?: OTHER_CITY_LABEL).uppercase()}$flag",
+                    tone = OverlineLabelTone.Muted,
+                )
+            }
+            items(group.places, key = { it.id }) { place -> MatchRow(place) }
         }
     }
 }
