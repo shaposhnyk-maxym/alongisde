@@ -50,6 +50,7 @@ dependencies {
     implementation(projects.feature.pairing)
     implementation(projects.feature.diary)
     implementation(projects.feature.places)
+    implementation(projects.feature.matcher)
     implementation(projects.core.network)
     implementation(projects.core.database)
     implementation(projects.core.domain)

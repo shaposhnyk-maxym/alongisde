@@ -7,6 +7,7 @@ import com.alongside.core.ui.component.installAlongsideImageLoader
 import com.alongside.data.di.dataModule
 import com.alongside.feature.auth.di.authFeatureModule
 import com.alongside.feature.diary.di.diaryFeatureModule
+import com.alongside.feature.matcher.di.matcherFeatureModule
 import com.alongside.feature.onboarding.di.onboardingFeatureModule
 import com.alongside.feature.pairing.di.pairingFeatureModule
 import com.alongside.feature.places.di.placesFeatureModule
@@ -38,6 +39,7 @@ class AlongsideApplication :
                 pairingFeatureModule,
                 diaryFeatureModule,
                 placesFeatureModule,
+                matcherFeatureModule,
             )
         }
         // Idempotent (ExistingPeriodicWorkPolicy.KEEP) - safe to call on every process start,
