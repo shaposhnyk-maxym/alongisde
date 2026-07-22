@@ -46,51 +46,57 @@ internal fun PairingContent(
     animateEntrance: Boolean = true,
 ) {
     InkGradientBackground(modifier = modifier.fillMaxSize()) {
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .semantics {
-                        contentDescription = "pairing-step-${state.step.name}"
-                    },
-        ) {
-            when (state.step) {
-                PairingStep.CHOICE ->
-                    ChoiceStep(
-                        isCreating = state.isCreating,
-                        onCreateTrip = onPickTripDates,
-                        onStartJoinFlow = onStartJoinFlow,
-                        animateEntrance = animateEntrance,
-                    )
-                PairingStep.CREATE_PICK_DATES ->
-                    state.tripStartDate?.let { startDate ->
-                        state.tripEndDate?.let { endDate ->
-                            PickDatesStep(
-                                startDate = startDate,
-                                endDate = endDate,
-                                onDatesChange = onTripDatesChange,
-                                onConfirm = onConfirmTripDates,
-                                onBackToChoice = onBackToChoice,
-                            )
-                        }
-                    }
-                PairingStep.CREATE_SHOW_CODE ->
-                    state.ownTrip?.let { trip ->
-                        CreateShowCodeStep(
-                            inviteCode = trip.inviteCode,
+        // While the initial active-trip check is still in flight, showing the choice step
+        // would flash "create or join a trip?" at an already-paired user for one frame before
+        // Paired fires - same fix as AuthContent's isRestoringSession, simplest to just not
+        // draw the step yet.
+        if (!state.isCheckingTrip) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .semantics {
+                            contentDescription = "pairing-step-${state.step.name}"
+                        },
+            ) {
+                when (state.step) {
+                    PairingStep.CHOICE ->
+                        ChoiceStep(
+                            isCreating = state.isCreating,
+                            onCreateTrip = onPickTripDates,
+                            onStartJoinFlow = onStartJoinFlow,
                             animateEntrance = animateEntrance,
                         )
-                    }
-                PairingStep.JOIN_ENTER_CODE ->
-                    JoinEnterCodeStep(
-                        codeInput = state.codeInput,
-                        isJoining = state.isJoining,
-                        joinError = state.joinError,
-                        onBackToChoice = onBackToChoice,
-                        onCodeInputChange = onCodeInputChange,
-                        onSubmitCode = onSubmitCode,
-                    )
+                    PairingStep.CREATE_PICK_DATES ->
+                        state.tripStartDate?.let { startDate ->
+                            state.tripEndDate?.let { endDate ->
+                                PickDatesStep(
+                                    startDate = startDate,
+                                    endDate = endDate,
+                                    onDatesChange = onTripDatesChange,
+                                    onConfirm = onConfirmTripDates,
+                                    onBackToChoice = onBackToChoice,
+                                )
+                            }
+                        }
+                    PairingStep.CREATE_SHOW_CODE ->
+                        state.ownTrip?.let { trip ->
+                            CreateShowCodeStep(
+                                inviteCode = trip.inviteCode,
+                                animateEntrance = animateEntrance,
+                            )
+                        }
+                    PairingStep.JOIN_ENTER_CODE ->
+                        JoinEnterCodeStep(
+                            codeInput = state.codeInput,
+                            isJoining = state.isJoining,
+                            joinError = state.joinError,
+                            onBackToChoice = onBackToChoice,
+                            onCodeInputChange = onCodeInputChange,
+                            onSubmitCode = onSubmitCode,
+                        )
+                }
             }
         }
     }

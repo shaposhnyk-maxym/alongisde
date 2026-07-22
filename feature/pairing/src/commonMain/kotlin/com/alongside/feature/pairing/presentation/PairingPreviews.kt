@@ -30,7 +30,9 @@ private val previewTrip =
 private fun PairingPreview(state: PairingState) {
     AlongsideTheme {
         PairingContent(
-            state = state,
+            // Settled end state - the active-trip check has always resolved by the time any of
+            // these steps would actually be visible.
+            state = state.copy(isCheckingTrip = false),
             onPickTripDates = {},
             onTripDatesChange = { _, _ -> },
             onConfirmTripDates = {},

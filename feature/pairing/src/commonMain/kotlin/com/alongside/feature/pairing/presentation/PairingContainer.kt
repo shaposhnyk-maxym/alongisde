@@ -44,12 +44,15 @@ public class PairingContainer(
     // joiner submitting a code end up here when the stored trip gains its second person.
     private suspend fun Syntax<PairingState, PairingSideEffect>.observeActiveTrip() {
         val uid = currentUid()
-        if (uid == null) return
+        if (uid == null) {
+            reduce { state.copy(isCheckingTrip = false) }
+            return
+        }
         pairingRepository.observeActiveTrip(uid).collect { trip ->
             when {
-                trip == null -> Unit
+                trip == null -> reduce { state.copy(isCheckingTrip = false) }
                 trip.memberId != null -> postSideEffect(PairingSideEffect.Paired)
-                trip.ownerId == uid -> reduce { state.copy(ownTrip = trip) }
+                trip.ownerId == uid -> reduce { state.copy(isCheckingTrip = false, ownTrip = trip) }
             }
         }
     }
