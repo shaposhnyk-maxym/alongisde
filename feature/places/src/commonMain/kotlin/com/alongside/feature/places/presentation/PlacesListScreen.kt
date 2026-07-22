@@ -2,6 +2,7 @@ package com.alongside.feature.places.presentation
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -19,6 +20,7 @@ import com.alongside.core.ui.component.MediaListRow
 import com.alongside.core.ui.component.OverlineLabel
 import com.alongside.core.ui.component.OverlineLabelTone
 import com.alongside.core.ui.component.PaperCard
+import com.alongside.core.ui.component.ScreenHeader
 import com.alongside.core.ui.format.countryCodeToFlagEmoji
 import com.alongside.core.ui.theme.AlongsideSpacing
 import org.orbitmvi.orbit.compose.collectAsState
@@ -42,19 +44,24 @@ internal fun PlacesListContent(
     modifier: Modifier = Modifier,
 ) {
     InkBackground(modifier = modifier.fillMaxSize()) {
-        when {
-            state.isLoading ->
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+        Column(modifier = Modifier.fillMaxSize()) {
+            ScreenHeader(title = "Places", modifier = Modifier.padding(AlongsideSpacing.lg))
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                when {
+                    state.isLoading ->
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    state.places.isEmpty() ->
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(
+                                text = "No places yet - share one from Google Maps to get started.",
+                                color = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
+                    else -> PlacesByCity(state.places.groupedByCity())
                 }
-            state.places.isEmpty() ->
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "No places yet - share one from Google Maps to get started.",
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
-            else -> PlacesByCity(state.places.groupedByCity())
+            }
         }
     }
 }

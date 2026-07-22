@@ -30,6 +30,7 @@ import com.alongside.core.ui.component.MediaListRow
 import com.alongside.core.ui.component.OverlineLabel
 import com.alongside.core.ui.component.OverlineLabelTone
 import com.alongside.core.ui.component.PaperCard
+import com.alongside.core.ui.component.ScreenHeader
 import com.alongside.core.ui.format.countryCodeToFlagEmoji
 import com.alongside.core.ui.theme.AlongsideSpacing
 import org.orbitmvi.orbit.compose.collectAsState
@@ -55,7 +56,7 @@ internal fun MatchListContent(
 ) {
     InkBackground(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().padding(AlongsideSpacing.xl)) {
-            Text(text = "Our Matches", style = MaterialTheme.typography.headlineSmall)
+            ScreenHeader(title = "Our Matches")
             Spacer(modifier = Modifier.height(AlongsideSpacing.lg))
             if (state.matches.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

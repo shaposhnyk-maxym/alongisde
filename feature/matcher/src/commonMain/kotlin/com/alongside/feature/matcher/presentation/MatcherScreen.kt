@@ -29,6 +29,7 @@ import com.alongside.core.ui.component.CircleIconButton
 import com.alongside.core.ui.component.CircleIconButtonStyle
 import com.alongside.core.ui.component.DotBanner
 import com.alongside.core.ui.component.InkBackground
+import com.alongside.core.ui.component.ScreenHeader
 import com.alongside.core.ui.theme.AlongsideSpacing
 import com.alongside.core.ui.theme.alongsideTypography
 import kotlinx.coroutines.delay
@@ -112,8 +113,7 @@ internal fun MatcherContent(
 
     InkBackground(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().padding(AlongsideSpacing.xl)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(text = "Matcher", style = MaterialTheme.typography.headlineSmall)
+            ScreenHeader(title = "Matcher") {
                 Text(
                     text = "${queue.size} left",
                     style = MaterialTheme.alongsideTypography.meta,

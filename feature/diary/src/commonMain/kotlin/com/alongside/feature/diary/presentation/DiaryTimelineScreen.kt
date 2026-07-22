@@ -29,6 +29,7 @@ import com.alongside.core.ui.component.AlongsidePrimaryButton
 import com.alongside.core.ui.component.AlongsideTextButton
 import com.alongside.core.ui.component.InkGradientBackground
 import com.alongside.core.ui.component.PagerDots
+import com.alongside.core.ui.component.ScreenHeader
 import com.alongside.core.ui.theme.AlongsideSpacing
 import com.alongside.core.ui.theme.alongsideColors
 import kotlinx.datetime.LocalDate
@@ -66,59 +67,63 @@ internal fun DiaryTimelineContent(
     val selectedDay = (items.getOrNull(pagerState.currentPage) as? DiaryTimelineItem.Day)?.card
 
     InkGradientBackground(modifier = modifier.fillMaxSize()) {
-        Box(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
-            if (items.isNotEmpty()) {
-                HorizontalPager(
-                    state = pagerState,
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .testTag("timeline-pager"),
-                    contentPadding = PagerContentPadding,
-                    pageSpacing = AlongsideSpacing.md,
-                ) { page ->
-                    DiaryTimelineItemCard(
-                        item = items[page],
+        Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+            ScreenHeader(title = "Timeline", modifier = Modifier.padding(horizontal = AlongsideSpacing.xl))
+            Box(modifier = Modifier.weight(1f).fillMaxSize()) {
+                if (items.isNotEmpty()) {
+                    HorizontalPager(
+                        state = pagerState,
                         modifier =
                             Modifier
                                 .fillMaxSize()
-                                .padding(vertical = AlongsideSpacing.xxl)
-                                .testTag("timeline-page-$page"),
+                                .testTag("timeline-pager"),
+                        contentPadding = PagerContentPadding,
+                        pageSpacing = AlongsideSpacing.md,
+                    ) { page ->
+                        DiaryTimelineItemCard(
+                            item = items[page],
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .padding(vertical = AlongsideSpacing.xxl)
+                                    .testTag("timeline-page-$page"),
+                        )
+                    }
+                    PagerDots(
+                        pageCount = items.size,
+                        selectedPage = pagerState.currentPage,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = AlongsideSpacing.xxl),
                     )
                 }
-                PagerDots(
-                    pageCount = items.size,
-                    selectedPage = pagerState.currentPage,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = AlongsideSpacing.xxl),
-                )
-            }
-            // Once a day is UNLOCKED there's nothing left to add or close - both sides' episodes
-            // are already fully revealed, so the capture UI would just be a stale distraction.
-            // A day whose own date has already passed (docs/roadmap.md M12.12) is hidden too -
-            // MISSED is computed, not stored, so backdating a capture into it would just flip it
-            // back to READY; `today == null` (state not loaded yet) defaults to showing, not
-            // hiding, since `items` is only ever non-empty once `today` is known too.
-            val isPastDay = selectedDay != null && today != null && selectedDay.date < today
-            if (selectedDay != null && selectedDay.unlockState == DayUnlockState.LOCKED && !isPastDay) {
-                CaptureButtonArea(
-                    day = selectedDay,
-                    onAddPhotosClick = {
-                        if (selectedDay.ownEpisodes.isNotEmpty()) {
-                            showContinueCaptureDialog = true
-                        } else {
-                            onAddPhotos(selectedDay.date)
-                        }
-                    },
-                    onCloseDay = { onCloseDay(selectedDay.date) },
-                    modifier =
-                        Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = AlongsideSpacing.xxl),
-                )
+                // Once a day is UNLOCKED there's nothing left to add or close - both sides'
+                // episodes are already fully revealed, so the capture UI would just be a stale
+                // distraction. A day whose own date has already passed (docs/roadmap.md M12.12)
+                // is hidden too - MISSED is computed, not stored, so backdating a capture into it
+                // would just flip it back to READY; `today == null` (state not loaded yet)
+                // defaults to showing, not hiding, since `items` is only ever non-empty once
+                // `today` is known too.
+                val isPastDay = selectedDay != null && today != null && selectedDay.date < today
+                if (selectedDay != null && selectedDay.unlockState == DayUnlockState.LOCKED && !isPastDay) {
+                    CaptureButtonArea(
+                        day = selectedDay,
+                        onAddPhotosClick = {
+                            if (selectedDay.ownEpisodes.isNotEmpty()) {
+                                showContinueCaptureDialog = true
+                            } else {
+                                onAddPhotos(selectedDay.date)
+                            }
+                        },
+                        onCloseDay = { onCloseDay(selectedDay.date) },
+                        modifier =
+                            Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = AlongsideSpacing.xxl),
+                    )
+                }
             }
         }
     }
