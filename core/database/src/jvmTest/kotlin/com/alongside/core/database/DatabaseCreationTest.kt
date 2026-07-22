@@ -5,6 +5,7 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.alongside.core.database.entity.AuthSessionEntity
 import com.alongside.core.database.entity.DiaryEntryEntity
 import com.alongside.core.database.entity.EpisodeEntity
+import com.alongside.core.database.entity.OnboardingCompletionEntity
 import com.alongside.core.database.entity.PhotoEntity
 import com.alongside.core.database.entity.PlaceCandidateEntity
 import com.alongside.core.database.entity.PlaceSwipeEntity
@@ -114,6 +115,14 @@ class DatabaseCreationTest {
             database.authSessionDao().upsert(session)
 
             assertEquals(session, database.authSessionDao().get())
+        }
+
+    @Test
+    fun `onboarding completion table round trips a row from a freshly created database`() =
+        runTest {
+            database.onboardingCompletionDao().upsert(OnboardingCompletionEntity())
+
+            assertEquals(OnboardingCompletionEntity(), database.onboardingCompletionDao().get())
         }
 
     @Test

@@ -1,5 +1,6 @@
 package com.alongside.feature.onboarding.presentation
 
+import com.alongside.feature.onboarding.FakeOnboardingCompletionCache
 import com.alongside.feature.onboarding.FakePermissionController
 import com.alongside.feature.onboarding.OnboardingPermission
 import com.alongside.feature.onboarding.OnboardingStep
@@ -9,6 +10,7 @@ import kotlinx.coroutines.test.runTest
 import org.orbitmvi.orbit.test.test
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 class OnboardingContainerTest {
     @Test
@@ -22,7 +24,7 @@ class OnboardingContainerTest {
                             OnboardingPermission.NOTIFICATIONS to PermissionStatus.GRANTED,
                         ),
                 )
-            val container = OnboardingContainer(controller)
+            val container = OnboardingContainer(controller, FakeOnboardingCompletionCache())
 
             container.test(this) {
                 runOnCreate()
@@ -36,7 +38,7 @@ class OnboardingContainerTest {
     fun `requesting photo permission that succeeds updates state and does not complete yet`() =
         runTest {
             val controller = FakePermissionController(requestResult = { PermissionStatus.GRANTED })
-            val container = OnboardingContainer(controller)
+            val container = OnboardingContainer(controller, FakeOnboardingCompletionCache())
 
             container.test(this) {
                 runOnCreate()
@@ -49,7 +51,7 @@ class OnboardingContainerTest {
     fun `requesting photo permission that the user denies keeps state at denied without advancing`() =
         runTest {
             val controller = FakePermissionController(requestResult = { PermissionStatus.DENIED })
-            val container = OnboardingContainer(controller)
+            val container = OnboardingContainer(controller, FakeOnboardingCompletionCache())
 
             container.test(this) {
                 runOnCreate()
@@ -64,7 +66,7 @@ class OnboardingContainerTest {
         runTest {
             val controller =
                 FakePermissionController(initialStatuses = mapOf(OnboardingPermission.PHOTOS to PermissionStatus.GRANTED))
-            val container = OnboardingContainer(controller)
+            val container = OnboardingContainer(controller, FakeOnboardingCompletionCache())
 
             container.test(this) {
                 runOnCreate()
@@ -81,7 +83,7 @@ class OnboardingContainerTest {
                 FakePermissionController(
                     initialStatuses = mapOf(OnboardingPermission.PHOTOS to PermissionStatus.GRANTED),
                 )
-            val container = OnboardingContainer(controller)
+            val container = OnboardingContainer(controller, FakeOnboardingCompletionCache())
 
             container.test(this) {
                 runOnCreate()
@@ -104,7 +106,7 @@ class OnboardingContainerTest {
                         ),
                     requestResult = { PermissionStatus.DENIED },
                 )
-            val container = OnboardingContainer(controller)
+            val container = OnboardingContainer(controller, FakeOnboardingCompletionCache())
 
             container.test(this) {
                 runOnCreate()
@@ -119,7 +121,7 @@ class OnboardingContainerTest {
         }
 
     @Test
-    fun `completing the last remaining step posts Completed exactly once`() =
+    fun `completing the last remaining step posts Completed exactly once and persists it`() =
         runTest {
             val controller =
                 FakePermissionController(
@@ -129,7 +131,8 @@ class OnboardingContainerTest {
                         ),
                     requestResult = { PermissionStatus.GRANTED },
                 )
-            val container = OnboardingContainer(controller)
+            val completionCache = FakeOnboardingCompletionCache()
+            val container = OnboardingContainer(controller, completionCache)
 
             container.test(this) {
                 runOnCreate()
@@ -142,13 +145,35 @@ class OnboardingContainerTest {
                 expectState { copy(notificationPermission = PermissionStatus.GRANTED) }
                 expectSideEffect(OnboardingSideEffect.Completed)
             }
+            assertEquals(1, completionCache.markCompletedCallCount)
+            assertEquals(true, completionCache.isCompleted())
+        }
+
+    @Test
+    fun `acknowledging only some steps does not mark onboarding completed in the cache`() =
+        runTest {
+            val controller =
+                FakePermissionController(
+                    initialStatuses = mapOf(OnboardingPermission.PHOTOS to PermissionStatus.GRANTED),
+                )
+            val completionCache = FakeOnboardingCompletionCache()
+            val container = OnboardingContainer(controller, completionCache)
+
+            container.test(this) {
+                runOnCreate()
+                expectState { copy(photoPermission = PermissionStatus.GRANTED) }
+                containerHost.onIntent(OnboardingIntent.AcknowledgeCameraGeolocation)
+                expectState { copy(cameraGeolocationAcknowledged = true) }
+            }
+            assertEquals(0, completionCache.markCompletedCallCount)
+            assertFalse(completionCache.isCompleted())
         }
 
     @Test
     fun `opening app settings delegates to the controller without changing state`() =
         runTest {
             val controller = FakePermissionController()
-            val container = OnboardingContainer(controller)
+            val container = OnboardingContainer(controller, FakeOnboardingCompletionCache())
 
             container.test(this) {
                 runOnCreate()
@@ -168,7 +193,7 @@ class OnboardingContainerTest {
                             OnboardingPermission.NOTIFICATIONS to PermissionStatus.DENIED_PERMANENTLY,
                         ),
                 )
-            val container = OnboardingContainer(controller)
+            val container = OnboardingContainer(controller, FakeOnboardingCompletionCache())
 
             container.test(this) {
                 runOnCreate()

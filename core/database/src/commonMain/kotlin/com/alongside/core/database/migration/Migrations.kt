@@ -237,3 +237,13 @@ internal val MIGRATION_14_15: Migration =
             connection.execSQL("CREATE INDEX IF NOT EXISTS `index_place_swipes_tripId` ON `place_swipes` (`tripId`)")
         }
     }
+
+/** v15 -> v16 (onboarding-completion fix): a single-row table marking onboarding as done once. */
+internal val MIGRATION_15_16: Migration =
+    object : Migration(15, 16) {
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL(
+                "CREATE TABLE IF NOT EXISTS `onboarding_completion` (`id` TEXT NOT NULL, PRIMARY KEY(`id`))",
+            )
+        }
+    }
