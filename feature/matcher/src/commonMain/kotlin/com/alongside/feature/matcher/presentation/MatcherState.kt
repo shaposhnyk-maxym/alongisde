@@ -1,6 +1,7 @@
 package com.alongside.feature.matcher.presentation
 
 import androidx.compose.runtime.Immutable
+import com.alongside.core.domain.place.isMyTurn
 import com.alongside.core.domain.place.resolveMatchStatus
 import com.alongside.core.model.place.MatchStatus
 import com.alongside.core.model.place.PlaceCandidate
@@ -29,6 +30,23 @@ public data class MatcherState(
     val matches: List<PlaceCandidate>
         get() = candidates.filter { matchStatus(it) == MatchStatus.MATCHED }
 
+    /**
+     * Which [deck] candidates still need *my* decision: fresh ones, ones my partner already
+     * decided on, and splits offered back for reconsideration - excludes only "I've decided,
+     * partner hasn't yet" (nothing to do but wait). Doesn't determine display order - that's a
+     * UI-layer concern (see `MatcherContent`'s local queue).
+     */
+    val myTurnDeck: List<PlaceCandidate>
+        get() {
+            val uid = ownUserId ?: return emptyList()
+            return deck.filter { candidate ->
+                isMyTurn(
+                    mine = swipeDirection(candidate.id, uid),
+                    theirs = otherSwipeDirection(candidate.id, uid),
+                )
+            }
+        }
+
     internal fun matchStatus(candidate: PlaceCandidate): MatchStatus {
         val trip = trip ?: return MatchStatus.PENDING
         val ownerSwipe = swipeDirection(candidate.id, trip.ownerId)
@@ -40,4 +58,9 @@ public data class MatcherState(
         candidateId: String,
         userId: String,
     ) = swipes.find { it.candidateId == candidateId && it.userId == userId }?.direction
+
+    private fun otherSwipeDirection(
+        candidateId: String,
+        uid: String,
+    ) = swipes.find { it.candidateId == candidateId && it.userId != uid }?.direction
 }
