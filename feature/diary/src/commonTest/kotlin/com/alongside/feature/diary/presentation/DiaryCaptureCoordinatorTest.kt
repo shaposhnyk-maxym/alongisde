@@ -155,6 +155,41 @@ class DiaryCaptureCoordinatorTest {
         }
 
     @Test
+    fun `capture for a past day is rejected and persists nothing`() =
+        runTest {
+            val pastDate = LocalDate(2026, 7, 18)
+            val underTest = coordinator(FakeExifPhotoReader(mapOf("content://p1" to photo("p1"))))
+
+            underTest.capture(
+                tripId = "trip-1",
+                userId = "user-1",
+                date = pastDate,
+                existingEntryId = null,
+                uris = listOf("content://p1"),
+            )
+
+            assertEquals(0, diaryEntryRepository.upserted.size)
+            assertEquals(0, episodeRepository.upserted.size)
+            assertEquals(emptyList(), backgroundWorkScheduler.scheduledOneOffs)
+        }
+
+    @Test
+    fun `capture for today or a future day is not rejected`() =
+        runTest {
+            val underTest = coordinator(FakeExifPhotoReader(mapOf("content://p1" to photo("p1"))))
+
+            underTest.capture(
+                tripId = "trip-1",
+                userId = "user-1",
+                date = LocalDate(2026, 7, 20),
+                existingEntryId = null,
+                uris = listOf("content://p1"),
+            )
+
+            assertEquals(1, diaryEntryRepository.upserted.size)
+        }
+
+    @Test
     fun `retryIncompleteEpisodes heals a photo missing its remoteUrl and a missing description`() =
         runTest {
             val underTest = coordinator(FakeExifPhotoReader(emptyMap()))

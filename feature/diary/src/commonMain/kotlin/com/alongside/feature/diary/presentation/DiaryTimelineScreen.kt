@@ -43,6 +43,7 @@ public fun DiaryTimelineScreen(
     val state by container.collectAsState()
     DiaryTimelineContent(
         items = state.items,
+        today = state.today,
         modifier = modifier,
         onAddPhotos = onAddPhotos,
         onCloseDay = { date -> container.onIntent(DiaryTimelineIntent.CloseDay(date)) },
@@ -56,6 +57,7 @@ private val PagerContentPadding = PaddingValues(horizontal = PagerHorizontalPeek
 internal fun DiaryTimelineContent(
     items: List<DiaryTimelineItem>,
     modifier: Modifier = Modifier,
+    today: LocalDate? = null,
     onAddPhotos: (LocalDate) -> Unit = {},
     onCloseDay: (LocalDate) -> Unit = {},
 ) {
@@ -96,7 +98,12 @@ internal fun DiaryTimelineContent(
             }
             // Once a day is UNLOCKED there's nothing left to add or close - both sides' episodes
             // are already fully revealed, so the capture UI would just be a stale distraction.
-            if (selectedDay != null && selectedDay.unlockState == DayUnlockState.LOCKED) {
+            // A day whose own date has already passed (docs/roadmap.md M12.12) is hidden too -
+            // MISSED is computed, not stored, so backdating a capture into it would just flip it
+            // back to READY; `today == null` (state not loaded yet) defaults to showing, not
+            // hiding, since `items` is only ever non-empty once `today` is known too.
+            val isPastDay = selectedDay != null && today != null && selectedDay.date < today
+            if (selectedDay != null && selectedDay.unlockState == DayUnlockState.LOCKED && !isPastDay) {
                 CaptureButtonArea(
                     day = selectedDay,
                     onAddPhotosClick = {
@@ -131,8 +138,9 @@ internal fun DiaryTimelineContent(
  * (docs/roadmap.md M12.6) - what shows here depends entirely on [day]: no own episodes yet ->
  * just "Add Photos"; own episodes already added but not closed -> both "Add Photos" (which now
  * warns before proceeding) and "Close Day"; closed -> neither, a day closed once is final and can
- * never be reopened for capture on this side. Restricting this to today/the trip's date range is
- * a deliberate follow-up, not enforced yet - any day in the carousel is capturable for now.
+ * never be reopened for capture on this side. The caller (`DiaryTimelineContent`) already hides
+ * this whole area once the day's date has passed (docs/roadmap.md M12.12) - restricting it to the
+ * trip's date range too (can't backdate before the trip started) remains a follow-up.
  */
 @Composable
 private fun CaptureButtonArea(

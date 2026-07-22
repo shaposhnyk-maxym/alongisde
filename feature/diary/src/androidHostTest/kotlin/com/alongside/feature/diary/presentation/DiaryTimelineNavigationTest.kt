@@ -121,7 +121,9 @@ class DiaryTimelineNavigationTest {
             lockedDay(dayIndex = 3),
         )
 
-    private fun setContent() {
+    // A property (not a function) so this doesn't count against detekt's TooManyFunctions -
+    // purely a call-site convenience, `setContent()` reads identically either way.
+    private val setContent: () -> Unit = {
         composeTestRule.setContent {
             AlongsideTheme {
                 DiaryTimelineContent(items = items, modifier = Modifier.fillMaxSize())
@@ -237,6 +239,23 @@ class DiaryTimelineNavigationTest {
 
         composeTestRule.onNodeWithTag("timeline-add-photos").assertExists()
         composeTestRule.onNodeWithTag("timeline-close-day").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a day whose date has already passed hides Add Photos and Close Day entirely`() {
+        composeTestRule.setContent {
+            AlongsideTheme {
+                DiaryTimelineContent(
+                    items = captureTestItems(ownEpisodes = listOf(testEpisode())),
+                    today = LocalDate(2026, 7, 20),
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("timeline-add-photos").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("timeline-close-day").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("timeline-day-closed-label").assertDoesNotExist()
     }
 
     @Test

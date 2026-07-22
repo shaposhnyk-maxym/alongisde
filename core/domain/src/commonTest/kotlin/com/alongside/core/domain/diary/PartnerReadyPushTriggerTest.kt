@@ -111,12 +111,38 @@ class PartnerReadyPushTriggerTest {
     }
 
     @Test
-    fun `both synced for a day that has already passed triggers without an explicit close`() {
+    fun `both synced for a day that has already passed but has no episodes does not trigger`() {
+        assertFalse(
+            shouldTriggerPartnerReadyPush(
+                own = entry("own", SyncStatus.SYNCED),
+                partner = entry("partner", SyncStatus.SYNCED),
+                today = TODAY.plus(1, DateTimeUnit.DAY),
+            ),
+        )
+    }
+
+    @Test
+    fun `both synced for a day that has already passed with episodes on both sides triggers`() {
         assertTrue(
             shouldTriggerPartnerReadyPush(
                 own = entry("own", SyncStatus.SYNCED),
                 partner = entry("partner", SyncStatus.SYNCED),
                 today = TODAY.plus(1, DateTimeUnit.DAY),
+                ownHasEpisodes = true,
+                partnerHasEpisodes = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `own side missing episodes for a passed day does not trigger even if partner has some`() {
+        assertFalse(
+            shouldTriggerPartnerReadyPush(
+                own = entry("own", SyncStatus.SYNCED),
+                partner = entry("partner", SyncStatus.SYNCED),
+                today = TODAY.plus(1, DateTimeUnit.DAY),
+                ownHasEpisodes = false,
+                partnerHasEpisodes = true,
             ),
         )
     }
