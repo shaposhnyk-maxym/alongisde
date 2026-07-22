@@ -50,7 +50,7 @@ class PairingContainerTest {
 
             containerUnderTest().test(this) {
                 runOnCreate()
-                expectState { copy(ownTrip = ownTrip) }
+                expectState { copy(isCheckingTrip = false, ownTrip = ownTrip) }
                 cancelAndIgnoreRemainingItems()
             }
         }
@@ -63,6 +63,33 @@ class PairingContainerTest {
             containerUnderTest().test(this) {
                 runOnCreate()
                 expectSideEffect(PairingSideEffect.Paired)
+                cancelAndIgnoreRemainingItems()
+            }
+        }
+
+    @Test
+    fun `no existing trip flips isCheckingTrip to false without a side effect`() =
+        runTest {
+            containerUnderTest().test(this) {
+                runOnCreate()
+                expectState { copy(isCheckingTrip = false) }
+                cancelAndIgnoreRemainingItems()
+            }
+        }
+
+    @Test
+    fun `no signed-in user leaves isCheckingTrip false without observing anything`() =
+        runTest {
+            val container =
+                PairingContainer(
+                    pairingRepository = repository,
+                    authSessionCache = FakeAuthSessionCache(session = null),
+                    clock = FixedClock,
+                )
+
+            container.test(this) {
+                runOnCreate()
+                expectState { copy(isCheckingTrip = false) }
                 cancelAndIgnoreRemainingItems()
             }
         }
@@ -109,6 +136,7 @@ class PairingContainerTest {
         runTest {
             containerUnderTest().test(this) {
                 runOnCreate()
+                expectState { copy(isCheckingTrip = false) }
                 containerHost.onIntent(PairingIntent.PickTripDates)
                 val expectedStart = FixedClock.todayIn(TimeZone.currentSystemDefault())
                 expectState {
@@ -185,6 +213,7 @@ class PairingContainerTest {
         runTest {
             containerUnderTest().test(this) {
                 runOnCreate()
+                expectState { copy(isCheckingTrip = false) }
                 containerHost.onIntent(PairingIntent.PickTripDates)
                 val expectedStart = FixedClock.todayIn(TimeZone.currentSystemDefault())
                 expectState {
@@ -253,6 +282,7 @@ class PairingContainerTest {
 
             containerUnderTest().test(this) {
                 runOnCreate()
+                expectState { copy(isCheckingTrip = false) }
                 containerHost.onIntent(PairingIntent.StartJoinFlow)
                 expectState { copy(isJoinFlowChosen = true) }
                 containerHost.onIntent(PairingIntent.CodeInputChanged("ABCD23"))
@@ -273,6 +303,7 @@ class PairingContainerTest {
 
             containerUnderTest().test(this) {
                 runOnCreate()
+                expectState { copy(isCheckingTrip = false) }
                 containerHost.onIntent(PairingIntent.StartJoinFlow)
                 expectState { copy(isJoinFlowChosen = true) }
                 containerHost.onIntent(PairingIntent.CodeInputChanged("ZZZZ99"))

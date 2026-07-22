@@ -19,6 +19,7 @@ public enum class PairingJoinError {
 
 @Immutable
 public data class PairingState(
+    val isCheckingTrip: Boolean = true,
     val ownTrip: Trip? = null,
     val isPickingDates: Boolean = false,
     val tripStartDate: LocalDate? = null,
