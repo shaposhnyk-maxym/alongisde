@@ -13,6 +13,7 @@ import com.alongside.core.database.dao.AuthSessionDao
 import com.alongside.core.database.dao.DiaryEntryDao
 import com.alongside.core.database.dao.EpisodeDao
 import com.alongside.core.database.dao.PlaceCandidateDao
+import com.alongside.core.database.dao.PlaceSwipeDao
 import com.alongside.core.database.dao.PushTokenDao
 import com.alongside.core.database.dao.SyncOperationDao
 import com.alongside.core.database.dao.TripDao
@@ -21,6 +22,7 @@ import com.alongside.core.database.entity.DiaryEntryEntity
 import com.alongside.core.database.entity.EpisodeEntity
 import com.alongside.core.database.entity.PhotoEntity
 import com.alongside.core.database.entity.PlaceCandidateEntity
+import com.alongside.core.database.entity.PlaceSwipeEntity
 import com.alongside.core.database.entity.PushTokenEntity
 import com.alongside.core.database.entity.SyncOperationEntity
 import com.alongside.core.database.entity.TripEntity
@@ -28,6 +30,7 @@ import com.alongside.core.database.migration.MIGRATION_10_11
 import com.alongside.core.database.migration.MIGRATION_11_12
 import com.alongside.core.database.migration.MIGRATION_12_13
 import com.alongside.core.database.migration.MIGRATION_13_14
+import com.alongside.core.database.migration.MIGRATION_14_15
 import com.alongside.core.database.migration.MIGRATION_3_4
 import com.alongside.core.database.migration.MIGRATION_4_5
 import com.alongside.core.database.migration.MIGRATION_5_6
@@ -39,6 +42,7 @@ import com.alongside.core.database.repository.AuthSessionCacheImpl
 import com.alongside.core.database.repository.DiaryEntryRepositoryImpl
 import com.alongside.core.database.repository.EpisodeRepositoryImpl
 import com.alongside.core.database.repository.PlaceCandidateRepositoryImpl
+import com.alongside.core.database.repository.PlaceSwipeRepositoryImpl
 import com.alongside.core.database.repository.RoomPairingTripDataSource
 import com.alongside.core.database.repository.SyncOperationStoreImpl
 import com.alongside.core.database.repository.TripRepositoryImpl
@@ -48,6 +52,7 @@ import com.alongside.core.domain.diary.DiaryEntryRepository
 import com.alongside.core.domain.diary.EpisodeRepository
 import com.alongside.core.domain.pairing.PairingTripDataSource
 import com.alongside.core.domain.place.PlaceCandidateRepository
+import com.alongside.core.domain.place.PlaceSwipeRepository
 import com.alongside.core.domain.trip.TripRepository
 import kotlinx.coroutines.Dispatchers
 
@@ -58,13 +63,14 @@ internal const val DATABASE_FILE_NAME = "alongside.db"
         TripEntity::class,
         DiaryEntryEntity::class,
         PlaceCandidateEntity::class,
+        PlaceSwipeEntity::class,
         EpisodeEntity::class,
         PhotoEntity::class,
         PushTokenEntity::class,
         AuthSessionEntity::class,
         SyncOperationEntity::class,
     ],
-    version = 14,
+    version = 15,
     exportSchema = true,
 )
 @TypeConverters(AlongsideTypeConverters::class, StringListTypeConverters::class, PlacePhotoListTypeConverters::class)
@@ -75,6 +81,8 @@ public abstract class AlongsideDatabase : RoomDatabase() {
     internal abstract fun diaryEntryDao(): DiaryEntryDao
 
     internal abstract fun placeCandidateDao(): PlaceCandidateDao
+
+    internal abstract fun placeSwipeDao(): PlaceSwipeDao
 
     internal abstract fun episodeDao(): EpisodeDao
 
@@ -109,6 +117,7 @@ public fun getRoomDatabase(builder: RoomDatabase.Builder<AlongsideDatabase>): Al
             MIGRATION_11_12,
             MIGRATION_12_13,
             MIGRATION_13_14,
+            MIGRATION_14_15,
         ).build()
 
 /** Factory rather than a public [AuthSessionCacheImpl] - keeps the Room-backed impl an internal detail. */
@@ -125,6 +134,9 @@ public fun AlongsideDatabase.episodeRepository(): EpisodeRepository = EpisodeRep
 
 /** Room-backed local [PlaceCandidateRepository] - the `data` module wraps it with sync-queue enqueueing. */
 public fun AlongsideDatabase.placeCandidateRepository(): PlaceCandidateRepository = PlaceCandidateRepositoryImpl(this)
+
+/** Room-backed local [PlaceSwipeRepository] - the `data` module wraps it with sync-queue enqueueing. */
+public fun AlongsideDatabase.placeSwipeRepository(): PlaceSwipeRepository = PlaceSwipeRepositoryImpl(this)
 
 /** Local (Room) side of pairing lookups - the `data` module composes it with the Firestore side. */
 public fun AlongsideDatabase.pairingTripLocalDataSource(): PairingTripDataSource = RoomPairingTripDataSource(this)

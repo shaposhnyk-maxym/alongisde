@@ -6,7 +6,6 @@ import com.alongside.core.database.AlongsideDatabase
 import com.alongside.core.database.entity.PlaceCandidateEntity
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.place.PlacePhoto
-import com.alongside.core.model.place.SwipeDirection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
@@ -41,18 +40,15 @@ class PlaceCandidateDaoTest {
     private fun placeEntity(
         id: String = "place-1",
         tripId: String = "trip-1",
-        ownerSwipe: SwipeDirection? = null,
-        memberSwipe: SwipeDirection? = null,
+        note: String? = null,
     ) = PlaceCandidateEntity(
         id = id,
         tripId = tripId,
         name = "Lviv Coffee Manufacture",
         latitude = 49.8397,
         longitude = 24.0297,
-        note = null,
+        note = note,
         addedByUserId = "owner-1",
-        ownerSwipe = ownerSwipe,
-        memberSwipe = memberSwipe,
         syncStatus = SyncStatus.PENDING,
         createdAt = Instant.fromEpochMilliseconds(1_752_600_000_000),
         updatedAt = Instant.fromEpochMilliseconds(1_752_600_000_000),
@@ -77,25 +73,13 @@ class PlaceCandidateDaoTest {
     @Test
     fun `upsert with existing id replaces existing row`() =
         runTest {
-            val original = placeEntity(ownerSwipe = null, memberSwipe = SwipeDirection.LIKE)
-            val replacement = original.copy(ownerSwipe = SwipeDirection.LIKE)
+            val original = placeEntity(note = null)
+            val replacement = original.copy(note = "Great coffee")
 
             dao.upsert(original)
             dao.upsert(replacement)
 
             assertEquals(replacement, dao.getById(original.id))
-        }
-
-    @Test
-    fun `nullable swipe columns round trip correctly`() =
-        runTest {
-            val place = placeEntity(ownerSwipe = null, memberSwipe = SwipeDirection.LIKE)
-
-            dao.upsert(place)
-
-            val loaded = dao.getById(place.id)
-            assertEquals(null, loaded?.ownerSwipe)
-            assertEquals(SwipeDirection.LIKE, loaded?.memberSwipe)
         }
 
     @Test
@@ -147,7 +131,7 @@ class PlaceCandidateDaoTest {
             dao.upsert(place)
             assertEquals(listOf(place), emissions.receive())
 
-            val updated = place.copy(ownerSwipe = SwipeDirection.LIKE)
+            val updated = place.copy(note = "Great coffee")
             dao.upsert(updated)
             assertEquals(listOf(updated), emissions.receive())
 

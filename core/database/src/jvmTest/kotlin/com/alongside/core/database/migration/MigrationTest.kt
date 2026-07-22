@@ -6,8 +6,11 @@ import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
 import com.alongside.core.database.AlongsideDatabase
+import com.alongside.core.database.entity.PlaceSwipeEntity
 import com.alongside.core.database.entity.SyncOperationEntity
+import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.place.PlacePhoto
+import com.alongside.core.model.place.SwipeDirection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import java.io.File
@@ -132,6 +135,7 @@ class MigrationTest {
                 MIGRATION_11_12,
                 MIGRATION_12_13,
                 MIGRATION_13_14,
+                MIGRATION_14_15,
             ).build()
 
     @Test
@@ -200,6 +204,7 @@ class MigrationTest {
                         MIGRATION_11_12,
                         MIGRATION_12_13,
                         MIGRATION_13_14,
+                        MIGRATION_14_15,
                     ).build()
             try {
                 val episode = database.episodeDao().getById("episode-1")
@@ -231,6 +236,7 @@ class MigrationTest {
                         MIGRATION_11_12,
                         MIGRATION_12_13,
                         MIGRATION_13_14,
+                        MIGRATION_14_15,
                     ).build()
             try {
                 val episode = database.episodeDao().getById("episode-1")
@@ -262,6 +268,7 @@ class MigrationTest {
                         MIGRATION_11_12,
                         MIGRATION_12_13,
                         MIGRATION_13_14,
+                        MIGRATION_14_15,
                     ).build()
             try {
                 val preMigrationEpisode = database.episodeDao().getById("episode-1")
@@ -304,6 +311,7 @@ class MigrationTest {
                         MIGRATION_11_12,
                         MIGRATION_12_13,
                         MIGRATION_13_14,
+                        MIGRATION_14_15,
                     ).build()
             try {
                 val preMigrationEntry = database.diaryEntryDao().getById("entry-1")
@@ -338,6 +346,7 @@ class MigrationTest {
                         MIGRATION_11_12,
                         MIGRATION_12_13,
                         MIGRATION_13_14,
+                        MIGRATION_14_15,
                     ).build()
             try {
                 val preMigrationEpisode = database.episodeDao().getById("episode-1")
@@ -373,6 +382,7 @@ class MigrationTest {
                     MIGRATION_11_12,
                     MIGRATION_12_13,
                     MIGRATION_13_14,
+                    MIGRATION_14_15,
                 )
             try {
                 val preMigrationPlace = database.placeCandidateDao().getById("place-1")
@@ -412,7 +422,7 @@ class MigrationTest {
                     .databaseBuilder<AlongsideDatabase>(name = v10File.absolutePath)
                     .setDriver(BundledSQLiteDriver())
                     .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
+                    .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
                     .build()
             try {
                 val preMigrationPlace = database.placeCandidateDao().getById("place-1")
@@ -455,7 +465,7 @@ class MigrationTest {
                     .databaseBuilder<AlongsideDatabase>(name = v11File.absolutePath)
                     .setDriver(BundledSQLiteDriver())
                     .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
+                    .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
                     .build()
             try {
                 val preMigrationPlace = database.placeCandidateDao().getById("place-1")
@@ -548,13 +558,68 @@ class MigrationTest {
             }
         }
 
-    private fun openVersion13To14Database(file: File): AlongsideDatabase =
-        Room
-            .databaseBuilder<AlongsideDatabase>(name = file.absolutePath)
-            .setDriver(BundledSQLiteDriver())
-            .setQueryCoroutineContext(Dispatchers.IO)
-            .addMigrations(MIGRATION_13_14)
-            .build()
+    @Test
+    fun `migration 14 to 15 drops place_candidates swipe columns and adds a usable place_swipes table`() =
+        runTest {
+            val v14File = File.createTempFile("migration-test-v14", ".db")
+            v14File.delete()
+            createVersion14Database(v14File)
+            val database = openDatabase(v14File, MIGRATION_14_15)
+            try {
+                // The whole point of the migration: place_candidates no longer has swipe columns,
+                // but the pre-existing row survives the table recreation with every other field intact.
+                val place = database.placeCandidateDao().getById("place-1")
+                assertEquals("Cafe", place?.name)
+
+                val swipe =
+                    PlaceSwipeEntity(
+                        id = "place-1::owner-1",
+                        tripId = "trip-1",
+                        candidateId = "place-1",
+                        userId = "owner-1",
+                        direction = SwipeDirection.LIKE,
+                        swipedAt = Instant.fromEpochMilliseconds(1_000),
+                        syncStatus = SyncStatus.PENDING,
+                        updatedAt = Instant.fromEpochMilliseconds(1_000),
+                    )
+                database.placeSwipeDao().upsert(swipe)
+                assertEquals(swipe, database.placeSwipeDao().getById(swipe.id))
+            } finally {
+                database.close()
+                v14File.delete()
+            }
+        }
+
+    private fun createVersion14Database(file: File) {
+        val connection = BundledSQLiteDriver().open(file.absolutePath)
+        try {
+            connection.createVersion4SyncableTables()
+            connection.createVersion9AuxiliaryTables()
+            connection.execSQL(
+                "ALTER TABLE `place_candidates` ADD COLUMN `photos` TEXT NOT NULL DEFAULT ''",
+            )
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `rating` REAL")
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `category` TEXT")
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `city` TEXT")
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `cityPlaceId` TEXT")
+            connection.execSQL("ALTER TABLE `place_candidates` ADD COLUMN `countryCode` TEXT")
+            connection.execSQL("ALTER TABLE `episodes` ADD COLUMN `city` TEXT")
+            connection.execSQL("ALTER TABLE `episodes` ADD COLUMN `cityPlaceId` TEXT")
+            connection.execSQL("ALTER TABLE `episodes` ADD COLUMN `countryCode` TEXT")
+            connection.execSQL("ALTER TABLE `episodes` ADD COLUMN `geocodeAttempts` INTEGER NOT NULL DEFAULT 0")
+            connection.execSQL(
+                "INSERT INTO place_candidates (id, tripId, name, latitude, longitude, note, addedByUserId, " +
+                    "ownerSwipe, memberSwipe, syncStatus, createdAt, updatedAt, photos, rating, category, " +
+                    "city, cityPlaceId, countryCode) VALUES ('place-1', 'trip-1', 'Cafe', 49.0, 24.0, NULL, " +
+                    "'owner-1', NULL, NULL, 'PENDING', 333, 333, '', 4.3, 'Restaurant', 'Lviv', NULL, NULL)",
+            )
+            connection.execSQL("PRAGMA user_version = 14")
+        } finally {
+            connection.close()
+        }
+    }
+
+    private fun openVersion13To14Database(file: File) = openDatabase(file, MIGRATION_13_14, MIGRATION_14_15)
 
     private fun createVersion13Database(file: File) {
         val connection = BundledSQLiteDriver().open(file.absolutePath)
@@ -599,7 +664,10 @@ class MigrationTest {
             .addMigrations(*migrations)
             .build()
 
-    private fun openVersion12To13Database(file: File) = openDatabase(file, MIGRATION_12_13, MIGRATION_13_14)
+    private fun openVersion12To13Database(file: File): AlongsideDatabase {
+        val migrations = arrayOf(MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
+        return openDatabase(file, *migrations)
+    }
 
     private fun createVersion12Database(file: File) {
         val connection = BundledSQLiteDriver().open(file.absolutePath)

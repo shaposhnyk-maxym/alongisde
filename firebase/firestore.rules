@@ -6,6 +6,8 @@ rules_version = '2';
 //   diaryEntries/{diaryEntryId}   - field tripId
 //   episodes/{episodeId}         - field diaryEntryId (no tripId of its own - looked up via parent)
 //   placeCandidates/{placeId}    - field tripId
+//   placeSwipes/{swipeId}        - fields tripId, candidateId, userId (doc id is deterministic:
+//                                   "$candidateId::$userId", one doc per user per candidate)
 //   pushTokens/{userId}          - one FCM token per user, doc id == owner's uid
 //
 // Scope of "owner-only delete" (docs/backend-plan.md): interpreted here as applying to the Trip
@@ -107,9 +109,21 @@ service cloud.firestore {
         request.resource.data.addedByUserId == request.auth.uid &&
         isTripMember(request.resource.data.tripId);
 
-      // Either trip member can update (swiping sets ownerSwipe/memberSwipe on the *other*
-      // member's card too) or delete (matcher business logic removes rejected/matched cards).
+      // Either trip member can update (e.g. retrying a failed photo upload) or delete - swiping
+      // no longer touches this document at all (see placeSwipes below, M14).
       allow update, delete: if isSignedIn() && isTripMember(resource.data.tripId);
+    }
+
+    match /placeSwipes/{swipeId} {
+      // A swipe record's owner is baked into who is allowed to write it - never "any trip
+      // member", unlike placeCandidates above. This is the actual enforcement of the M14 design
+      // (docs/roadmap.md): the client-side convention of "only ever write your own userId" is
+      // not a security boundary without this rule backing it.
+      allow read: if isSignedIn() && (resource == null || isTripMember(resource.data.tripId));
+
+      allow create, update: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        isTripMember(request.resource.data.tripId);
     }
 
     // The doc id IS the owner's uid, so ownership is a path check, no resource.data read needed.

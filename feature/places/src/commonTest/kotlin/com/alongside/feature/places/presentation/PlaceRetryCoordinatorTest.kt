@@ -59,8 +59,6 @@ class PlaceRetryCoordinatorTest {
         longitude = 24.0297,
         note = null,
         addedByUserId = addedByUserId,
-        ownerSwipe = null,
-        memberSwipe = null,
         syncStatus = SyncStatus.SYNCED,
         createdAt = FIXED_NOW,
         updatedAt = FIXED_NOW,

@@ -23,8 +23,6 @@ private fun place(
     longitude = 0.0,
     note = null,
     addedByUserId = "owner-1",
-    ownerSwipe = null,
-    memberSwipe = null,
     syncStatus = SyncStatus.PENDING,
     createdAt = Instant.fromEpochMilliseconds(0),
     updatedAt = Instant.fromEpochMilliseconds(0),

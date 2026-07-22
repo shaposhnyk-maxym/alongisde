@@ -7,7 +7,6 @@ import com.alongside.core.database.placeCandidateRepository
 import com.alongside.core.database.sync.PersistedSyncOperationStatus
 import com.alongside.core.database.syncOperationStore
 import com.alongside.core.model.SyncStatus
-import com.alongside.core.model.place.SwipeDirection
 import com.alongside.core.network.firestore.model.FirestoreValue
 import com.alongside.core.network.queue.MaxAttemptsRetryPolicy
 import com.alongside.core.network.queue.SyncOperationType
@@ -81,7 +80,7 @@ class PlaceOfflineSyncIntegrationTest {
     @Test
     fun `offline write lands only in Room then a sync after the network appears pushes it remotely`() =
         runTest {
-            repository.upsert(testPlace(id = "place-1", ownerSwipe = SwipeDirection.LIKE))
+            repository.upsert(testPlace(id = "place-1"))
 
             assertEquals(emptyList(), networkClient.pushed)
             val stored = repository.getById("place-1")
@@ -97,7 +96,7 @@ class PlaceOfflineSyncIntegrationTest {
             assertEquals(SyncOperationType.UPSERT, pushed.type)
             assertEquals("placeCandidates", pushed.collectionPath)
             assertEquals("place-1", pushed.documentId)
-            assertEquals(FirestoreValue.StringValue("LIKE"), pushed.fields["ownerSwipe"])
+            assertEquals(FirestoreValue.StringValue("Lviv Coffee Manufacture"), pushed.fields["name"])
             val expected = repository.getById("place-1")!!
             assertEquals(PlaceCandidateFirestoreMapper.toFields(expected), pushed.fields)
 
