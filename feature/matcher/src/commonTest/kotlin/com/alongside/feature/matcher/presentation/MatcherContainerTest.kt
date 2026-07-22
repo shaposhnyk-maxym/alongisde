@@ -206,6 +206,31 @@ class MatcherContainerTest {
         }
 
     @Test
+    fun `an already-matched candidate at container creation does not re-fire Matched`() =
+        // Regression: a fresh MatcherContainer (e.g. re-navigating to this tab tears down and
+        // recreates the ViewModel) must not treat its first content load - which can already
+        // contain long-settled matches from Room - as a brand-new match worth a banner for.
+        runTest {
+            pairingRepository.activeTrip.value = fakeTrip()
+            placeCandidateRepository.seed(fakeCandidate("place-1"))
+            placeSwipeRepository.seed(
+                fakeSwipe("place-1", "member-1", SwipeDirection.LIKE),
+                fakeSwipe("place-1", "owner-1", SwipeDirection.LIKE),
+            )
+
+            containerUnderTest(uid = "owner-1").test(this) {
+                runOnCreate()
+                awaitState()
+                val loaded = awaitState()
+
+                assertEquals(listOf("place-1"), loaded.matches.map { it.id })
+                expectNoItems()
+
+                cancelAndIgnoreRemainingItems()
+            }
+        }
+
+    @Test
     fun `swiping as the owner writes a swipe record keyed by the owner's userId`() =
         runTest {
             pairingRepository.activeTrip.value = fakeTrip(ownerId = "owner-1", memberId = "member-1")

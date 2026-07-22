@@ -76,6 +76,13 @@ public class MatcherContainer(
                     .collectLatest { tripId -> if (tripId != null) pollTripContent(tripId, uid) }
             }
 
+            // A fresh MatcherContainer (e.g. re-navigating to this tab, which tears down and
+            // recreates the ViewModel - see AlongsideApp's tab-switch wiring) starts from an
+            // empty MatcherState. Without this flag, its very first content load would report
+            // EVERY already-matched candidate already sitting in Room as "newly matched" and
+            // re-fire the Matched banner for old news. Only the first emission is a baseline -
+            // everything after it is a real diff against the previous (already-reduced) state.
+            var hasLoadedInitialContent = false
             tripFlow
                 .flatMapLatest { trip -> observeTripContent(trip) }
                 .collect { content ->
@@ -83,9 +90,12 @@ public class MatcherContainer(
                     reduce {
                         state.copy(trip = content.trip, candidates = content.candidates, swipes = content.swipes)
                     }
-                    state.matches
-                        .filter { it.id !in previousMatchIds }
-                        .forEach { postSideEffect(MatcherSideEffect.Matched(it)) }
+                    if (hasLoadedInitialContent) {
+                        state.matches
+                            .filter { it.id !in previousMatchIds }
+                            .forEach { postSideEffect(MatcherSideEffect.Matched(it)) }
+                    }
+                    hasLoadedInitialContent = true
                 }
         }
     }
