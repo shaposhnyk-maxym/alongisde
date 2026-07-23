@@ -45,21 +45,36 @@ public class FirestorePairingTripDataSource(
 
     override fun observeByUserId(userId: String): Flow<Trip?> =
         channelFlow {
+            // Remembered ACROSS ticks, not just within one: the local delete behind a
+            // Leave/Delete Trip action happens whenever the user confirms it, with no
+            // synchronization to any particular poller tick - by the time a tick notices the
+            // local row is gone, it may have disappeared several ticks ago already. Once that's
+            // observed, its id stays suppressed (ignored if a lagging remote read still shows
+            // it) until local has something again, not just for the one tick it was noticed on.
+            var lastKnownTripId: String? = null
+            var suppressedId: String? = null
             val poller =
                 launch {
                     while (isActive) {
+                        val current = localLookup.getActiveTrip(userId)
+                        if (current != null) {
+                            lastKnownTripId = current.id
+                            suppressedId = null
+                        } else if (lastKnownTripId != null) {
+                            suppressedId = lastKnownTripId
+                            lastKnownTripId = null
+                        }
                         // Snapshotted BEFORE pushPendingSync(), not after: a trip pushed for the
                         // first time this very tick flips PENDING -> SYNCED locally, but Firestore
                         // may not yet answer a findTripByUserId query with what was just written
                         // (no same-tick read-after-write guarantee) - refreshFromRemote seeing an
                         // empty remote a moment later must not mistake that lag for a delete.
-                        val previouslySynced =
-                            localLookup.getActiveTrip(userId)?.takeIf { it.syncStatus == SyncStatus.SYNCED }
+                        val previouslySynced = current?.takeIf { it.syncStatus == SyncStatus.SYNCED }
                         // Push before pull: operations parked in the durable queue (a write
                         // that 403'd or happened offline) have no other trigger than save() -
                         // the poll tick is what drains them once connectivity/auth is back.
                         pushPendingSync()
-                        refreshFromRemote(userId, previouslySynced)
+                        refreshFromRemote(userId, previouslySynced, suppressedId)
                         delay(pollInterval)
                     }
                 }
@@ -106,22 +121,25 @@ public class FirestorePairingTripDataSource(
         }
     }
 
-    // [previouslySynced] must be the local trip's state from BEFORE this tick's pushPendingSync()
-    // - see the poller loop's comment for why deciding this from the current (post-push) local
-    // state would false-positive on a trip that just synced for the first time.
+    // [previouslySynced] and [suppressedId] are both decided from local state as of BEFORE this
+    // tick's pushPendingSync() - see the poller loop's comments for why.
     private suspend fun refreshFromRemote(
         userId: String,
         previouslySynced: Trip?,
+        suppressedId: String?,
     ) {
         try {
             val remoteTrip = remote.findTripByUserId(userId)
-            if (remoteTrip != null) {
-                cacheRemote(remoteTrip)
-            } else if (previouslySynced != null) {
-                // Gone on the remote and was already confirmed synced before this tick - deleted
-                // (by either owner or member, from either device). Without this the local cache
-                // stays stuck showing a trip that no longer exists anywhere, until app restart.
-                localLookup.delete(previouslySynced.id)
+            when {
+                remoteTrip != null && remoteTrip.id == suppressedId -> Unit // stale echo of our own delete
+                remoteTrip != null -> cacheRemote(remoteTrip)
+                previouslySynced != null -> {
+                    // Gone on the remote and was already confirmed synced before this tick -
+                    // deleted by the other person, from their device. Without this the local
+                    // cache stays stuck showing a trip that no longer exists anywhere, until
+                    // app restart.
+                    localLookup.delete(previouslySynced.id)
+                }
             }
         } catch (e: FirestoreException) {
             val detail =

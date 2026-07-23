@@ -189,6 +189,30 @@ class FirestorePairingTripDataSourceTest {
         }
 
     @Test
+    fun `deleting the trip locally is not undone by a stale remote read in the same poll tick`() =
+        runTest {
+            // Own-device delete: local.delete() runs synchronously, but the durable DELETE
+            // operation only gets *pushed* to Firestore inside this same tick's pushPendingSync()
+            // - remote.tripsByUserId is a separate fake here (standing in for Firestore not yet
+            // reflecting a write it was just sent), so the immediately-following remote read
+            // must not resurrect the trip it was just told to delete.
+            val trip = testTrip(id = "trip-1", ownerId = "owner-1", memberId = "member-1", syncStatus = SyncStatus.SYNCED)
+            local.save(trip)
+            remote.tripsByUserId["owner-1"] = trip
+            val emissions = mutableListOf<Trip?>()
+            val collector = launch { dataSource.observeByUserId("owner-1").collect { emissions += it } }
+            runCurrent()
+
+            syncingTrips.delete("trip-1")
+            advanceTimeBy(POLL_INTERVAL)
+            runCurrent()
+
+            assertNull(emissions.last())
+            assertNull(local.getById("trip-1"))
+            collector.cancel()
+        }
+
+    @Test
     fun `polling failures keep the local flow alive`() =
         runTest {
             val created = testTrip(id = "trip-1", ownerId = "owner-1")
