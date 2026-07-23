@@ -56,6 +56,9 @@ class DefaultTripManagementRepositoryTest {
             assertNull(left.trip.memberId)
             assertEquals("owner-1", left.trip.ownerId)
             assertEquals(left.trip, tripRepository.getById(trip.id))
+            // forceUpsert, not upsert - a leave must never be a plain, conflict-checkable write.
+            assertEquals(listOf(left.trip), tripRepository.forceUpserted)
+            assertEquals(emptyList(), tripRepository.upserted)
         }
 
     @Test
@@ -70,6 +73,8 @@ class DefaultTripManagementRepositoryTest {
             assertEquals("member-1", transferred.trip.ownerId)
             assertNull(transferred.trip.memberId)
             assertEquals(transferred.trip, tripRepository.getById(trip.id))
+            assertEquals(listOf(transferred.trip), tripRepository.forceUpserted)
+            assertEquals(emptyList(), tripRepository.upserted)
         }
 
     @Test
@@ -96,6 +101,7 @@ class DefaultTripManagementRepositoryTest {
             assertEquals(LeaveTripResult.NotFound, result)
             assertEquals(emptyList(), tripRepository.deletedIds)
             assertEquals(emptyList(), tripRepository.upserted)
+            assertEquals(emptyList(), tripRepository.forceUpserted)
         }
 
     @Test

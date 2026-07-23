@@ -110,14 +110,13 @@ class ConfirmedTripManagementRepositoryTest {
         }
 
     @Test
-    fun `leaveTrip reports SyncFailed, not success, when a concurrent remote write silently discards it`() =
+    fun `leaveTrip is never silently discarded by a concurrent remote write claiming a newer timestamp`() =
         runTest {
-            // The preflight conflict check for an UPSERT applies the remote copy locally and
-            // drops the operation from the queue when remote looks newer (SyncCoordinator.
-            // preflight's REMOTE_WON branch) - that op never reaches processor.processAll, so it
-            // shows up in neither succeeded nor failed. A confirmation check that only looks at
-            // those two lists would report the leave as confirmed even though it was just
-            // silently reverted back to memberId="member-1" by applyRemote.
+            // Leaving goes through TripRepository.forceUpsert, so the underlying SyncOperation is
+            // FORCE_UPSERT - SyncCoordinator.preflight skips the conflict-check read entirely for
+            // it (same as DELETE), so a remote document claiming a "newer" updatedAt (clock skew
+            // between the two devices, or any other concurrent write) can never silently revert
+            // the leave back to memberId="member-1" the way a plain UPSERT's preflight could.
             val trip = testTrip(id = "trip-1", ownerId = "owner-1", memberId = "member-1", updatedAt = FIXED_NOW)
             local.upsert(trip)
             remoteReader.documents["trip-1"] =
@@ -125,8 +124,9 @@ class ConfirmedTripManagementRepositoryTest {
 
             val result = repository.leaveTrip("trip-1", "member-1")
 
-            assertEquals(LeaveTripResult.SyncFailed, result)
-            assertEquals("member-1", local.getById("trip-1")?.memberId)
+            assertIs<LeaveTripResult.Left>(result)
+            assertEquals(emptyList(), remoteReader.readDocumentIds)
+            assertEquals(null, local.getById("trip-1")?.memberId)
         }
 
     @Test

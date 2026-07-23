@@ -11,6 +11,7 @@ internal class FakeTripRepository : TripRepository {
     private val trips = MutableStateFlow<Map<String, Trip>>(emptyMap())
 
     val upserted = mutableListOf<Trip>()
+    val forceUpserted = mutableListOf<Trip>()
     val deletedIds = mutableListOf<String>()
 
     fun seed(trip: Trip) {
@@ -19,6 +20,11 @@ internal class FakeTripRepository : TripRepository {
 
     override suspend fun upsert(trip: Trip) {
         upserted += trip
+        trips.update { it + (trip.id to trip) }
+    }
+
+    override suspend fun forceUpsert(trip: Trip) {
+        forceUpserted += trip
         trips.update { it + (trip.id to trip) }
     }
 

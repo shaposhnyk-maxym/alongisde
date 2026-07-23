@@ -53,6 +53,11 @@ public class SyncCoordinator(
     @Suppress("SwallowedException")
     private suspend fun preflight(operation: SyncOperation): PreflightOutcome {
         val localUpdatedAt = operation.fields.updatedAtOrNull()
+        // DELETE and FORCE_UPSERT both fall out of this `!= UPSERT` check deliberately - only a
+        // plain UPSERT (routine offline-first writes) goes through last-write-wins conflict
+        // resolution at all. FORCE_UPSERT exists specifically so a deliberate, user-confirmed
+        // change (Leave Trip) can never be silently overridden by a concurrent remote write -
+        // client clocks aren't reliable enough across two devices to gate that on a timestamp.
         if (operation.type != SyncOperationType.UPSERT || localUpdatedAt == null) {
             return PreflightOutcome.PUSH
         }

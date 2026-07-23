@@ -16,11 +16,17 @@ internal class RecordingTripRepository :
     PairingTripDataSource {
     private val trips = MutableStateFlow<Map<String, Trip>>(emptyMap())
     val upserted = mutableListOf<Trip>()
+    val forceUpserted = mutableListOf<Trip>()
     val deletedIds = mutableListOf<String>()
     val savedDirectly = mutableListOf<Trip>()
 
     override suspend fun upsert(trip: Trip) {
         upserted += trip
+        trips.value = trips.value + (trip.id to trip)
+    }
+
+    override suspend fun forceUpsert(trip: Trip) {
+        forceUpserted += trip
         trips.value = trips.value + (trip.id to trip)
     }
 

@@ -26,6 +26,7 @@ public object SyncOperationCodec {
                 when (operation.type) {
                     SyncOperationType.UPSERT -> PersistedSyncOperationType.UPSERT
                     SyncOperationType.DELETE -> PersistedSyncOperationType.DELETE
+                    SyncOperationType.FORCE_UPSERT -> PersistedSyncOperationType.FORCE_UPSERT
                 },
             fieldsJson = firestoreJson.encodeToString<Map<String, FirestoreValue>>(operation.fields),
             attempts = operation.attempts,
@@ -42,6 +43,7 @@ public object SyncOperationCodec {
                 when (record.type) {
                     PersistedSyncOperationType.UPSERT -> SyncOperationType.UPSERT
                     PersistedSyncOperationType.DELETE -> SyncOperationType.DELETE
+                    PersistedSyncOperationType.FORCE_UPSERT -> SyncOperationType.FORCE_UPSERT
                 },
             fields = firestoreJson.decodeFromString<Map<String, FirestoreValue>>(record.fieldsJson),
             attempts = record.attempts,

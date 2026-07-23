@@ -15,6 +15,11 @@ internal class TripRepositoryImpl(
         database.tripDao().upsert(trip.toEntity())
     }
 
+    // Purely local storage has no concept of a remote conflict to override - identical to upsert.
+    override suspend fun forceUpsert(trip: Trip) {
+        database.tripDao().upsert(trip.toEntity())
+    }
+
     override suspend fun getById(id: String): Trip? = database.tripDao().getById(id)?.toDomain()
 
     override fun observeById(id: String): Flow<Trip?> = database.tripDao().observeById(id).map { it?.toDomain() }

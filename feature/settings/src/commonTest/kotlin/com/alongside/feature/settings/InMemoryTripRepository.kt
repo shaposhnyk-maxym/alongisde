@@ -15,6 +15,10 @@ internal class InMemoryTripRepository : TripRepository {
         trips.update { it + (trip.id to trip) }
     }
 
+    override suspend fun forceUpsert(trip: Trip) {
+        trips.update { it + (trip.id to trip) }
+    }
+
     override suspend fun getById(id: String): Trip? = trips.value[id]
 
     override fun observeById(id: String): Flow<Trip?> = trips.map { it[id] }

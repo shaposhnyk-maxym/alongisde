@@ -25,16 +25,19 @@ public class DefaultTripManagementRepository(
     ): LeaveTripResult {
         val trip = tripRepository.getById(tripId) ?: return LeaveTripResult.NotFound
         return when (callerId) {
+            // forceUpsert, not upsert: leaving/transferring ownership is a deliberate,
+            // user-confirmed action - it must never be silently overridden by a concurrent
+            // remote write just because that write's client clock claims a later timestamp.
             trip.memberId -> {
                 val updated = trip.copy(memberId = null)
-                tripRepository.upsert(updated)
+                tripRepository.forceUpsert(updated)
                 LeaveTripResult.Left(updated)
             }
             trip.ownerId -> {
                 val member = trip.memberId
                 if (member != null) {
                     val updated = trip.copy(ownerId = member, memberId = null)
-                    tripRepository.upsert(updated)
+                    tripRepository.forceUpsert(updated)
                     LeaveTripResult.OwnershipTransferred(updated)
                 } else {
                     tripRepository.delete(tripId)
