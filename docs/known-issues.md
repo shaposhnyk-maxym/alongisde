@@ -47,20 +47,52 @@ onboarding-багу. Збіг у часі, ймовірно, через те, щ
 
 ---
 
-## (не баг, для довідки) 404 при резолві Google Maps share-link
+## ✅ fixed — Імпорт місця через share-лінк працював лише один раз
 
-**Знайдено:** 2026-07-22, разом з онбордінг-багом, спершу здавалось
-пов'язаним
+**Знайдено:** 2026-07-22, живе тестування, реальний пристрій. Раніше
+помилково записано нижче як "не баг" (одноразовий 404) — насправді то
+був симптом двох реальних, окремих багів, обидва підтверджені живими
+логами й виправлені в тій самій сесії.
 
-**Симптом:** одноразова помилка "Expected a redirect with a Location
-header, got HTTP 404" при імпорті місця через share-лінк.
+**Симптом:** перший share → Alongside через Google Maps працював
+коректно (картка, Add to Places, синк у Firestore). Кожен наступний
+share або показував картку/помилку від ПЕРШОГО імпорту, або взагалі
+одразу кидав на головний екран — і так назавжди, поки не стерти всі
+дані застосунку.
 
-**Причина:** `KtorShareLinkRedirectResolver.kt:28-32` очікує
-редирект (3xx + `Location`-хедер) від `maps.app.goo.gl`
-short-URL; Google повернув 404 (лінк недійсний/rate-limited/зіпсований).
+**Причина 1 — кешування `PlaceImportContainer` через Koin/Navigation3:**
+`entry<PlaceImport>` (`app/.../AlongsideApp.kt`) викликав
+`koinViewModel<PlaceImportContainer> { parametersOf(shareText) }` без
+`key`. `AlongsideNavDisplay.android.kt`'s `NavDisplay` не має жодного
+`ViewModelStoreNavEntryDecorator`, тож усі entry цього застосунку
+резолвляться проти ОДНОГО Activity-рівня `ViewModelStore`. Koin/AndroidX
+кешують ViewModel за назвою класу, якщо `key`/`qualifier` не передано —
+тож кожен наступний share повертав закешований інстанс із ПЕРШИМ
+shareText, а `parametersOf(newShareText)` мовчки ігнорувався
+(`runImport()` в Orbit-контейнері виконується рівно один раз за
+інстанс). Підтверджено живими логами: `container.hashCode()` був
+ідентичним для кількох різних посилань підряд.
 
-**Висновок:** обробляється коректно — `PlaceImportPipeline` →
-`PlaceImportContainer` → dismissable `MessageCard` в
-`PlaceImportScreen`. Нічого не падає, auth/сесія не чіпаються.
-Нічого виправляти не треба — залишено тут лише щоб не сплутати з
-онбордінг-багом знову.
+**Виправлення:** `koinViewModel<PlaceImportContainer>(key = placeImport.shareText) { ... }`
+— кожен shareText тепер отримує власний інстанс.
+
+**Причина 2 — гонка з auth/pairing-гейтами на холодному старті:**
+`LaunchedEffect(pendingShareText)` пушив `PlaceImport` на стек негайно,
+але `entry<Login>`/`entry<Onboarding>`/`entry<Pairing>`'s side-effect
+хендлери роблять безумовний `backStack.resetTo(...)` в момент, коли їхня
+умова вже виконана (сесія відновлена, вже в трипі) — і цей resetTo
+повністю затирає стек, включно з щойно доданим `PlaceImport`, якщо гейт
+довершується вже ПІСЛЯ пуша. На холодному старті з share-інтентом це
+відбувалось майже завжди. Підтверджено живими логами: `entry<Login>
+SignedIn -> resetTo(Pairing)` і `entry<Pairing> Paired -> resetTo(Home)`
+фіксувались одразу після `entry<PlaceImport> composed`.
+
+**Виправлення:** `LaunchedEffect(pendingShareText)` тепер чекає (через
+`snapshotFlow { backStack.lastOrNull() }.first { ... }`), поки стек не
+мине `Login`/`Onboarding`/`Pairing`, і лише тоді пушить `PlaceImport` —
+гейт більше не може затерти картку, якої ще не було на стеці.
+
+**Відоме, не змінене цією сесією:** кожен share тепер пушить СВОЮ картку
+на стек (замість мовчки губити дані) — якщо шарити кілька місць підряд,
+не встигнувши підтвердити попередню картку, вони стекуються, і треба
+пройтись назад і підтвердити/відхилити кожну по черзі.

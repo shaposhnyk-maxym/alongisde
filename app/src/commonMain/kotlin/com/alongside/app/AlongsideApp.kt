@@ -10,6 +10,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
@@ -56,6 +57,7 @@ import com.alongside.feature.places.presentation.PlaceImportContainer
 import com.alongside.feature.places.presentation.PlaceImportScreen
 import com.alongside.feature.places.presentation.PlacesListContainer
 import com.alongside.feature.places.presentation.PlacesListScreen
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.modules.SerializersModule
@@ -129,6 +131,16 @@ public fun AlongsideApp(
 
     LaunchedEffect(pendingShareText) {
         pendingShareText?.let { text ->
+            // Wait for the auth/onboarding/pairing gate to settle before pushing PlaceImport -
+            // each gate step's own side effect does an unconditional backStack.resetTo(...) the
+            // moment its condition is satisfied (e.g. session restore completing, already-paired
+            // check), which would otherwise wipe out a PlaceImport entry pushed while a gate was
+            // still resolving (confirmed live: a share landing during cold-start session restore
+            // got silently discarded when SignedIn -> resetTo(Pairing) fired a moment later).
+            // There's also nothing useful to import into before pairing anyway - PlaceImportContainer
+            // itself requires an active trip.
+            snapshotFlow { backStack.lastOrNull() }
+                .first { it != null && it !is Login && it !is Onboarding && it !is Pairing }
             backStack.add(PlaceImport(text))
             onShareTextConsume()
         }
@@ -222,7 +234,15 @@ public fun AlongsideApp(
                     }
                 }
                 entry<PlaceImport> { placeImport ->
-                    val container = koinViewModel<PlaceImportContainer> { parametersOf(placeImport.shareText) }
+                    // key = shareText: without a distinguishing key, koinViewModel() resolves by
+                    // class name alone against this Activity's single ViewModelStore (Navigation3
+                    // gives no per-entry ViewModelStoreOwner here) - every share after the first
+                    // would silently get back the FIRST share's cached PlaceImportContainer,
+                    // ignoring its own shareText entirely (confirmed live via debug logging).
+                    val container =
+                        koinViewModel<PlaceImportContainer>(key = placeImport.shareText) {
+                            parametersOf(placeImport.shareText)
+                        }
                     PlaceImportScreen(
                         container = container,
                         onImport = { backStack.removeLastOrNull() },
