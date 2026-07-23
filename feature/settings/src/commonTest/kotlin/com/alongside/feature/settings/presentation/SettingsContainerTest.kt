@@ -124,6 +124,44 @@ class SettingsContainerTest {
         }
 
     @Test
+    fun `a failed delete sync does not fire the side effect`() =
+        runTest {
+            val trip = fakeTrip(ownerId = "owner-1", memberId = "member-1")
+            pairingRepository.activeTrip.value = trip
+            tripManagementRepository.nextDeleteResult = DeleteTripResult.SyncFailed
+
+            containerUnderTest(uid = "owner-1").test(this) {
+                runOnCreate()
+                expectState { copy(isLoading = false, trip = trip, currentUid = "owner-1") }
+                containerHost.onIntent(SettingsIntent.RequestDeleteTrip)
+                expectState { copy(pendingConfirmation = SettingsConfirmation.DELETE_TRIP) }
+                containerHost.onIntent(SettingsIntent.ConfirmPendingAction)
+                expectState { copy(isProcessing = true) }
+                expectState { copy(isProcessing = false, pendingConfirmation = null) }
+                cancelAndIgnoreRemainingItems()
+            }
+        }
+
+    @Test
+    fun `a failed leave sync does not fire the side effect`() =
+        runTest {
+            val trip = fakeTrip(ownerId = "owner-1", memberId = "member-1")
+            pairingRepository.activeTrip.value = trip
+            tripManagementRepository.nextLeaveResult = LeaveTripResult.SyncFailed
+
+            containerUnderTest(uid = "member-1").test(this) {
+                runOnCreate()
+                expectState { copy(isLoading = false, trip = trip, currentUid = "member-1") }
+                containerHost.onIntent(SettingsIntent.RequestLeaveTrip)
+                expectState { copy(pendingConfirmation = SettingsConfirmation.LEAVE_TRIP) }
+                containerHost.onIntent(SettingsIntent.ConfirmPendingAction)
+                expectState { copy(isProcessing = true) }
+                expectState { copy(isProcessing = false, pendingConfirmation = null) }
+                cancelAndIgnoreRemainingItems()
+            }
+        }
+
+    @Test
     fun `dismissing a confirmation clears it without calling the repository`() =
         runTest {
             val trip = fakeTrip(ownerId = "owner-1", memberId = "member-1")

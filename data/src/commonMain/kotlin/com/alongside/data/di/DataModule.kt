@@ -16,6 +16,8 @@ import com.alongside.core.domain.pairing.PairingTripDataSource
 import com.alongside.core.domain.place.PlaceCandidateRepository
 import com.alongside.core.domain.place.PlaceContentPuller
 import com.alongside.core.domain.place.PlaceSwipeRepository
+import com.alongside.core.domain.trip.DefaultTripManagementRepository
+import com.alongside.core.domain.trip.TripManagementRepository
 import com.alongside.core.domain.trip.TripRepository
 import com.alongside.core.network.firestore.FirestoreApi
 import com.alongside.core.network.queue.FirestoreSyncNetworkClient
@@ -38,6 +40,7 @@ import com.alongside.data.sync.FirestoreRemoteDocumentReader
 import com.alongside.data.sync.RemoteDocumentReader
 import com.alongside.data.sync.SyncCoordinator
 import com.alongside.data.sync.SyncEntityBinding
+import com.alongside.data.trip.ConfirmedTripManagementRepository
 import com.alongside.data.trip.SyncingTripRepository
 import com.alongside.data.trip.TripSyncEntityBinding
 import org.koin.core.module.Module
@@ -139,6 +142,12 @@ public val dataModule: Module =
                 trips = get(),
                 localLookup = get<AlongsideDatabase>().pairingTripLocalDataSource(),
                 remote = get(),
+                syncCoordinator = get(),
+            )
+        }
+        single<TripManagementRepository> {
+            ConfirmedTripManagementRepository(
+                delegate = DefaultTripManagementRepository(get()),
                 syncCoordinator = get(),
             )
         }

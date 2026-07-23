@@ -65,3 +65,17 @@ private fun SettingsDeleteConfirmationPreview() {
         ),
     )
 }
+
+@Preview
+@Composable
+private fun SettingsDeleteConfirmationProcessingPreview() {
+    SettingsPreview(
+        SettingsState(
+            isLoading = false,
+            trip = previewTrip,
+            currentUid = previewTrip.ownerId,
+            pendingConfirmation = SettingsConfirmation.DELETE_TRIP,
+            isProcessing = true,
+        ),
+    )
+}

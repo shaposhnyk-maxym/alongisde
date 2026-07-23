@@ -19,4 +19,7 @@ public sealed interface LeaveTripResult {
 
     /** No trip exists with this id, or the caller isn't its owner or member. */
     public data object NotFound : LeaveTripResult
+
+    /** Authorized and recorded, but couldn't be confirmed against the remote right now. */
+    public data object SyncFailed : LeaveTripResult
 }

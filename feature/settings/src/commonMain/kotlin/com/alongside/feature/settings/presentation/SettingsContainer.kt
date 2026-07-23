@@ -66,7 +66,11 @@ public class SettingsContainer(
                 }
                 SettingsConfirmation.LEAVE_TRIP -> {
                     val result = tripManagementRepository.leaveTrip(trip.id, uid)
-                    if (result !is LeaveTripResult.NotFound) postSideEffect(SettingsSideEffect.LeftOrDeletedTrip)
+                    val succeeded =
+                        result is LeaveTripResult.Left ||
+                            result is LeaveTripResult.OwnershipTransferred ||
+                            result is LeaveTripResult.Deleted
+                    if (succeeded) postSideEffect(SettingsSideEffect.LeftOrDeletedTrip)
                 }
             }
             reduce { state.copy(isProcessing = false, pendingConfirmation = null) }

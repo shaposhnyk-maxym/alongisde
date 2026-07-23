@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -19,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.alongside.core.ui.component.CircleIconButton
 import com.alongside.core.ui.component.InkGradientBackground
 import com.alongside.core.ui.component.OverlineLabel
@@ -86,6 +89,7 @@ internal fun SettingsContent(
     if (confirmation != null) {
         SettingsConfirmationDialog(
             confirmation = confirmation,
+            isProcessing = state.isProcessing,
             onConfirm = onConfirm,
             onDismiss = onDismissConfirmation,
         )
@@ -148,12 +152,16 @@ private fun SettingsRow(
 @Composable
 private fun SettingsConfirmationDialog(
     confirmation: SettingsConfirmation,
+    isProcessing: Boolean,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val isDelete = confirmation == SettingsConfirmation.DELETE_TRIP
     AlertDialog(
-        onDismissRequest = onDismiss,
+        // Not dismissible mid-flight: this is a real network write in progress (see
+        // ConfirmedTripManagementRepository), not an offline-first optimistic one - the dialog
+        // stays up with a spinner until the trip is confirmed gone, not just queued to become so.
+        onDismissRequest = { if (!isProcessing) onDismiss() },
         title = { Text(if (isDelete) "Delete Trip?" else "Leave Trip?") },
         text = {
             Text(
@@ -165,15 +173,19 @@ private fun SettingsConfirmationDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(
-                    text = if (isDelete) "Delete" else "Leave",
-                    color = if (isDelete) MaterialTheme.colorScheme.error else Color.Unspecified,
-                )
+            if (isProcessing) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            } else {
+                TextButton(onClick = onConfirm) {
+                    Text(
+                        text = if (isDelete) "Delete" else "Leave",
+                        color = if (isDelete) MaterialTheme.colorScheme.error else Color.Unspecified,
+                    )
+                }
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss, enabled = !isProcessing) { Text("Cancel") }
         },
     )
 }

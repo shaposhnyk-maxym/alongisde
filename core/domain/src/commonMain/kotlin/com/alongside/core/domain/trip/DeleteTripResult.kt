@@ -10,4 +10,7 @@ public sealed interface DeleteTripResult {
 
     /** No trip exists with this id. */
     public data object NotFound : DeleteTripResult
+
+    /** Authorized and recorded, but couldn't be confirmed against the remote right now. */
+    public data object SyncFailed : DeleteTripResult
 }
