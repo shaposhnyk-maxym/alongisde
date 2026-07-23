@@ -2292,6 +2292,30 @@ add/edit/delete) реалізовано read-only список:
   `city`; `PlaceCityGroup` отримав `countryCode`, похідний від першого
   місця в групі).
 
+**Оновлення (2026-07-23): share-link імпорт працював лише один раз за
+життя процесу — знайдено й виправлено, деталі в
+`docs/known-issues.md`.** Два незалежні баги, обидва підтверджені живими
+логами на реальному пристрої (не лише теоретично):
+- `entry<PlaceImport>` викликав `koinViewModel<PlaceImportContainer>()`
+  без `key` — оскільки `AlongsideNavDisplay.android.kt`'s `NavDisplay`
+  не має `ViewModelStoreNavEntryDecorator`, усі entry резолвляться проти
+  ОДНОГО Activity-рівня `ViewModelStore`, тож кожен наступний share
+  повертав закешований контейнер із ПЕРШИМ shareText. Фікс — один рядок:
+  `key = placeImport.shareText`. Свідомо НЕ ширший архітектурний фікс
+  (додати decorator по всьому застосунку) — `navigation3-ui` не публікує
+  iOS-артефактів (M6), тож Android-специфічний decorator однаково не
+  закрив би цей самий клас багу на iOS-шляху (`AlongsideNavDisplay`'s
+  плаский рендер); `key`-фікс живе в commonMain і працює однаково на
+  обох платформах без нової залежності.
+- Гонка між `LaunchedEffect(pendingShareText)` (пушить `PlaceImport`
+  негайно) і auth/onboarding/pairing-гейтами, чиї side-effect хендлери
+  роблять безумовний `backStack.resetTo(...)` в момент завершення
+  перевірки (сесія відновлена / вже в трипі) — на холодному старті з
+  share-інтентом гейт майже завжди довершувався ПІСЛЯ пуша й затирав
+  щойно додану картку. Фікс — `LaunchedEffect` тепер чекає
+  (`snapshotFlow { backStack.lastOrNull() }.first { ... }`), поки стек
+  не мине гейт-екрани, перш ніж пушити `PlaceImport`.
+
 ---
 
 ### M14 — Matcher: swipe & match mechanic ✅ done
