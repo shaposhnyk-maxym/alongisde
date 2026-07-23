@@ -2,6 +2,7 @@ package com.alongside.data.pairing
 
 import com.alongside.core.domain.pairing.PairingTripDataSource
 import com.alongside.core.domain.trip.TripRepository
+import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.trip.Trip
 import com.alongside.core.network.firestore.FirestoreException
 import com.alongside.data.sync.ConflictWinner
@@ -47,11 +48,18 @@ public class FirestorePairingTripDataSource(
             val poller =
                 launch {
                     while (isActive) {
+                        // Snapshotted BEFORE pushPendingSync(), not after: a trip pushed for the
+                        // first time this very tick flips PENDING -> SYNCED locally, but Firestore
+                        // may not yet answer a findTripByUserId query with what was just written
+                        // (no same-tick read-after-write guarantee) - refreshFromRemote seeing an
+                        // empty remote a moment later must not mistake that lag for a delete.
+                        val previouslySynced =
+                            localLookup.getActiveTrip(userId)?.takeIf { it.syncStatus == SyncStatus.SYNCED }
                         // Push before pull: operations parked in the durable queue (a write
                         // that 403'd or happened offline) have no other trigger than save() -
                         // the poll tick is what drains them once connectivity/auth is back.
                         pushPendingSync()
-                        refreshFromRemote(userId)
+                        refreshFromRemote(userId, previouslySynced)
                         delay(pollInterval)
                     }
                 }
@@ -78,6 +86,10 @@ public class FirestorePairingTripDataSource(
         pushPendingSync()
     }
 
+    override suspend fun delete(tripId: String) {
+        localLookup.delete(tripId)
+    }
+
     // catch(Throwable) is deliberate here, not an oversight: this is a poller's per-tick sync
     // call, and an unexpected (non-FirestoreException) failure must still be logged with a clear
     // "UNEXPECTED" marker before it's rethrown - swallowing it silently would make the poller die
@@ -94,9 +106,23 @@ public class FirestorePairingTripDataSource(
         }
     }
 
-    private suspend fun refreshFromRemote(userId: String) {
+    // [previouslySynced] must be the local trip's state from BEFORE this tick's pushPendingSync()
+    // - see the poller loop's comment for why deciding this from the current (post-push) local
+    // state would false-positive on a trip that just synced for the first time.
+    private suspend fun refreshFromRemote(
+        userId: String,
+        previouslySynced: Trip?,
+    ) {
         try {
-            remote.findTripByUserId(userId)?.also { cacheRemote(it) }
+            val remoteTrip = remote.findTripByUserId(userId)
+            if (remoteTrip != null) {
+                cacheRemote(remoteTrip)
+            } else if (previouslySynced != null) {
+                // Gone on the remote and was already confirmed synced before this tick - deleted
+                // (by either owner or member, from either device). Without this the local cache
+                // stays stuck showing a trip that no longer exists anywhere, until app restart.
+                localLookup.delete(previouslySynced.id)
+            }
         } catch (e: FirestoreException) {
             val detail =
                 when (e) {

@@ -149,6 +149,46 @@ class FirestorePairingTripDataSourceTest {
         }
 
     @Test
+    fun `observeByUserId clears a synced local trip the remote no longer has`() =
+        runTest {
+            // The other person deleted (or left, transferring ownership away from) the trip -
+            // remote has nothing for this user any more. Without this, the local cache would
+            // stay stuck showing a trip that's gone everywhere else, until the app restarts.
+            local.save(testTrip(id = "trip-1", ownerId = "owner-1", syncStatus = SyncStatus.SYNCED))
+            val emissions = mutableListOf<Trip?>()
+            val collector = launch { dataSource.observeByUserId("owner-1").collect { emissions += it } }
+            runCurrent()
+
+            // The poller's very first tick runs immediately (no initial delay) and races the
+            // local-observer's own first emission under the test dispatcher's eager scheduling -
+            // both orderings are valid here, only the settled end state matters.
+            advanceTimeBy(POLL_INTERVAL)
+            runCurrent()
+
+            assertNull(emissions.last())
+            assertEquals(listOf("trip-1"), local.deletedIds)
+            collector.cancel()
+        }
+
+    @Test
+    fun `observeByUserId does not clear a not-yet-synced local trip just because remote is empty`() =
+        runTest {
+            // createTrip while offline: local is PENDING and remote genuinely has nothing yet -
+            // that must not be mistaken for a remote delete.
+            local.save(testTrip(id = "trip-1", ownerId = "owner-1", syncStatus = SyncStatus.PENDING))
+            val emissions = mutableListOf<Trip?>()
+            val collector = launch { dataSource.observeByUserId("owner-1").collect { emissions += it } }
+            runCurrent()
+
+            advanceTimeBy(POLL_INTERVAL)
+            runCurrent()
+
+            assertEquals("trip-1", emissions.last()?.id)
+            assertEquals(emptyList(), local.deletedIds)
+            collector.cancel()
+        }
+
+    @Test
     fun `polling failures keep the local flow alive`() =
         runTest {
             val created = testTrip(id = "trip-1", ownerId = "owner-1")
