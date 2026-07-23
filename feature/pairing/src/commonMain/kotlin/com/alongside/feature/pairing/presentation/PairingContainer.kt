@@ -50,8 +50,18 @@ public class PairingContainer(
         }
         pairingRepository.observeActiveTrip(uid).collect { trip ->
             when {
-                trip == null -> reduce { state.copy(isCheckingTrip = false) }
-                trip.memberId != null -> postSideEffect(PairingSideEffect.Paired)
+                trip == null -> reduce { state.copy(isCheckingTrip = false, ownTrip = null) }
+                trip.memberId != null -> {
+                    // Reduce before the side effect, not just the side effect alone: this
+                    // container is a process-lifetime singleton (Navigation 3 gives no per-entry
+                    // ViewModelStoreOwner here), so if the caller ever leaves/deletes the trip and
+                    // is routed back to entry<Pairing>, this same collector fires again - without
+                    // this reduce, isCheckingTrip stays stuck at its initial `true` forever (this
+                    // branch never used to flip it), and PairingContent's `if (!isCheckingTrip)`
+                    // guard renders nothing until the app is force-restarted.
+                    reduce { state.copy(isCheckingTrip = false) }
+                    postSideEffect(PairingSideEffect.Paired)
+                }
                 trip.ownerId == uid -> reduce { state.copy(isCheckingTrip = false, ownTrip = trip) }
             }
         }

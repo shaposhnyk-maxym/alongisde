@@ -62,6 +62,7 @@ class PairingContainerTest {
 
             containerUnderTest().test(this) {
                 runOnCreate()
+                expectState { copy(isCheckingTrip = false) }
                 expectSideEffect(PairingSideEffect.Paired)
                 cancelAndIgnoreRemainingItems()
             }
