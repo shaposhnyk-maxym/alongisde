@@ -149,6 +149,7 @@ public val dataModule: Module =
             ConfirmedTripManagementRepository(
                 delegate = DefaultTripManagementRepository(get()),
                 syncCoordinator = get(),
+                tripRepository = get(),
             )
         }
     }
