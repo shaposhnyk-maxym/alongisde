@@ -8,6 +8,7 @@ import androidx.sqlite.execSQL
 import com.alongside.core.database.AlongsideDatabase
 import com.alongside.core.database.entity.OnboardingCompletionEntity
 import com.alongside.core.database.entity.PlaceSwipeEntity
+import com.alongside.core.database.entity.PreTripPhotoEntity
 import com.alongside.core.database.entity.SyncOperationEntity
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.place.PlacePhoto
@@ -139,6 +140,7 @@ class MigrationTest {
                 MIGRATION_13_14,
                 MIGRATION_14_15,
                 MIGRATION_15_16,
+                MIGRATION_16_17,
             ).build()
 
     @Test
@@ -209,6 +211,7 @@ class MigrationTest {
                         MIGRATION_13_14,
                         MIGRATION_14_15,
                         MIGRATION_15_16,
+                        MIGRATION_16_17,
                     ).build()
             try {
                 val episode = database.episodeDao().getById("episode-1")
@@ -242,6 +245,7 @@ class MigrationTest {
                         MIGRATION_13_14,
                         MIGRATION_14_15,
                         MIGRATION_15_16,
+                        MIGRATION_16_17,
                     ).build()
             try {
                 val episode = database.episodeDao().getById("episode-1")
@@ -272,6 +276,7 @@ class MigrationTest {
                     MIGRATION_13_14,
                     MIGRATION_14_15,
                     MIGRATION_15_16,
+                    MIGRATION_16_17,
                 )
             try {
                 val preMigrationEpisode = database.episodeDao().getById("episode-1")
@@ -316,6 +321,7 @@ class MigrationTest {
                         MIGRATION_13_14,
                         MIGRATION_14_15,
                         MIGRATION_15_16,
+                        MIGRATION_16_17,
                     ).build()
             try {
                 val preMigrationEntry = database.diaryEntryDao().getById("entry-1")
@@ -352,6 +358,7 @@ class MigrationTest {
                         MIGRATION_13_14,
                         MIGRATION_14_15,
                         MIGRATION_15_16,
+                        MIGRATION_16_17,
                     ).build()
             try {
                 val preMigrationEpisode = database.episodeDao().getById("episode-1")
@@ -379,24 +386,13 @@ class MigrationTest {
             val v9File = File.createTempFile("migration-test-v9", ".db")
             v9File.delete()
             createVersion9Database(v9File)
-            val database =
-                openDatabase(
-                    v9File,
-                    MIGRATION_9_10,
-                    MIGRATION_10_11,
-                    MIGRATION_11_12,
-                    MIGRATION_12_13,
-                    MIGRATION_13_14,
-                    MIGRATION_14_15,
-                    MIGRATION_15_16,
-                )
+            val database = openVersion9To10Database(v9File)
             try {
                 val preMigrationPlace = database.placeCandidateDao().getById("place-1")
                 assertEquals(emptyList(), preMigrationPlace?.photos)
                 assertEquals(null, preMigrationPlace?.rating)
                 assertEquals(null, preMigrationPlace?.category)
                 assertEquals(null, preMigrationPlace?.city)
-
                 val updatedPlace =
                     requireNotNull(preMigrationPlace).copy(
                         photos = listOf(PlacePhoto(photoRef = "places/abc/photos/photo-1", remoteUrl = null)),
@@ -405,7 +401,6 @@ class MigrationTest {
                         city = "Lviv",
                     )
                 database.placeCandidateDao().upsert(updatedPlace)
-
                 val reloaded = database.placeCandidateDao().getById("place-1")
                 assertEquals(updatedPlace.photos, reloaded?.photos)
                 assertEquals(4.3, reloaded?.rating)
@@ -432,6 +427,7 @@ class MigrationTest {
                     MIGRATION_13_14,
                     MIGRATION_14_15,
                     MIGRATION_15_16,
+                    MIGRATION_16_17,
                 )
             try {
                 val preMigrationPlace = database.placeCandidateDao().getById("place-1")
@@ -474,8 +470,14 @@ class MigrationTest {
                     .databaseBuilder<AlongsideDatabase>(name = v11File.absolutePath)
                     .setDriver(BundledSQLiteDriver())
                     .setQueryCoroutineContext(Dispatchers.IO)
-                    .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
-                    .build()
+                    .addMigrations(
+                        MIGRATION_11_12,
+                        MIGRATION_12_13,
+                        MIGRATION_13_14,
+                        MIGRATION_14_15,
+                        MIGRATION_15_16,
+                        MIGRATION_16_17,
+                    ).build()
             try {
                 val preMigrationPlace = database.placeCandidateDao().getById("place-1")
                 assertEquals(null, preMigrationPlace?.city)
@@ -573,7 +575,7 @@ class MigrationTest {
             val v14File = File.createTempFile("migration-test-v14", ".db")
             v14File.delete()
             createVersion14Database(v14File)
-            val database = openDatabase(v14File, MIGRATION_14_15, MIGRATION_15_16)
+            val database = openDatabase(v14File, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
             try {
                 // The whole point of the migration: place_candidates no longer has swipe columns,
                 // but the pre-existing row survives the table recreation with every other field intact.
@@ -605,7 +607,7 @@ class MigrationTest {
             val v15File = File.createTempFile("migration-test-v15", ".db")
             v15File.delete()
             createVersion15Database(v15File)
-            val database = openDatabase(v15File, MIGRATION_15_16)
+            val database = openDatabase(v15File, MIGRATION_15_16, MIGRATION_16_17)
             try {
                 // Pre-existing data survives untouched - this migration only adds a new table.
                 val place = database.placeCandidateDao().getById("place-1")
@@ -618,6 +620,49 @@ class MigrationTest {
                 v15File.delete()
             }
         }
+
+    @Test
+    fun `migration 16 to 17 adds a usable pre_trip_photos table`() =
+        runTest {
+            val v16File = File.createTempFile("migration-test-v16", ".db")
+            v16File.delete()
+            createVersion16Database(v16File)
+            val database = openDatabase(v16File, MIGRATION_16_17)
+            try {
+                // Pre-existing data survives untouched - this migration only adds a new table.
+                val place = database.placeCandidateDao().getById("place-1")
+                assertEquals("Cafe", place?.name)
+
+                val photo =
+                    PreTripPhotoEntity(
+                        id = "photo-1",
+                        tripId = "trip-1",
+                        userId = "owner-1",
+                        uri = "content://photos/photo-1",
+                        takenAt = Instant.fromEpochMilliseconds(1_000),
+                        latitude = 49.0,
+                        longitude = 24.0,
+                        remoteUrl = null,
+                        syncStatus = SyncStatus.PENDING,
+                    )
+                database.preTripPhotoDao().upsert(photo)
+                assertEquals(photo, database.preTripPhotoDao().getById("photo-1"))
+            } finally {
+                database.close()
+                v16File.delete()
+            }
+        }
+
+    private fun createVersion16Database(file: File) {
+        createVersion15Database(file)
+        val connection = BundledSQLiteDriver().open(file.absolutePath)
+        try {
+            MIGRATION_15_16.migrate(connection)
+            connection.execSQL("PRAGMA user_version = 16")
+        } finally {
+            connection.close()
+        }
+    }
 
     private fun createVersion15Database(file: File) {
         createVersion14Database(file)
@@ -659,8 +704,23 @@ class MigrationTest {
         }
     }
 
+    private fun openVersion9To10Database(file: File): AlongsideDatabase {
+        val migrations =
+            arrayOf(
+                MIGRATION_9_10,
+                MIGRATION_10_11,
+                MIGRATION_11_12,
+                MIGRATION_12_13,
+                MIGRATION_13_14,
+                MIGRATION_14_15,
+                MIGRATION_15_16,
+                MIGRATION_16_17,
+            )
+        return openDatabase(file, *migrations)
+    }
+
     private fun openVersion13To14Database(file: File): AlongsideDatabase {
-        val migrations = arrayOf(MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
+        val migrations = arrayOf(MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
         return openDatabase(file, *migrations)
     }
 
@@ -708,7 +768,7 @@ class MigrationTest {
             .build()
 
     private fun openVersion12To13Database(file: File): AlongsideDatabase {
-        val migrations = arrayOf(MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
+        val migrations = arrayOf(MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
         return openDatabase(file, *migrations)
     }
 

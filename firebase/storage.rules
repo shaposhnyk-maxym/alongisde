@@ -6,6 +6,10 @@ rules_version = '2';
 // trips-collection "read open to any authenticated user" TODO) - same tradeoff, same rationale:
 // two-person app, enumeration risk accepted for now. TODO(hardening): revisit if the object path
 // convention changes to embed tripId/ownerId.
+//
+// Pre-trip photos (M19.5, FirebasePreTripPhotoUploadClient) reuse this same flat path with a
+// `pretrip_`-prefixed object id, the same way place photos already do with a `place_` prefix -
+// no new match block needed, `photos/{photoId}` already covers any object id under it.
 service firebase.storage {
   match /b/{bucket}/o {
     match /photos/{photoId} {
