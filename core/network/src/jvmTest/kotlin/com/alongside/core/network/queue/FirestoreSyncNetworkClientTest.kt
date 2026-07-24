@@ -51,6 +51,24 @@ class FirestoreSyncNetworkClientTest {
         }
 
     @Test
+    fun `FORCE_UPSERT calls upsertDocument the same as UPSERT`() =
+        runBlocking {
+            var capturedMethod: HttpMethod? = null
+            val client =
+                clientWith { request ->
+                    capturedMethod = request.method
+                    respondJson(
+                        """{"name":"projects/alongside-test/databases/(default)/documents/trips/trip-1","fields":{}}""",
+                    )
+                }
+
+            val result = client.push(op(SyncOperationType.FORCE_UPSERT))
+
+            assertEquals(SyncResult.Success, result)
+            assertEquals(HttpMethod.Patch, capturedMethod)
+        }
+
+    @Test
     fun `DELETE calls deleteDocument and maps a 2xx response to Success`() =
         runBlocking {
             var capturedMethod: HttpMethod? = null

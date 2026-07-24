@@ -31,6 +31,17 @@ public class SyncingTripRepository
         private val generateOpId: () -> String = { Uuid.random().toString() },
     ) : TripRepository {
         override suspend fun upsert(trip: Trip) {
+            enqueueUpsert(trip, SyncOperationType.UPSERT)
+        }
+
+        override suspend fun forceUpsert(trip: Trip) {
+            enqueueUpsert(trip, SyncOperationType.FORCE_UPSERT)
+        }
+
+        private suspend fun enqueueUpsert(
+            trip: Trip,
+            type: SyncOperationType,
+        ) {
             val now = clock.now()
             val stamped = trip.copy(updatedAt = now, syncStatus = SyncStatus.PENDING)
             local.upsert(stamped)
@@ -39,7 +50,7 @@ public class SyncingTripRepository
                     id = generateOpId(),
                     collectionPath = TripFirestoreMapper.COLLECTION_PATH,
                     documentId = stamped.id,
-                    type = SyncOperationType.UPSERT,
+                    type = type,
                     fields = TripFirestoreMapper.toFields(stamped),
                 )
             store.append(SyncOperationCodec.toPersisted(operation, enqueuedAt = now))

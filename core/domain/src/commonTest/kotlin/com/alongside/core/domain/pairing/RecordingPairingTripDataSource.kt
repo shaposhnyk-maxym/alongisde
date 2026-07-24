@@ -12,6 +12,7 @@ internal class RecordingPairingTripDataSource : PairingTripDataSource {
 
     val savedTrips = mutableListOf<Trip>()
     val lookedUpCodes = mutableListOf<String>()
+    val deletedIds = mutableListOf<String>()
 
     override suspend fun findByInviteCode(code: String): Trip? {
         lookedUpCodes += code
@@ -29,5 +30,10 @@ internal class RecordingPairingTripDataSource : PairingTripDataSource {
     override suspend fun save(trip: Trip) {
         savedTrips += trip
         trips.update { it + (trip.id to trip) }
+    }
+
+    override suspend fun delete(tripId: String) {
+        deletedIds += tripId
+        trips.update { it - tripId }
     }
 }

@@ -22,6 +22,7 @@
     <application
         android:name=".AlongsideApplication"
         android:label="Alongside"
+        android:allowBackup="false"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity
             android:name=".MainActivity"

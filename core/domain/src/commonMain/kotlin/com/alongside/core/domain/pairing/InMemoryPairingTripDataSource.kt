@@ -27,6 +27,10 @@ public class InMemoryPairingTripDataSource : PairingTripDataSource {
         trips.update { it + (trip.id to trip) }
     }
 
+    override suspend fun delete(tripId: String) {
+        trips.update { it - tripId }
+    }
+
     /** Test helper: all stored trips, outside the interface. */
     public fun snapshot(): List<Trip> = trips.value.values.toList()
 }

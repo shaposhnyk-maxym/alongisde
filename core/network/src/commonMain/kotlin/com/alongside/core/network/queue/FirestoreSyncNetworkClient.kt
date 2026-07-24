@@ -11,7 +11,7 @@ public class FirestoreSyncNetworkClient(
     override suspend fun push(operation: SyncOperation): SyncResult =
         try {
             when (operation.type) {
-                SyncOperationType.UPSERT ->
+                SyncOperationType.UPSERT, SyncOperationType.FORCE_UPSERT ->
                     api.upsertDocument(operation.collectionPath, operation.documentId, operation.fields)
                 SyncOperationType.DELETE ->
                     api.deleteDocument(operation.collectionPath, operation.documentId)

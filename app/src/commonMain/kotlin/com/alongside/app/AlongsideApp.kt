@@ -57,6 +57,9 @@ import com.alongside.feature.places.presentation.PlaceImportContainer
 import com.alongside.feature.places.presentation.PlaceImportScreen
 import com.alongside.feature.places.presentation.PlacesListContainer
 import com.alongside.feature.places.presentation.PlacesListScreen
+import com.alongside.feature.settings.presentation.SettingsContainer
+import com.alongside.feature.settings.presentation.SettingsScreen
+import com.alongside.feature.settings.presentation.SettingsSideEffect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
@@ -262,10 +265,11 @@ public fun AlongsideApp(
                     }
                 }
                 entry<Settings> {
-                    PlaceholderScreen(
-                        title = "Settings",
-                        note = "Profile, permissions, leave or delete trip - feature:settings.",
-                    )
+                    val container = koinViewModel<SettingsContainer>()
+                    container.collectSideEffect { effect ->
+                        if (effect is SettingsSideEffect.LeftOrDeletedTrip) backStack.resetTo(Pairing)
+                    }
+                    SettingsScreen(container, onClose = { backStack.removeLastOrNull() })
                 }
                 entry<Recap> {
                     PlaceholderScreen(

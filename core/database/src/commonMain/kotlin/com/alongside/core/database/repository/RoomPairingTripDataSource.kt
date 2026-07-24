@@ -22,4 +22,8 @@ internal class RoomPairingTripDataSource(
     override suspend fun save(trip: Trip) {
         dao.upsert(trip.toEntity())
     }
+
+    override suspend fun delete(tripId: String) {
+        dao.delete(tripId)
+    }
 }

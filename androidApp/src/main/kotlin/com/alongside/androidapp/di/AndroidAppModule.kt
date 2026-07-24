@@ -86,6 +86,8 @@ public fun androidAppModule(
     single { InviteCodeGenerator() }
     single<BackgroundWorkScheduler> { AndroidWorkManagerScheduler(context) }
     // PairingTripDataSource comes from dataModule (Room + Firestore) since M9.
+    // TripManagementRepository comes from dataModule too - it needs SyncCoordinator to confirm
+    // Leave/Delete Trip against Firestore before returning.
     single<PairingRepository> { DefaultPairingRepository(get(), get()) }
     single { GooglePlacesConfig(apiKey = googlePlacesApiKey) }
     single { GooglePlacesGeocodingApi(get(), get()) }

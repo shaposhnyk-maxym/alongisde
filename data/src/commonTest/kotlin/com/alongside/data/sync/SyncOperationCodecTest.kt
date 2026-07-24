@@ -63,6 +63,23 @@ class SyncOperationCodecTest {
     }
 
     @Test
+    fun `force-upsert operation round trips through the persisted record`() {
+        val operation =
+            SyncOperation(
+                id = "op-4",
+                collectionPath = "trips",
+                documentId = "trip-1",
+                type = SyncOperationType.FORCE_UPSERT,
+                fields = everyValueVariant,
+            )
+
+        val persisted = SyncOperationCodec.toPersisted(operation, enqueuedAt)
+
+        assertEquals(PersistedSyncOperationType.FORCE_UPSERT, persisted.type)
+        assertEquals(operation, SyncOperationCodec.toOperation(persisted))
+    }
+
+    @Test
     fun `retry marked record decodes back with its persisted attempt count`() {
         val operation = SyncOperation(id = "op-3", collectionPath = "trips", documentId = "t", type = SyncOperationType.UPSERT)
         val persisted =

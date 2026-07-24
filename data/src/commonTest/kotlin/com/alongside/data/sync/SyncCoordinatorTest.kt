@@ -229,4 +229,24 @@ class SyncCoordinatorTest {
             assertEquals(listOf("trip-1"), result.succeeded.map { it.documentId })
             assertTrue(store.loadAll().isEmpty())
         }
+
+    @Test
+    fun `force-upserts skip the preflight read and push even when remote claims a newer timestamp`() =
+        runTest {
+            // The exact scenario forceUpsert exists for: a deliberate, user-confirmed change
+            // (Leave Trip) must never be silently reverted just because a remote document claims
+            // a later updatedAt - client clocks across two devices aren't trustworthy enough to
+            // gate that on a timestamp comparison the way routine offline-first upserts are.
+            remoteReader.documents["trip-1"] =
+                FirestoreDocument(
+                    fields = TripFirestoreMapper.toFields(testTrip(id = "trip-1", updatedAt = FIXED_NOW + 1.minutes)),
+                )
+
+            repository.forceUpsert(testTrip(id = "trip-1", memberId = null, updatedAt = FIXED_NOW))
+            val result = coordinator.sync()
+
+            assertEquals(emptyList(), remoteReader.readDocumentIds)
+            assertEquals(listOf("trip-1"), result.succeeded.map { it.documentId })
+            assertEquals(null, local.getById("trip-1")?.memberId)
+        }
 }

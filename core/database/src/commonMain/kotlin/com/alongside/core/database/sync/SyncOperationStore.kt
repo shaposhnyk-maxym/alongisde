@@ -2,7 +2,7 @@ package com.alongside.core.database.sync
 
 import kotlin.time.Instant
 
-public enum class PersistedSyncOperationType { UPSERT, DELETE }
+public enum class PersistedSyncOperationType { UPSERT, DELETE, FORCE_UPSERT }
 
 public enum class PersistedSyncOperationStatus { PENDING, RETRY }
 

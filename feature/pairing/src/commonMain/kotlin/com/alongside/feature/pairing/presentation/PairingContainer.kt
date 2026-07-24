@@ -48,12 +48,34 @@ public class PairingContainer(
             reduce { state.copy(isCheckingTrip = false) }
             return
         }
+        // Edge-triggered, not level-checked: this container is a process-lifetime singleton
+        // (Navigation 3 gives no per-entry ViewModelStoreOwner here), so this collect runs once,
+        // forever. The underlying Flow re-emits on every unrelated write to the trips table
+        // (Room's table-level InvalidationTracker), not just on an actual pairing transition.
+        // Without wasPaired, every redundant re-emission of an already-paired trip would re-post
+        // Paired, which sits buffered in Orbit's side-effect Channel until some later, unrelated
+        // navigation to entry<Pairing> drains it and bounces back to Home (confirmed live: a
+        // Leave Trip navigated to Pairing only to be immediately bounced back to Home by a stale
+        // Paired posted minutes earlier while the user was elsewhere in the app).
+        var wasPaired = false
         pairingRepository.observeActiveTrip(uid).collect { trip ->
+            val isPaired = trip?.memberId != null
             when {
-                trip == null -> reduce { state.copy(isCheckingTrip = false) }
-                trip.memberId != null -> postSideEffect(PairingSideEffect.Paired)
+                trip == null -> reduce { state.copy(isCheckingTrip = false, ownTrip = null) }
+                isPaired -> {
+                    // Reduce before the side effect, not just the side effect alone: this
+                    // container is a process-lifetime singleton (Navigation 3 gives no per-entry
+                    // ViewModelStoreOwner here), so if the caller ever leaves/deletes the trip and
+                    // is routed back to entry<Pairing>, this same collector fires again - without
+                    // this reduce, isCheckingTrip stays stuck at its initial `true` forever (this
+                    // branch never used to flip it), and PairingContent's `if (!isCheckingTrip)`
+                    // guard renders nothing until the app is force-restarted.
+                    reduce { state.copy(isCheckingTrip = false) }
+                    if (!wasPaired) postSideEffect(PairingSideEffect.Paired)
+                }
                 trip.ownerId == uid -> reduce { state.copy(isCheckingTrip = false, ownTrip = trip) }
             }
+            wasPaired = isPaired
         }
     }
 

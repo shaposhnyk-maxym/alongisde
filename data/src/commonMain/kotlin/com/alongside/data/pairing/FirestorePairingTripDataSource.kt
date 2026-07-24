@@ -2,15 +2,23 @@ package com.alongside.data.pairing
 
 import com.alongside.core.domain.pairing.PairingTripDataSource
 import com.alongside.core.domain.trip.TripRepository
+import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.trip.Trip
 import com.alongside.core.network.firestore.FirestoreException
 import com.alongside.data.sync.ConflictWinner
 import com.alongside.data.sync.SyncCoordinator
 import com.alongside.data.sync.resolveConflict
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
@@ -31,6 +39,10 @@ public class FirestorePairingTripDataSource(
     private val remote: PairingRemoteDataSource,
     private val syncCoordinator: SyncCoordinator,
     private val pollInterval: Duration = DEFAULT_POLL_INTERVAL,
+    // Overridable so tests can pass a TestScope (its delay() calls obey advanceTimeBy) instead
+    // of a real one, where the shared poller's delay(pollInterval) would run in real wall-clock
+    // time and never be driven by the test's virtual clock.
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) : PairingTripDataSource {
     override suspend fun findByInviteCode(code: String): Trip? =
         try {
@@ -42,16 +54,60 @@ public class FirestorePairingTripDataSource(
             localLookup.findByInviteCode(code)
         }
 
-    override fun observeByUserId(userId: String): Flow<Trip?> =
+    // A userId-keyed cache of shared flows, not a fresh channelFlow per call: observeByUserId is
+    // called independently by multiple process-lifetime container singletons (PairingContainer,
+    // SettingsContainer, ...) for the SAME uid, since Navigation 3 gives no per-entry
+    // ViewModelStoreOwner to scope them apart. A plain channelFlow is cold, so each caller used to
+    // spin up its OWN poller - multiple pollers racing writes into the same Room row caused
+    // duplicate emissions, which meant PairingContainer's memberId-based Paired side effect fired
+    // more than once per real pairing event. The extra postSideEffect had no collector left (the
+    // first one already navigated away) and sat buffered in Orbit's side-effect channel until the
+    // next time entry<Pairing> was recomposed - at which point it replayed and forced a bogus
+    // Home navigation right after a Leave/Delete. shareIn multicasts one real poller per uid to
+    // every subscriber instead.
+    private val sharedFlowsByUserId = MutableStateFlow<Map<String, Flow<Trip?>>>(emptyMap())
+
+    override fun observeByUserId(userId: String): Flow<Trip?> {
+        sharedFlowsByUserId.value[userId]?.let { return it }
+        val created =
+            pollingFlow(userId)
+                .shareIn(scope, SharingStarted.WhileSubscribed(STOP_TIMEOUT.inWholeMilliseconds), replay = 1)
+        sharedFlowsByUserId.update { current -> if (userId in current) current else current + (userId to created) }
+        return sharedFlowsByUserId.value.getValue(userId)
+    }
+
+    private fun pollingFlow(userId: String): Flow<Trip?> =
         channelFlow {
+            // Remembered ACROSS ticks, not just within one: the local delete behind a
+            // Leave/Delete Trip action happens whenever the user confirms it, with no
+            // synchronization to any particular poller tick - by the time a tick notices the
+            // local row is gone, it may have disappeared several ticks ago already. Once that's
+            // observed, its id stays suppressed (ignored if a lagging remote read still shows
+            // it) until local has something again, not just for the one tick it was noticed on.
+            var lastKnownTripId: String? = null
+            var suppressedId: String? = null
             val poller =
                 launch {
                     while (isActive) {
+                        val current = localLookup.getActiveTrip(userId)
+                        if (current != null) {
+                            lastKnownTripId = current.id
+                            suppressedId = null
+                        } else if (lastKnownTripId != null) {
+                            suppressedId = lastKnownTripId
+                            lastKnownTripId = null
+                        }
+                        // Snapshotted BEFORE pushPendingSync(), not after: a trip pushed for the
+                        // first time this very tick flips PENDING -> SYNCED locally, but Firestore
+                        // may not yet answer a findTripByUserId query with what was just written
+                        // (no same-tick read-after-write guarantee) - refreshFromRemote seeing an
+                        // empty remote a moment later must not mistake that lag for a delete.
+                        val previouslySynced = current?.takeIf { it.syncStatus == SyncStatus.SYNCED }
                         // Push before pull: operations parked in the durable queue (a write
                         // that 403'd or happened offline) have no other trigger than save() -
                         // the poll tick is what drains them once connectivity/auth is back.
                         pushPendingSync()
-                        refreshFromRemote(userId)
+                        refreshFromRemote(userId, previouslySynced, suppressedId)
                         delay(pollInterval)
                     }
                 }
@@ -78,6 +134,10 @@ public class FirestorePairingTripDataSource(
         pushPendingSync()
     }
 
+    override suspend fun delete(tripId: String) {
+        localLookup.delete(tripId)
+    }
+
     // catch(Throwable) is deliberate here, not an oversight: this is a poller's per-tick sync
     // call, and an unexpected (non-FirestoreException) failure must still be logged with a clear
     // "UNEXPECTED" marker before it's rethrown - swallowing it silently would make the poller die
@@ -94,9 +154,26 @@ public class FirestorePairingTripDataSource(
         }
     }
 
-    private suspend fun refreshFromRemote(userId: String) {
+    // [previouslySynced] and [suppressedId] are both decided from local state as of BEFORE this
+    // tick's pushPendingSync() - see the poller loop's comments for why.
+    private suspend fun refreshFromRemote(
+        userId: String,
+        previouslySynced: Trip?,
+        suppressedId: String?,
+    ) {
         try {
-            remote.findTripByUserId(userId)?.also { cacheRemote(it) }
+            val remoteTrip = remote.findTripByUserId(userId)
+            when {
+                remoteTrip != null && remoteTrip.id == suppressedId -> Unit // stale echo of our own delete
+                remoteTrip != null -> cacheRemote(remoteTrip)
+                previouslySynced != null -> {
+                    // Gone on the remote and was already confirmed synced before this tick -
+                    // deleted by the other person, from their device. Without this the local
+                    // cache stays stuck showing a trip that no longer exists anywhere, until
+                    // app restart.
+                    localLookup.delete(previouslySynced.id)
+                }
+            }
         } catch (e: FirestoreException) {
             val detail =
                 when (e) {
@@ -119,5 +196,10 @@ public class FirestorePairingTripDataSource(
 
     private companion object {
         val DEFAULT_POLL_INTERVAL: Duration = 5.seconds
+
+        // Keeps the shared poller alive through a brief gap between the last collector leaving
+        // and a new one attaching (e.g. mid-navigation), instead of tearing it down and losing
+        // lastKnownTripId/suppressedId only to spin a fresh one back up moments later.
+        val STOP_TIMEOUT: Duration = 5.seconds
     }
 }

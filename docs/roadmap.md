@@ -2500,14 +2500,35 @@ FCM-інтеграція (Android + iOS/APNs) + Cloud Function.
 
 ---
 
-### M18 — Settings & trip management
+### M18 — Settings & trip management ✅ done
 `feature:settings` — Leave/Delete Trip.
 
 **Accept:**
-- Юніт-тест owner-only авторизації для Delete (member не може, owner
-  може) — покриває і repository-рівень, і UI-рівень (кнопка не
-  показується member'у)
-- Screenshot-тести відмінності UI owner vs member
+- [x] Юніт-тест owner-only авторизації для Delete (member не може,
+      owner може) — покриває і repository-рівень
+      (`core:domain/trip/DefaultTripManagementRepositoryTest`), і
+      UI-рівень: контейнер-рівень guard
+      (`SettingsContainerTest` — `RequestDeleteTrip` від member'а не
+      відкриває підтвердження) і композовий екран
+      (`SettingsScreenAuthorizationTest` — `assertDoesNotExist`/
+      `assertExists` на рядку "Delete Trip")
+- [x] Screenshot-тести відмінності UI owner vs member
+      (`SettingsPreviews.kt` → `SettingsOwnerPreview`/
+      `SettingsMemberPreview`/`SettingsDeleteConfirmationPreview`,
+      auto-generated Roborazzi goldens)
+
+**Відхилення:**
+- **Owner, що тисне "Leave", а не "Delete"** — не було зафіксовано в
+  `docs/trip-app-concept.md`/`docs/screens.md` (`Trip.ownerId`
+  non-nullable, тому "owner просто йде" не мало очевидної семантики).
+  Узгоджено з користувачем: якщо є member — ownership переходить до
+  нього (`LeaveTripResult.OwnershipTransferred`, трип продовжує
+  існувати); якщо трип ще соло — Leave працює як Delete
+  (`LeaveTripResult.Deleted`, нема чиїх даних зберігати).
+- **Профіль/Нотіфікації/version-footer з мокапу не реалізовані** —
+  Accept-критерії M18 стосуються тільки Leave/Delete Trip; ці рядки з
+  мокапу належать іншим (поки не заплановані окремо) мілстоунам і
+  M19's 5-tap debug-меню відповідно. Реалізовано тільки секцію "Trip".
 
 ---
 

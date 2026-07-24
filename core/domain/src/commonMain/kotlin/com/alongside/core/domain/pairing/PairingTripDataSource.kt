@@ -24,4 +24,7 @@ public interface PairingTripDataSource {
     public suspend fun getActiveTrip(userId: String): Trip?
 
     public suspend fun save(trip: Trip)
+
+    /** Clears the local cache entry for [tripId], without enqueuing any remote sync work. */
+    public suspend fun delete(tripId: String)
 }

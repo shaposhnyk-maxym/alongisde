@@ -93,6 +93,42 @@ class TripDaoTest {
         }
 
     @Test
+    fun `getByUserId returns the most recently updated row when multiple rows match the same user`() =
+        runTest {
+            val older =
+                tripEntity(id = "trip-old", ownerId = "user-1", memberId = null)
+                    .copy(updatedAt = Instant.fromEpochMilliseconds(1_000))
+            val newer =
+                tripEntity(id = "trip-new", ownerId = "someone-else", memberId = "user-1")
+                    .copy(updatedAt = Instant.fromEpochMilliseconds(2_000))
+            dao.upsert(older)
+            dao.upsert(newer)
+
+            assertEquals(newer, dao.getByUserId("user-1"))
+        }
+
+    @Test
+    fun `observeByUserId emits the most recently updated matching row after a newer trip is upserted`() =
+        runTest {
+            val older =
+                tripEntity(id = "trip-old", ownerId = "user-1", memberId = null)
+                    .copy(updatedAt = Instant.fromEpochMilliseconds(1_000))
+            dao.upsert(older)
+
+            val emissions = Channel<TripEntity?>(capacity = Channel.UNLIMITED)
+            val job = launch { dao.observeByUserId("user-1").collect { emissions.send(it) } }
+            assertEquals(older, emissions.receive())
+
+            val newer =
+                tripEntity(id = "trip-new", ownerId = "someone-else", memberId = "user-1")
+                    .copy(updatedAt = Instant.fromEpochMilliseconds(2_000))
+            dao.upsert(newer)
+            assertEquals(newer, emissions.receive())
+
+            job.cancel()
+        }
+
+    @Test
     fun `observeById emits on insert update and delete`() =
         runTest {
             val trip = tripEntity()

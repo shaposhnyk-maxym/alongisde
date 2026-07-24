@@ -66,6 +66,19 @@ class SyncingTripRepositoryTest {
         }
 
     @Test
+    fun `forceUpsert stamps and appends a durable FORCE_UPSERT operation`() =
+        runTest {
+            val trip = testTrip(syncStatus = SyncStatus.SYNCED)
+
+            repository.forceUpsert(trip)
+
+            val stamped = trip.copy(updatedAt = FIXED_NOW, syncStatus = SyncStatus.PENDING)
+            assertEquals(listOf(stamped), local.upserted)
+            val record = store.loadAll().single()
+            assertEquals(PersistedSyncOperationType.FORCE_UPSERT, record.type)
+        }
+
+    @Test
     fun `delete removes locally and appends a DELETE operation`() =
         runTest {
             repository.upsert(testTrip())
