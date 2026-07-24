@@ -15,6 +15,7 @@ import org.orbitmvi.orbit.test.test
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
 private val FIXED_NOW = Instant.fromEpochMilliseconds(1_752_800_000_000)
@@ -63,6 +64,64 @@ class PairingContainerTest {
             containerUnderTest().test(this) {
                 runOnCreate()
                 expectState { copy(isCheckingTrip = false) }
+                expectSideEffect(PairingSideEffect.Paired)
+                cancelAndIgnoreRemainingItems()
+            }
+        }
+
+    @Test
+    fun `a redundant re-emission of an already-paired trip does not re-fire Paired`() =
+        runTest {
+            val paired = fakeTrip(ownerId = "uid-1", memberId = "partner")
+            repository.activeTrip.value = paired
+
+            containerUnderTest().test(this) {
+                runOnCreate()
+                expectState { copy(isCheckingTrip = false) }
+                expectSideEffect(PairingSideEffect.Paired)
+
+                // Redundant re-emission of the same pairing state (e.g. Room's table-level
+                // InvalidationTracker firing on an unrelated write elsewhere in the trips
+                // table) - memberId is unchanged, only an incidental field differs.
+                repository.activeTrip.value = paired.copy(updatedAt = paired.updatedAt + 1.milliseconds)
+
+                // Force a real, independent transition and assert it's the very next item -
+                // this fails loudly if a stray Paired is still queued ahead of it. Simply
+                // calling cancelAndIgnoreRemainingItems() right after the redundant push would
+                // pass regardless of the bug, since it silently swallows unconsumed items.
+                containerHost.onIntent(PairingIntent.CodeInputChanged("AB"))
+                expectState { copy(codeInput = "AB") }
+                cancelAndIgnoreRemainingItems()
+            }
+        }
+
+    @Test
+    fun `fires Paired again after leaving and later re-pairing in the same session`() =
+        runTest {
+            // Captured from the outer TestScope, not the inner test-DSL scope below (which
+            // shadows `this` with orbit-test's own receiver): needed to force the collector to
+            // actually process the intervening null before the next value overwrites it -
+            // MutableStateFlow only guarantees collectors see the latest value, so two back-to-
+            // back sets with no suspension in between can silently conflate away the null (never
+            // happens for real: leave and a later re-pair are always separated by real user
+            // actions/IO in production).
+            val scheduler = testScheduler
+            val paired = fakeTrip(ownerId = "uid-1", memberId = "partner")
+            repository.activeTrip.value = paired
+
+            containerUnderTest().test(this) {
+                runOnCreate()
+                expectState { copy(isCheckingTrip = false) }
+                expectSideEffect(PairingSideEffect.Paired)
+
+                // Member leaves: the repository now reports no active trip. This same
+                // PairingContainer instance keeps observing (process-lifetime singleton).
+                repository.activeTrip.value = null
+                scheduler.runCurrent()
+
+                // Later, same app session: a new trip pairs.
+                val rePaired = fakeTrip(id = "trip-2", ownerId = "partner-2", memberId = "uid-1")
+                repository.activeTrip.value = rePaired
                 expectSideEffect(PairingSideEffect.Paired)
                 cancelAndIgnoreRemainingItems()
             }

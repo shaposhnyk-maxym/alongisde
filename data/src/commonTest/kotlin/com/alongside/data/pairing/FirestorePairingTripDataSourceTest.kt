@@ -15,6 +15,7 @@ import com.alongside.data.trip.RecordingTripRepository
 import com.alongside.data.trip.SyncingTripRepository
 import com.alongside.data.trip.TripSyncEntityBinding
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -48,7 +49,11 @@ class FirestorePairingTripDataSourceTest {
             clock = FixedClock,
             generateOpId = { "op-${++nextOpId}" },
         )
-    private val dataSource =
+
+    // A function, not a class-level val: the shared poller's delay(pollInterval) must run on
+    // this TestScope so advanceTimeBy/runCurrent can drive it - a scope built outside runTest
+    // would use real wall-clock time instead.
+    private fun TestScope.dataSource() =
         FirestorePairingTripDataSource(
             trips = syncingTrips,
             localLookup = local,
@@ -61,6 +66,7 @@ class FirestorePairingTripDataSourceTest {
                     bindings = listOf(TripSyncEntityBinding(local)),
                 ),
             pollInterval = POLL_INTERVAL,
+            scope = backgroundScope,
         )
 
     // --- findByInviteCode ---
@@ -68,6 +74,7 @@ class FirestorePairingTripDataSourceTest {
     @Test
     fun `remote invite-code hit is returned and cached into the local store`() =
         runTest {
+            val dataSource = dataSource()
             val remoteTrip = testTrip(id = "trip-r", syncStatus = SyncStatus.SYNCED)
             remote.tripsByInviteCode["ABCD23"] = remoteTrip
 
@@ -81,6 +88,7 @@ class FirestorePairingTripDataSourceTest {
     @Test
     fun `remote outage falls back to the local invite-code lookup`() =
         runTest {
+            val dataSource = dataSource()
             val cached = testTrip(id = "trip-l")
             local.save(cached)
             remote.unreachable = true
@@ -91,12 +99,14 @@ class FirestorePairingTripDataSourceTest {
     @Test
     fun `unknown code returns null without an exception`() =
         runTest {
+            val dataSource = dataSource()
             assertNull(dataSource.findByInviteCode("XXXX99"))
         }
 
     @Test
     fun `a newer local copy is not overwritten by a stale remote hit`() =
         runTest {
+            val dataSource = dataSource()
             val localCopy = testTrip(id = "trip-1", memberId = "member-local", updatedAt = FIXED_NOW)
             local.save(localCopy)
             remote.tripsByInviteCode["ABCD23"] =
@@ -112,6 +122,7 @@ class FirestorePairingTripDataSourceTest {
     @Test
     fun `observeByUserId emits the local trip immediately and the partner join after a poll tick`() =
         runTest {
+            val dataSource = dataSource()
             val created = testTrip(id = "trip-1", ownerId = "owner-1", memberId = null)
             local.save(created)
             val emissions = mutableListOf<Trip?>()
@@ -133,6 +144,7 @@ class FirestorePairingTripDataSourceTest {
     @Test
     fun `observeByUserId drains operations parked in the durable queue on each poll tick`() =
         runTest {
+            val dataSource = dataSource()
             // A write whose push never happened (e.g. it 403'd before auth was wired):
             // upsert enqueues durably but only save()/the poller actually push.
             syncingTrips.upsert(testTrip(id = "trip-1", ownerId = "owner-1"))
@@ -151,6 +163,7 @@ class FirestorePairingTripDataSourceTest {
     @Test
     fun `observeByUserId clears a synced local trip the remote no longer has`() =
         runTest {
+            val dataSource = dataSource()
             // The other person deleted (or left, transferring ownership away from) the trip -
             // remote has nothing for this user any more. Without this, the local cache would
             // stay stuck showing a trip that's gone everywhere else, until the app restarts.
@@ -173,6 +186,7 @@ class FirestorePairingTripDataSourceTest {
     @Test
     fun `observeByUserId does not clear a not-yet-synced local trip just because remote is empty`() =
         runTest {
+            val dataSource = dataSource()
             // createTrip while offline: local is PENDING and remote genuinely has nothing yet -
             // that must not be mistaken for a remote delete.
             local.save(testTrip(id = "trip-1", ownerId = "owner-1", syncStatus = SyncStatus.PENDING))
@@ -191,6 +205,7 @@ class FirestorePairingTripDataSourceTest {
     @Test
     fun `deleting the trip locally is not undone by a stale remote read in the same poll tick`() =
         runTest {
+            val dataSource = dataSource()
             // Own-device delete: local.delete() runs synchronously, but the durable DELETE
             // operation only gets *pushed* to Firestore inside this same tick's pushPendingSync()
             // - remote.tripsByUserId is a separate fake here (standing in for Firestore not yet
@@ -215,6 +230,7 @@ class FirestorePairingTripDataSourceTest {
     @Test
     fun `polling failures keep the local flow alive`() =
         runTest {
+            val dataSource = dataSource()
             val created = testTrip(id = "trip-1", ownerId = "owner-1")
             local.save(created)
             remote.unreachable = true
@@ -229,11 +245,47 @@ class FirestorePairingTripDataSourceTest {
             collector.cancel()
         }
 
+    @Test
+    fun `two independent subscribers for the same userId share one poller instead of racing separate ones`() =
+        runTest {
+            // Regression test: PairingContainer and SettingsContainer both call
+            // observeActiveTrip(uid) independently, and are both process-lifetime singletons
+            // under Navigation 3 (no per-entry ViewModelStoreOwner). A cold channelFlow used to
+            // hand each of them its OWN poller, so two pollers wrote the same Room row on
+            // overlapping ticks and doubled the emissions each collector saw - which meant
+            // PairingContainer's memberId-triggered Paired side effect could fire twice for one
+            // real pairing, with the second, uncollected posting replaying later as a bogus
+            // navigation. One shared poller means each tick produces at most one emission.
+            val dataSource = dataSource()
+            val created = testTrip(id = "trip-1", ownerId = "owner-1", memberId = null)
+            local.save(created)
+            val firstSubscriber = mutableListOf<Trip?>()
+            val secondSubscriber = mutableListOf<Trip?>()
+            val firstCollector = launch { dataSource.observeByUserId("owner-1").collect { firstSubscriber += it } }
+            runCurrent()
+            val secondCollector = launch { dataSource.observeByUserId("owner-1").collect { secondSubscriber += it } }
+            runCurrent()
+
+            val joined = created.copy(memberId = "member-1", updatedAt = FIXED_NOW + 1.minutes)
+            remote.tripsByUserId["owner-1"] = joined
+            advanceTimeBy(POLL_INTERVAL)
+            runCurrent()
+
+            // One poller x two ticks so far (subscribe + one advanceTimeBy) - two independent
+            // pollers racing the same userId would have run 4 lookups between them by now.
+            assertEquals(2, remote.userIdLookups)
+            assertEquals(joined, firstSubscriber.last())
+            assertEquals(joined, secondSubscriber.last())
+            firstCollector.cancel()
+            secondCollector.cancel()
+        }
+
     // --- getActiveTrip: the one-shot Worker path, no long-lived poller warming Room first ---
 
     @Test
     fun `getActiveTrip returns the local copy without touching remote when Room already has it`() =
         runTest {
+            val dataSource = dataSource()
             local.save(testTrip(id = "trip-1", ownerId = "owner-1"))
 
             val found = dataSource.getActiveTrip("owner-1")
@@ -245,6 +297,7 @@ class FirestorePairingTripDataSourceTest {
     @Test
     fun `getActiveTrip falls back to remote and caches it when the local cache is empty`() =
         runTest {
+            val dataSource = dataSource()
             // The scenario that broke retryAllIncompleteEpisodes/retryAllIncompletePlaces: a
             // fresh install/local-data wipe leaves Room empty with no poller having run yet.
             val remoteTrip = testTrip(id = "trip-r", ownerId = "owner-1")
@@ -259,12 +312,14 @@ class FirestorePairingTripDataSourceTest {
     @Test
     fun `getActiveTrip returns null when both local and remote have nothing`() =
         runTest {
+            val dataSource = dataSource()
             assertNull(dataSource.getActiveTrip("owner-1"))
         }
 
     @Test
     fun `getActiveTrip swallows a remote outage and returns null instead of throwing`() =
         runTest {
+            val dataSource = dataSource()
             remote.unreachable = true
 
             assertNull(dataSource.getActiveTrip("owner-1"))
@@ -275,6 +330,7 @@ class FirestorePairingTripDataSourceTest {
     @Test
     fun `save stamps the trip enqueues it durably and pushes best-effort`() =
         runTest {
+            val dataSource = dataSource()
             dataSource.save(testTrip(id = "trip-1"))
 
             val pushed = networkClient.pushed.single()
@@ -287,6 +343,7 @@ class FirestorePairingTripDataSourceTest {
     @Test
     fun `save survives a failing push and leaves the operation queued for retry`() =
         runTest {
+            val dataSource = dataSource()
             networkClient.failAll = true
 
             dataSource.save(testTrip(id = "trip-1"))
