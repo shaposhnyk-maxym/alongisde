@@ -247,3 +247,24 @@ internal val MIGRATION_15_16: Migration =
             )
         }
     }
+
+/**
+ * v16 -> v17 (M19.5): `pre_trip_photos` - photos taken before the trip starts, not attached to any
+ * `Episode`/`DiaryEntry` (no trip day exists yet), so it needs its own `tripId`/`userId` rather
+ * than inheriting them from a parent row.
+ */
+internal val MIGRATION_16_17: Migration =
+    object : Migration(16, 17) {
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL(
+                "CREATE TABLE IF NOT EXISTS `pre_trip_photos` (`id` TEXT NOT NULL, `tripId` TEXT NOT NULL, " +
+                    "`userId` TEXT NOT NULL, `uri` TEXT NOT NULL, `takenAt` INTEGER NOT NULL, " +
+                    "`latitude` REAL NOT NULL, `longitude` REAL NOT NULL, `remoteUrl` TEXT, " +
+                    "`syncStatus` TEXT NOT NULL, PRIMARY KEY(`id`))",
+            )
+            connection.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_pre_trip_photos_tripId_userId` " +
+                    "ON `pre_trip_photos` (`tripId`, `userId`)",
+            )
+        }
+    }

@@ -15,6 +15,7 @@ import com.alongside.core.database.dao.EpisodeDao
 import com.alongside.core.database.dao.OnboardingCompletionDao
 import com.alongside.core.database.dao.PlaceCandidateDao
 import com.alongside.core.database.dao.PlaceSwipeDao
+import com.alongside.core.database.dao.PreTripPhotoDao
 import com.alongside.core.database.dao.PushTokenDao
 import com.alongside.core.database.dao.SyncOperationDao
 import com.alongside.core.database.dao.TripDao
@@ -25,6 +26,7 @@ import com.alongside.core.database.entity.OnboardingCompletionEntity
 import com.alongside.core.database.entity.PhotoEntity
 import com.alongside.core.database.entity.PlaceCandidateEntity
 import com.alongside.core.database.entity.PlaceSwipeEntity
+import com.alongside.core.database.entity.PreTripPhotoEntity
 import com.alongside.core.database.entity.PushTokenEntity
 import com.alongside.core.database.entity.SyncOperationEntity
 import com.alongside.core.database.entity.TripEntity
@@ -34,6 +36,7 @@ import com.alongside.core.database.migration.MIGRATION_12_13
 import com.alongside.core.database.migration.MIGRATION_13_14
 import com.alongside.core.database.migration.MIGRATION_14_15
 import com.alongside.core.database.migration.MIGRATION_15_16
+import com.alongside.core.database.migration.MIGRATION_16_17
 import com.alongside.core.database.migration.MIGRATION_3_4
 import com.alongside.core.database.migration.MIGRATION_4_5
 import com.alongside.core.database.migration.MIGRATION_5_6
@@ -47,6 +50,7 @@ import com.alongside.core.database.repository.EpisodeRepositoryImpl
 import com.alongside.core.database.repository.OnboardingCompletionImpl
 import com.alongside.core.database.repository.PlaceCandidateRepositoryImpl
 import com.alongside.core.database.repository.PlaceSwipeRepositoryImpl
+import com.alongside.core.database.repository.PreTripPhotoRepositoryImpl
 import com.alongside.core.database.repository.RoomPairingTripDataSource
 import com.alongside.core.database.repository.SyncOperationStoreImpl
 import com.alongside.core.database.repository.TripRepositoryImpl
@@ -58,6 +62,7 @@ import com.alongside.core.domain.onboarding.OnboardingCompletionCache
 import com.alongside.core.domain.pairing.PairingTripDataSource
 import com.alongside.core.domain.place.PlaceCandidateRepository
 import com.alongside.core.domain.place.PlaceSwipeRepository
+import com.alongside.core.domain.pretrip.PreTripPhotoRepository
 import com.alongside.core.domain.trip.TripRepository
 import kotlinx.coroutines.Dispatchers
 
@@ -75,8 +80,9 @@ internal const val DATABASE_FILE_NAME = "alongside.db"
         AuthSessionEntity::class,
         SyncOperationEntity::class,
         OnboardingCompletionEntity::class,
+        PreTripPhotoEntity::class,
     ],
-    version = 16,
+    version = 17,
     exportSchema = true,
 )
 @TypeConverters(AlongsideTypeConverters::class, StringListTypeConverters::class, PlacePhotoListTypeConverters::class)
@@ -99,6 +105,8 @@ public abstract class AlongsideDatabase : RoomDatabase() {
     internal abstract fun syncOperationDao(): SyncOperationDao
 
     internal abstract fun onboardingCompletionDao(): OnboardingCompletionDao
+
+    internal abstract fun preTripPhotoDao(): PreTripPhotoDao
 }
 
 @Suppress("NO_ACTUAL_FOR_EXPECT")
@@ -127,6 +135,7 @@ public fun getRoomDatabase(builder: RoomDatabase.Builder<AlongsideDatabase>): Al
             MIGRATION_13_14,
             MIGRATION_14_15,
             MIGRATION_15_16,
+            MIGRATION_16_17,
         ).build()
 
 /** Factory rather than a public [AuthSessionCacheImpl] - keeps the Room-backed impl an internal detail. */
@@ -154,3 +163,6 @@ public fun AlongsideDatabase.placeSwipeRepository(): PlaceSwipeRepository = Plac
 public fun AlongsideDatabase.pairingTripLocalDataSource(): PairingTripDataSource = RoomPairingTripDataSource(this)
 
 public fun AlongsideDatabase.syncOperationStore(): SyncOperationStore = SyncOperationStoreImpl(this)
+
+/** Room-backed local [PreTripPhotoRepository] - sync-queue wiring lands in M19.6/M19.7. */
+public fun AlongsideDatabase.preTripPhotoRepository(): PreTripPhotoRepository = PreTripPhotoRepositoryImpl(this)
