@@ -64,7 +64,7 @@ class ConfirmedTripManagementRepositoryTest {
         }
 
     @Test
-    fun `deleteTrip returns SyncFailed when the push fails, leaving it queued for retry`() =
+    fun `deleteTrip returns SyncFailed when the push fails - leaving it queued for retry`() =
         runTest {
             local.upsert(testTrip(id = "trip-1", ownerId = "owner-1"))
             networkClient.failAll = true
