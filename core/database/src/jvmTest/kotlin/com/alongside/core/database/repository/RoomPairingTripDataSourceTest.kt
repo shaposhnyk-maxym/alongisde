@@ -105,6 +105,21 @@ class RoomPairingTripDataSourceTest {
         }
 
     @Test
+    fun `observeByUserId returns the most recently updated trip when the user matches multiple rows`() =
+        runTest {
+            val older =
+                trip(id = "trip-old", ownerId = "user-1", memberId = null)
+                    .copy(updatedAt = Instant.fromEpochMilliseconds(1_000))
+            val newer =
+                trip(id = "trip-new", ownerId = "someone-else", memberId = "user-1", inviteCode = "ZZZZ99")
+                    .copy(updatedAt = Instant.fromEpochMilliseconds(2_000))
+            dataSource.save(older)
+            dataSource.save(newer)
+
+            assertEquals(newer, dataSource.observeByUserId("user-1").first())
+        }
+
+    @Test
     fun `observeByUserId emits again when the partner joins`() =
         runTest {
             val created = trip(ownerId = "owner-1", memberId = null)
