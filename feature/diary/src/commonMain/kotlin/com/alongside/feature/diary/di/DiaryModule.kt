@@ -6,6 +6,7 @@ import com.alongside.feature.diary.capture.PhotoCompressor
 import com.alongside.feature.diary.presentation.DiaryCaptureCoordinator
 import com.alongside.feature.diary.presentation.DiaryTimelineContainer
 import com.alongside.feature.diary.presentation.DiaryTimelineDataSource
+import com.alongside.feature.diary.presentation.PreTripPhotoCaptureCoordinator
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -25,6 +26,17 @@ public val diaryFeatureModule =
             )
         }
         single { DiaryCaptureCoordinator(get(), get(), get(), get(), get(), get()) }
-        single { DiaryTimelineDataSource(get(), get(), get(), get(), get()) }
-        viewModel { DiaryTimelineContainer(get(), get(), get()) }
+        single {
+            val photoByteReader = get<PhotoByteReader>()
+            val photoCompressor = get<PhotoCompressor>()
+            PreTripPhotoCaptureCoordinator(
+                exifPhotoReader = get(),
+                imageBytesLoader = { photo -> photoCompressor.compress(photoByteReader.readBytes(photo.uri)) },
+                preTripPhotoUploadClient = get(),
+                preTripPhotoRepository = get(),
+                backgroundWorkScheduler = get(),
+            )
+        }
+        single { DiaryTimelineDataSource(get(), get(), get(), get(), get(), get(), get()) }
+        viewModel { DiaryTimelineContainer(get(), get(), get(), get()) }
     }

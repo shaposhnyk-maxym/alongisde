@@ -21,6 +21,7 @@ import com.alongside.core.domain.place.importing.PlaceImportPipeline
 import com.alongside.core.domain.place.importing.PlacePhotoClient
 import com.alongside.core.domain.place.importing.PlacePhotoUploadClient
 import com.alongside.core.domain.place.importing.ShareLinkRedirectResolver
+import com.alongside.core.domain.pretrip.PreTripPhotoUploadClient
 import com.alongside.core.domain.work.BackgroundWorkScheduler
 import com.alongside.core.network.auth.FirebaseAuthApi
 import com.alongside.core.network.auth.FirebaseAuthConfig
@@ -43,6 +44,7 @@ import com.alongside.core.network.places.GooglePlacesPhotoApi
 import com.alongside.core.network.places.GooglePlacesPhotoClient
 import com.alongside.core.network.places.KtorShareLinkRedirectResolver
 import com.alongside.core.network.storage.FirebasePlacePhotoUploadClient
+import com.alongside.core.network.storage.FirebasePreTripPhotoUploadClient
 import com.alongside.core.network.storage.FirebaseStorageApi
 import com.alongside.core.network.storage.FirebaseStorageConfig
 import com.alongside.core.network.storage.FirebaseStorageUploadClient
@@ -108,6 +110,7 @@ public fun androidAppModule(
             compress = { bytes -> photoCompressor.compress(bytes) },
         )
     }
+    single<PreTripPhotoUploadClient> { FirebasePreTripPhotoUploadClient(get(), get()) }
     placesBindings()
 }
 

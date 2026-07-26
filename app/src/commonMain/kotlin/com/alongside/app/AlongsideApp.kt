@@ -217,12 +217,21 @@ public fun AlongsideApp(
                                 }
                                 captureDate = null
                             }
+                        // A second, independent launcher instance (not reused with the one above)
+                        // - pre-trip photos have no `date` to capture at tap-time, so there's no
+                        // "which mode was the picker in" ambiguity to guard against
+                        // (docs/roadmap.md M19.8).
+                        val launchPreTripPhotoPicker =
+                            rememberPhotoPickerLauncher { uris ->
+                                container.onIntent(DiaryTimelineIntent.ProcessPreTripPhotos(uris))
+                            }
                         DiaryTimelineScreen(
                             container,
                             onAddPhotos = { date ->
                                 captureDate = date
                                 launchPhotoPicker()
                             },
+                            onAddPreTripPhotos = { launchPreTripPhotoPicker() },
                         )
                     }
                 }

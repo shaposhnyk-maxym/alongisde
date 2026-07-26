@@ -14,7 +14,7 @@ import com.alongside.core.ui.theme.AlongsideTheme
 import kotlinx.datetime.LocalDate
 import kotlin.time.Instant
 
-private val PreviewSize = Modifier.size(360.dp, 640.dp)
+internal val PreviewSize = Modifier.size(360.dp, 640.dp)
 
 private fun previewPhoto(id: String) =
     Photo(
@@ -46,18 +46,12 @@ private fun previewEpisode(
 )
 
 @Composable
-private fun ItemPreview(item: DiaryTimelineItem) {
+internal fun ItemPreview(item: DiaryTimelineItem) {
     AlongsideTheme {
         // Settled end state so the golden captures the finished layout, not the blank
         // pre-reveal frame of the entrance animations (same pattern as PairingPreviews).
         DiaryTimelineItemCard(item = item, modifier = PreviewSize, animateEntrance = false)
     }
-}
-
-@Preview
-@Composable
-private fun CountdownPreview() {
-    ItemPreview(DiaryTimelineItem.Countdown(daysUntilReunion = 7))
 }
 
 @Preview

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
@@ -35,6 +36,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.alongside.core.domain.diary.DayUnlockState
 import com.alongside.core.model.diary.Episode
 import com.alongside.core.model.diary.Photo
+import com.alongside.core.model.pretrip.PreTripPhoto
 import com.alongside.core.ui.animation.CountUpText
 import com.alongside.core.ui.animation.PulsingDot
 import com.alongside.core.ui.animation.TypewriterText
@@ -56,7 +58,8 @@ internal fun DiaryTimelineItemCard(
     animateEntrance: Boolean = true,
 ) {
     when (item) {
-        is DiaryTimelineItem.Countdown -> CountdownCard(item.daysUntilReunion, modifier, animateEntrance)
+        is DiaryTimelineItem.Countdown ->
+            CountdownCard(item.daysUntilReunion, item.ownPhotos, item.partnerPhotos, modifier, animateEntrance)
         is DiaryTimelineItem.Day -> DiaryDayCardContent(item.card, modifier, animateEntrance)
     }
 }
@@ -64,6 +67,8 @@ internal fun DiaryTimelineItemCard(
 @Composable
 internal fun CountdownCard(
     daysUntilReunion: Int,
+    ownPhotos: List<PreTripPhoto>,
+    partnerPhotos: List<PreTripPhoto>,
     modifier: Modifier = Modifier,
     animateEntrance: Boolean = true,
 ) {
@@ -73,26 +78,39 @@ internal fun CountdownCard(
                 .fillMaxSize()
                 .semantics { contentDescription = "timeline-countdown" },
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            OverlineLabel(text = "Until you meet", tone = OverlineLabelTone.Accent)
-            Spacer(Modifier.height(AlongsideSpacing.lg))
-            CountUpText(
-                targetValue = daysUntilReunion,
-                style = MaterialTheme.alongsideTypography.digit,
-                // Settled screenshots start already at the target - see StaggerRevealColumn's
-                // initiallyRevealed for why the scanner needs the finished frame, not frame zero.
-                startValue = if (animateEntrance) 0 else daysUntilReunion,
-            )
-            Spacer(Modifier.height(AlongsideSpacing.sm))
-            Text(
-                text = if (daysUntilReunion == 1) "day to go" else "days to go",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.alongsideColors.onPaperSecondary,
-            )
+        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                OverlineLabel(text = "Until you meet", tone = OverlineLabelTone.Accent)
+                Spacer(Modifier.height(AlongsideSpacing.lg))
+                CountUpText(
+                    targetValue = daysUntilReunion,
+                    style = MaterialTheme.alongsideTypography.digit,
+                    // Settled screenshots start already at the target - see StaggerRevealColumn's
+                    // initiallyRevealed for why the scanner needs the finished frame, not frame zero.
+                    startValue = if (animateEntrance) 0 else daysUntilReunion,
+                )
+                Spacer(Modifier.height(AlongsideSpacing.sm))
+                Text(
+                    text = if (daysUntilReunion == 1) "day to go" else "days to go",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.alongsideColors.onPaperSecondary,
+                )
+            }
+            if (ownPhotos.isNotEmpty() || partnerPhotos.isNotEmpty()) {
+                Spacer(Modifier.height(AlongsideSpacing.xl))
+                OverlineLabel(text = "You")
+                Spacer(Modifier.height(AlongsideSpacing.md))
+                PreTripPhotoGallery(photos = ownPhotos, initiallyRevealed = !animateEntrance)
+                if (partnerPhotos.isNotEmpty()) {
+                    Spacer(Modifier.height(AlongsideSpacing.xl))
+                    OverlineLabel(text = "Your partner")
+                    Spacer(Modifier.height(AlongsideSpacing.md))
+                    PreTripPhotoGallery(photos = partnerPhotos, initiallyRevealed = !animateEntrance)
+                }
+            }
         }
     }
 }
@@ -242,17 +260,25 @@ private const val PHOTO_STAGGER_DELAY_MILLIS = 80L
 
 private fun Photo.loadableModel(): String = remoteUrl ?: uri
 
+private fun PreTripPhoto.loadableModel(): String = remoteUrl ?: uri
+
 /**
  * Reveals [photos] one at a time in list order (docs/roadmap.md M12's stagger-order accept
  * criterion), laid out as a two-row lazy horizontal grid (docs/roadmap.md M12.8/M12.9) that
  * scrolls once there are more photos than fit - keeps index `i` mapped to `photos[i]`, never
  * re-sorted or re-grouped. Each tile loads the real photo via [AsyncPhotoTile] (remote URL if
  * already uploaded, falling back to the local `content://` URI otherwise - Coil accepts either);
- * tapping one opens [FullscreenPhotoViewer] on that photo, swipeable to the rest of the episode.
+ * tapping one opens [FullscreenPhotoViewer] on that photo, swipeable to the rest of the list.
+ * Shared by [EpisodePhotoGallery] and [PreTripPhotoGallery] - `Photo`/`PreTripPhoto` deliberately
+ * diverge in shape (no `episodeId`/`description` on the latter), so this stays generic over just
+ * the three things the grid actually needs, rather than forcing one type into the other's shape.
  */
 @Composable
-internal fun EpisodePhotoGallery(
-    photos: List<Photo>,
+private fun <T> PhotoGalleryGrid(
+    photos: List<T>,
+    photoId: (T) -> String,
+    loadableModel: (T) -> String,
+    testTagPrefix: String,
     modifier: Modifier = Modifier,
     initiallyRevealed: Boolean = false,
 ) {
@@ -274,19 +300,20 @@ internal fun EpisodePhotoGallery(
         horizontalArrangement = Arrangement.spacedBy(AlongsideSpacing.xs),
         verticalArrangement = Arrangement.spacedBy(AlongsideSpacing.xs),
     ) {
-        items(photos.size, key = { index -> photos[index].id }) { index ->
+        items(photos.size, key = { index -> photoId(photos[index]) }) { index ->
             val photo = photos[index]
+            val id = photoId(photo)
             AnimatedVisibility(
                 visible = index < revealedCount,
                 enter = fadeIn() + slideInVertically(),
-                modifier = Modifier.testTag("episode-photo-${photo.id}"),
+                modifier = Modifier.testTag("$testTagPrefix-$id"),
             ) {
                 AsyncPhotoTile(
-                    model = photo.loadableModel(),
+                    model = loadableModel(photo),
                     contentDescription = null,
                     size = PhotoTileSize,
                     onClick = { fullscreenIndex = index },
-                    modifier = Modifier.semantics { contentDescription = "photo-${photo.id}" },
+                    modifier = Modifier.semantics { contentDescription = "photo-$id" },
                 )
             }
         }
@@ -299,10 +326,42 @@ internal fun EpisodePhotoGallery(
             properties = DialogProperties(usePlatformDefaultWidth = false),
         ) {
             FullscreenPhotoViewer(
-                models = photos.map { it.loadableModel() },
+                models = photos.map(loadableModel),
                 initialIndex = openIndex,
                 onDismissRequest = { fullscreenIndex = null },
             )
         }
     }
+}
+
+@Composable
+internal fun EpisodePhotoGallery(
+    photos: List<Photo>,
+    modifier: Modifier = Modifier,
+    initiallyRevealed: Boolean = false,
+) {
+    PhotoGalleryGrid(
+        photos = photos,
+        photoId = { it.id },
+        loadableModel = { it.loadableModel() },
+        testTagPrefix = "episode-photo",
+        modifier = modifier,
+        initiallyRevealed = initiallyRevealed,
+    )
+}
+
+@Composable
+internal fun PreTripPhotoGallery(
+    photos: List<PreTripPhoto>,
+    modifier: Modifier = Modifier,
+    initiallyRevealed: Boolean = false,
+) {
+    PhotoGalleryGrid(
+        photos = photos,
+        photoId = { it.id },
+        loadableModel = { it.loadableModel() },
+        testTagPrefix = "pretrip-photo",
+        modifier = modifier,
+        initiallyRevealed = initiallyRevealed,
+    )
 }

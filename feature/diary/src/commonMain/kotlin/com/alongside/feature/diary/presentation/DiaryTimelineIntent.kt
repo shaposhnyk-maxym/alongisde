@@ -18,4 +18,18 @@ public sealed interface DiaryTimelineIntent {
     public data class CloseDay(
         val date: LocalDate,
     ) : DiaryTimelineIntent
+
+    /**
+     * Uploads and persists [uris] as pre-trip photos on the Countdown card - no `date`, unlike
+     * [ProcessCapturedPhotos], since pre-trip photos aren't tied to a day of the trip.
+     */
+    public data class ProcessPreTripPhotos(
+        val uris: List<String>,
+    ) : DiaryTimelineIntent
+
+    /**
+     * Manually nudges the sync queue - the Countdown card's "Close Day"-equivalent button, since
+     * pre-trip photos have no closed state of their own (docs/roadmap.md M19.8).
+     */
+    public data object FlushPreTripPhotoSync : DiaryTimelineIntent
 }

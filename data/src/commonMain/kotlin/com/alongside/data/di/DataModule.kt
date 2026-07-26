@@ -18,6 +18,7 @@ import com.alongside.core.domain.place.PlaceCandidateRepository
 import com.alongside.core.domain.place.PlaceContentPuller
 import com.alongside.core.domain.place.PlaceSwipeRepository
 import com.alongside.core.domain.pretrip.PreTripPhotoContentPuller
+import com.alongside.core.domain.pretrip.PreTripPhotoRepository
 import com.alongside.core.domain.trip.DefaultTripManagementRepository
 import com.alongside.core.domain.trip.TripManagementRepository
 import com.alongside.core.domain.trip.TripRepository
@@ -40,6 +41,7 @@ import com.alongside.data.place.SyncingPlaceCandidateRepository
 import com.alongside.data.place.SyncingPlaceSwipeRepository
 import com.alongside.data.pretrip.FirestorePreTripPhotoContentPuller
 import com.alongside.data.pretrip.PreTripPhotoSyncEntityBinding
+import com.alongside.data.pretrip.SyncingPreTripPhotoRepository
 import com.alongside.data.sync.FirestoreRemoteDocumentReader
 import com.alongside.data.sync.RemoteDocumentReader
 import com.alongside.data.sync.SyncCoordinator
@@ -95,6 +97,13 @@ public val dataModule: Module =
         single<PlaceSwipeRepository> {
             SyncingPlaceSwipeRepository(
                 local = get<AlongsideDatabase>().placeSwipeRepository(),
+                store = get(),
+                backgroundWorkScheduler = get(),
+            )
+        }
+        single<PreTripPhotoRepository> {
+            SyncingPreTripPhotoRepository(
+                local = get<AlongsideDatabase>().preTripPhotoRepository(),
                 store = get(),
                 backgroundWorkScheduler = get(),
             )

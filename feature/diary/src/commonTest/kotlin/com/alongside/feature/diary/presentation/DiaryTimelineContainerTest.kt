@@ -2,6 +2,7 @@ package com.alongside.feature.diary.presentation
 
 import com.alongside.core.domain.diary.DayUnlockState
 import com.alongside.core.domain.diary.processing.EpisodeProcessingPipeline
+import com.alongside.core.domain.work.BackgroundJobKind
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.diary.Episode
 import com.alongside.core.model.diary.Photo
@@ -14,11 +15,15 @@ import com.alongside.feature.diary.FakeExifPhotoReader
 import com.alongside.feature.diary.FakeGeocodingClient
 import com.alongside.feature.diary.FakePairingRepository
 import com.alongside.feature.diary.FakePhotoUploadClient
+import com.alongside.feature.diary.FakePreTripPhotoContentPuller
+import com.alongside.feature.diary.FakePreTripPhotoRepository
+import com.alongside.feature.diary.FakePreTripPhotoUploadClient
 import com.alongside.feature.diary.FakeVisionClient
 import com.alongside.feature.diary.capture.ExifPhotoReader
 import com.alongside.feature.diary.fakeTrip
 import com.alongside.feature.diary.testAuthSession
 import com.alongside.feature.diary.testDiaryEntry
+import com.alongside.feature.diary.testPreTripPhoto
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
@@ -42,6 +47,10 @@ class DiaryTimelineContainerTest {
     private val pairingRepository = FakePairingRepository()
     private val diaryEntryRepository = FakeDiaryEntryRepository()
     private val episodeRepository = FakeEpisodeRepository()
+    private val preTripPhotoRepository = FakePreTripPhotoRepository()
+    private val preTripPhotoContentPuller = FakePreTripPhotoContentPuller()
+    private val backgroundWorkScheduler = FakeBackgroundWorkScheduler()
+    private val preTripPhotoUploadClient = FakePreTripPhotoUploadClient()
 
     private fun containerUnderTest(
         uid: String = "owner-1",
@@ -61,8 +70,16 @@ class DiaryTimelineContainerTest {
                     ),
                 exifPhotoReader = exifPhotoReader,
                 pairingRepository = pairingRepository,
-                backgroundWorkScheduler = FakeBackgroundWorkScheduler(),
+                backgroundWorkScheduler = backgroundWorkScheduler,
                 clock = FixedClock,
+            )
+        val preTripPhotoCaptureCoordinator =
+            PreTripPhotoCaptureCoordinator(
+                exifPhotoReader = exifPhotoReader,
+                imageBytesLoader = { byteArrayOf(1) },
+                preTripPhotoUploadClient = preTripPhotoUploadClient,
+                preTripPhotoRepository = preTripPhotoRepository,
+                backgroundWorkScheduler = backgroundWorkScheduler,
             )
         return DiaryTimelineContainer(
             authSessionCache = FakeAuthSessionCache(testAuthSession(uid)),
@@ -73,8 +90,11 @@ class DiaryTimelineContainerTest {
                     episodeRepository = episodeRepository,
                     diaryContentPuller = FakeDiaryContentPuller(),
                     captureCoordinator = captureCoordinator,
+                    preTripPhotoRepository = preTripPhotoRepository,
+                    preTripPhotoContentPuller = preTripPhotoContentPuller,
                 ),
             captureCoordinator = captureCoordinator,
+            preTripPhotoCaptureCoordinator = preTripPhotoCaptureCoordinator,
             clock = FixedClock,
         )
     }
@@ -198,6 +218,38 @@ class DiaryTimelineContainerTest {
 
                 val countdown = assertIs<DiaryTimelineItem.Countdown>(loaded.items.first())
                 assertEquals(3, countdown.daysUntilReunion)
+
+                cancelAndIgnoreRemainingItems()
+            }
+        }
+
+    @Test
+    fun `the countdown carries own and partner pre-trip photos from the repository`() =
+        runTest {
+            val trip =
+                fakeTrip(
+                    id = "trip-1",
+                    ownerId = "owner-1",
+                    memberId = "partner-1",
+                    startDate = FIXED_TODAY.plus(3, DateTimeUnit.DAY),
+                    endDate = FIXED_TODAY.plus(4, DateTimeUnit.DAY),
+                )
+            pairingRepository.activeTrip.value = trip
+            val ownPhoto = testPreTripPhoto(id = "own-1", tripId = "trip-1", userId = "owner-1")
+            val partnerPhoto = testPreTripPhoto(id = "partner-1", tripId = "trip-1", userId = "partner-1")
+            preTripPhotoRepository.upsert(ownPhoto)
+            preTripPhotoRepository.upsert(partnerPhoto)
+
+            containerUnderTest().test(this) {
+                runOnCreate()
+                awaitState() // today/ownUserId bootstrap
+                val loaded = awaitState()
+
+                assertEquals(listOf(ownPhoto), loaded.ownPreTripPhotos)
+                assertEquals(listOf(partnerPhoto), loaded.partnerPreTripPhotos)
+                val countdown = assertIs<DiaryTimelineItem.Countdown>(loaded.items.first())
+                assertEquals(listOf(ownPhoto), countdown.ownPhotos)
+                assertEquals(listOf(partnerPhoto), countdown.partnerPhotos)
 
                 cancelAndIgnoreRemainingItems()
             }
@@ -358,5 +410,64 @@ class DiaryTimelineContainerTest {
             }
 
             assertEquals(0, diaryEntryRepository.upserted.size)
+        }
+
+    @Test
+    fun `processing pre-trip photos persists an uploaded PreTripPhoto per captured uri`() =
+        runTest {
+            val trip =
+                fakeTrip(
+                    id = "trip-1",
+                    ownerId = "owner-1",
+                    memberId = "partner-1",
+                    startDate = FIXED_TODAY.plus(3, DateTimeUnit.DAY),
+                    endDate = FIXED_TODAY.plus(4, DateTimeUnit.DAY),
+                )
+            pairingRepository.activeTrip.value = trip
+            val photo = Photo(id = "p1", uri = "content://p1", takenAt = FIXED_NOW, latitude = 1.0, longitude = 1.0)
+
+            containerUnderTest(exifPhotoReader = FakeExifPhotoReader(mapOf("content://p1" to photo))).test(this) {
+                runOnCreate()
+                awaitState() // today/ownUserId bootstrap
+                awaitState() // trip loaded, no pre-trip photos yet
+
+                containerHost.onIntent(DiaryTimelineIntent.ProcessPreTripPhotos(listOf("content://p1")))
+                awaitState() // reactive re-emit once the photo lands
+
+                cancelAndIgnoreRemainingItems()
+            }
+
+            val persisted = preTripPhotoRepository.upserted.single()
+            assertEquals("trip-1", persisted.tripId)
+            assertEquals("owner-1", persisted.userId)
+            assertEquals("content://p1", persisted.uri)
+            assertEquals("https://storage/${persisted.id}", persisted.remoteUrl)
+            assertEquals("content://p1", preTripPhotoUploadClient.uploaded.single().uri)
+        }
+
+    @Test
+    fun `flushing pre-trip photo sync schedules a sync-queue flush`() =
+        runTest {
+            val trip =
+                fakeTrip(
+                    id = "trip-1",
+                    ownerId = "owner-1",
+                    memberId = "partner-1",
+                    startDate = FIXED_TODAY.plus(3, DateTimeUnit.DAY),
+                    endDate = FIXED_TODAY.plus(4, DateTimeUnit.DAY),
+                )
+            pairingRepository.activeTrip.value = trip
+
+            containerUnderTest().test(this) {
+                runOnCreate()
+                awaitState() // today/ownUserId bootstrap
+                awaitState() // trip loaded
+
+                containerHost.onIntent(DiaryTimelineIntent.FlushPreTripPhotoSync)
+
+                cancelAndIgnoreRemainingItems()
+            }
+
+            assertEquals(listOf(BackgroundJobKind.SYNC_QUEUE_FLUSH), backgroundWorkScheduler.scheduledOneOffs)
         }
 }

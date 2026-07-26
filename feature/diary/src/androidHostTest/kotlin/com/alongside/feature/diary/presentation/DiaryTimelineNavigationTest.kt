@@ -115,7 +115,7 @@ class DiaryTimelineNavigationTest {
     // "one day's unlock state never leaks into another's" accept criteria at once.
     private val items =
         listOf(
-            DiaryTimelineItem.Countdown(daysUntilReunion = 5),
+            DiaryTimelineItem.Countdown(daysUntilReunion = 5, ownPhotos = emptyList(), partnerPhotos = emptyList()),
             lockedDay(dayIndex = 1),
             unlockedDay(dayIndex = 2),
             lockedDay(dayIndex = 3),

@@ -39,6 +39,7 @@ public fun DiaryTimelineScreen(
     container: DiaryTimelineContainer,
     modifier: Modifier = Modifier,
     onAddPhotos: (LocalDate) -> Unit = {},
+    onAddPreTripPhotos: () -> Unit = {},
 ) {
     val state by container.collectAsState()
     DiaryTimelineContent(
@@ -47,6 +48,8 @@ public fun DiaryTimelineScreen(
         modifier = modifier,
         onAddPhotos = onAddPhotos,
         onCloseDay = { date -> container.onIntent(DiaryTimelineIntent.CloseDay(date)) },
+        onAddPreTripPhotos = onAddPreTripPhotos,
+        onFlushPreTripPhotoSync = { container.onIntent(DiaryTimelineIntent.FlushPreTripPhotoSync) },
     )
 }
 
@@ -60,10 +63,13 @@ internal fun DiaryTimelineContent(
     today: LocalDate? = null,
     onAddPhotos: (LocalDate) -> Unit = {},
     onCloseDay: (LocalDate) -> Unit = {},
+    onAddPreTripPhotos: () -> Unit = {},
+    onFlushPreTripPhotoSync: () -> Unit = {},
 ) {
     var showContinueCaptureDialog by remember { mutableStateOf(false) }
     val pagerState = rememberPagerState(pageCount = { items.size })
-    val selectedDay = (items.getOrNull(pagerState.currentPage) as? DiaryTimelineItem.Day)?.card
+    val selectedItem = items.getOrNull(pagerState.currentPage)
+    val selectedDay = (selectedItem as? DiaryTimelineItem.Day)?.card
 
     InkGradientBackground(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -104,11 +110,14 @@ internal fun DiaryTimelineContent(
                 // is hidden too - MISSED is computed, not stored, so backdating a capture into it
                 // would just flip it back to READY; `today == null` (state not loaded yet)
                 // defaults to showing, not hiding, since `items` is only ever non-empty once
-                // `today` is known too.
+                // `today` is known too. The Countdown card has no lock/unlock/past-date concept
+                // of its own (docs/roadmap.md M19.8) - its button area always shows while it's
+                // the selected page.
                 val isPastDay = selectedDay != null && today != null && selectedDay.date < today
                 if (selectedDay != null && selectedDay.unlockState == DayUnlockState.LOCKED && !isPastDay) {
                     CaptureButtonArea(
-                        day = selectedDay,
+                        closedLabel = if (selectedDay.ownClosedAt != null) "This day's entry is closed" else null,
+                        showCloseButton = selectedDay.ownEpisodes.isNotEmpty(),
                         onAddPhotosClick = {
                             if (selectedDay.ownEpisodes.isNotEmpty()) {
                                 showContinueCaptureDialog = true
@@ -117,6 +126,17 @@ internal fun DiaryTimelineContent(
                             }
                         },
                         onCloseDay = { onCloseDay(selectedDay.date) },
+                        modifier =
+                            Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = AlongsideSpacing.xxl),
+                    )
+                } else if (selectedItem is DiaryTimelineItem.Countdown) {
+                    CaptureButtonArea(
+                        closedLabel = null,
+                        showCloseButton = true,
+                        onAddPhotosClick = onAddPreTripPhotos,
+                        onCloseDay = onFlushPreTripPhotoSync,
                         modifier =
                             Modifier
                                 .align(Alignment.TopCenter)
@@ -138,17 +158,22 @@ internal fun DiaryTimelineContent(
 }
 
 /**
- * Capture entry point for whichever day is currently centered in the carousel
- * (docs/roadmap.md M12.6) - what shows here depends entirely on [day]: no own episodes yet ->
- * just "Add Photos"; own episodes already added but not closed -> both "Add Photos" (which now
- * warns before proceeding) and "Close Day"; closed -> neither, a day closed once is final and can
- * never be reopened for capture on this side. The caller (`DiaryTimelineContent`) already hides
- * this whole area once the day's date has passed (docs/roadmap.md M12.12) - restricting it to the
- * trip's date range too (can't backdate before the trip started) remains a follow-up.
+ * Capture entry point for whichever carousel page is currently centered
+ * (docs/roadmap.md M12.6/M19.8) - shared by day cards and the Countdown card, so both drive it
+ * through the same primitive params rather than a shared concrete model type: [closedLabel]
+ * non-null shows a static label instead of any button (day cards only - a closed day is final and
+ * can never be reopened for capture on this side; the Countdown card never has a closed state, so
+ * always passes `null`); otherwise "Add Photos" always shows, and "Close Day" shows only when
+ * [showCloseButton] is true (day cards: only once own episodes exist; the Countdown card: always,
+ * since its "Close Day" is really a manual sync-flush, not a day-closing action). The caller
+ * (`DiaryTimelineContent`) already hides a day's whole area once its date has passed
+ * (docs/roadmap.md M12.12) - restricting it to the trip's date range too (can't backdate before
+ * the trip started) remains a follow-up.
  */
 @Composable
 private fun CaptureButtonArea(
-    day: DiaryDayCard,
+    closedLabel: String?,
+    showCloseButton: Boolean,
     onAddPhotosClick: () -> Unit,
     onCloseDay: () -> Unit,
     modifier: Modifier = Modifier,
@@ -157,9 +182,9 @@ private fun CaptureButtonArea(
         // Floats over whichever card is centered underneath it (usually the cream PaperCard,
         // not the dark ink canvas - see AlongsideOnPaperButton's own note on this) - labelMuted
         // gray reads against either, unlike a color picked for just one of the two.
-        day.ownClosedAt != null ->
+        closedLabel != null ->
             Text(
-                text = "This day's entry is closed",
+                text = closedLabel,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.alongsideColors.labelMuted,
                 modifier = modifier.testTag("timeline-day-closed-label"),
@@ -171,7 +196,7 @@ private fun CaptureButtonArea(
                     onClick = onAddPhotosClick,
                     modifier = Modifier.testTag("timeline-add-photos"),
                 )
-                if (day.ownEpisodes.isNotEmpty()) {
+                if (showCloseButton) {
                     Spacer(Modifier.height(AlongsideSpacing.sm))
                     AlongsideTextButton(
                         text = "Close Day",
