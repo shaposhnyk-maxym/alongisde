@@ -85,7 +85,7 @@ class DiaryTimelineStateTest {
     }
 
     @Test
-    fun `the countdown never survives the transition from one day left to zero, regardless of pre-trip photo count`() {
+    fun `the countdown never survives the transition from one day left to zero regardless of pre-trip photo count`() {
         for (photoCount in 0..3) {
             val ownPhotos = List(photoCount) { testPreTripPhoto("own-$it") }
 
