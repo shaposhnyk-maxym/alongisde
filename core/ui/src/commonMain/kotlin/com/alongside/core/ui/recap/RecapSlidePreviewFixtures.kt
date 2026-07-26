@@ -14,12 +14,20 @@ import kotlin.time.Instant
  */
 internal fun recapPreviewInstant(seconds: Long = 0) = Instant.fromEpochMilliseconds(seconds * 1000L)
 
+/**
+ * `uri` is deliberately blank, not a real-looking `content://...` value: Coil maps a blank string
+ * to "no data" synchronously (same fast, deterministic error path as an actual `null` model),
+ * whereas a real-looking URI matches a real fetcher and triggers genuine async I/O - on
+ * [ParallelLivesSlideContent]'s near-full-frame [com.alongside.core.ui.component.AsyncPhotoBanner]
+ * that surfaced as a CI-only flaky golden (the loading-state shimmer's animation phase at capture
+ * time isn't deterministic, and unlike a small fixed-size tile it dominates the whole frame here).
+ */
 internal fun recapPreviewPreTripPhoto(id: String) =
     PreTripPhoto(
         id = id,
         tripId = "trip-1",
         userId = "user-$id",
-        uri = "content://pretrip/$id",
+        uri = "",
         takenAt = recapPreviewInstant(),
         latitude = 49.8397,
         longitude = 24.0297,
