@@ -9,6 +9,7 @@ import com.alongside.core.domain.diary.resolveDayUnlockState
 import com.alongside.core.domain.trip.daysUntilReunion
 import com.alongside.core.model.diary.DiaryEntry
 import com.alongside.core.model.diary.Episode
+import com.alongside.core.model.pretrip.PreTripPhoto
 import com.alongside.core.model.trip.Trip
 import kotlinx.datetime.LocalDate
 import kotlin.time.Instant
@@ -43,6 +44,8 @@ public data class DiaryDayCard(
 public sealed interface DiaryTimelineItem {
     public data class Countdown(
         val daysUntilReunion: Int,
+        val ownPhotos: List<PreTripPhoto>,
+        val partnerPhotos: List<PreTripPhoto>,
     ) : DiaryTimelineItem
 
     public data class Day(
@@ -60,6 +63,8 @@ public data class DiaryTimelineState(
     val partnerEntries: List<DiaryEntry> = emptyList(),
     val episodesByDiaryEntryId: Map<String, List<Episode>> = emptyMap(),
     val processingOwnDate: LocalDate? = null,
+    val ownPreTripPhotos: List<PreTripPhoto> = emptyList(),
+    val partnerPreTripPhotos: List<PreTripPhoto> = emptyList(),
 ) {
     /** Derived, never stored, so the carousel can never drift out of sync with the raw data. */
     val items: List<DiaryTimelineItem>
@@ -105,7 +110,11 @@ public data class DiaryTimelineState(
             // Once they've met, a "0 days to go" card is just noise - the carousel opens
             // straight on Day 1 instead.
             val countdownItem =
-                if (daysUntilReunion > 0) listOf(DiaryTimelineItem.Countdown(daysUntilReunion)) else emptyList()
+                if (daysUntilReunion > 0) {
+                    listOf(DiaryTimelineItem.Countdown(daysUntilReunion, ownPreTripPhotos, partnerPreTripPhotos))
+                } else {
+                    emptyList()
+                }
             return countdownItem + dayItems
         }
 }

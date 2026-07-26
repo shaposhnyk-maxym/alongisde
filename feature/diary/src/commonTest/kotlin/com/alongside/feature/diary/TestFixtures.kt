@@ -7,11 +7,19 @@ import com.alongside.core.domain.diary.processing.PhotoUploadClient
 import com.alongside.core.domain.diary.processing.PhotoUploadResult
 import com.alongside.core.domain.diary.processing.PlaceGeocodingClient
 import com.alongside.core.domain.diary.processing.VisionDescriptionResult
+import com.alongside.core.domain.pretrip.PreTripPhotoContentPuller
+import com.alongside.core.domain.pretrip.PreTripPhotoRepository
+import com.alongside.core.domain.pretrip.PreTripPhotoUploadClient
+import com.alongside.core.domain.pretrip.PreTripPhotoUploadResult
 import com.alongside.core.domain.work.BackgroundJobKind
 import com.alongside.core.domain.work.BackgroundWorkScheduler
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.diary.DiaryEntry
 import com.alongside.core.model.diary.Photo
+import com.alongside.core.model.pretrip.PreTripPhoto
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
 import kotlin.time.Instant
 
@@ -84,5 +92,73 @@ internal class FakeDiaryContentPuller : DiaryContentPuller {
         ownUserId: String,
     ) {
         pulls += tripId to ownUserId
+    }
+}
+
+internal fun testPreTripPhoto(
+    id: String,
+    tripId: String = "trip-1",
+    userId: String = "owner-1",
+    remoteUrl: String? = null,
+    syncStatus: SyncStatus = SyncStatus.SYNCED,
+): PreTripPhoto =
+    PreTripPhoto(
+        id = id,
+        tripId = tripId,
+        userId = userId,
+        uri = "content://pretrip/$id",
+        takenAt = Instant.fromEpochMilliseconds(0),
+        latitude = 49.8397,
+        longitude = 24.0297,
+        remoteUrl = remoteUrl,
+        syncStatus = syncStatus,
+    )
+
+internal class FakePreTripPhotoRepository : PreTripPhotoRepository {
+    private val photos = MutableStateFlow<Map<String, PreTripPhoto>>(emptyMap())
+    val upserted = mutableListOf<PreTripPhoto>()
+
+    override suspend fun upsert(photo: PreTripPhoto) {
+        upserted += photo
+        photos.value = photos.value + (photo.id to photo)
+    }
+
+    override suspend fun getById(id: String): PreTripPhoto? = photos.value[id]
+
+    override fun observeByTripAndUser(
+        tripId: String,
+        userId: String,
+    ): Flow<List<PreTripPhoto>> = photos.map { all -> all.values.filter { it.tripId == tripId && it.userId == userId } }
+
+    override suspend fun delete(id: String) {
+        photos.value = photos.value - id
+    }
+}
+
+/** No-op by default - tests that care about polling behavior can subclass or wrap this. */
+internal class FakePreTripPhotoContentPuller : PreTripPhotoContentPuller {
+    val pulls = mutableListOf<Pair<String, String>>()
+
+    override suspend fun pullTripContent(
+        tripId: String,
+        ownUserId: String,
+    ) {
+        pulls += tripId to ownUserId
+    }
+}
+
+internal class FakePreTripPhotoUploadClient(
+    private val resultFor: (PreTripPhoto) -> PreTripPhotoUploadResult = {
+        PreTripPhotoUploadResult.Uploaded("https://storage/${it.id}")
+    },
+) : PreTripPhotoUploadClient {
+    val uploaded = mutableListOf<PreTripPhoto>()
+
+    override suspend fun upload(
+        photo: PreTripPhoto,
+        bytes: ByteArray,
+    ): PreTripPhotoUploadResult {
+        uploaded += photo
+        return resultFor(photo)
     }
 }

@@ -15,6 +15,7 @@ public class DiaryTimelineContainer(
     private val authSessionCache: AuthSessionCache,
     private val timelineDataSource: DiaryTimelineDataSource,
     private val captureCoordinator: DiaryCaptureCoordinator,
+    private val preTripPhotoCaptureCoordinator: PreTripPhotoCaptureCoordinator,
     private val clock: Clock = Clock.System,
 ) : ViewModel(),
     ContainerHost<DiaryTimelineState, DiaryTimelineSideEffect> {
@@ -25,6 +26,8 @@ public class DiaryTimelineContainer(
         when (intent) {
             is DiaryTimelineIntent.ProcessCapturedPhotos -> processCapturedPhotos(intent.date, intent.uris)
             is DiaryTimelineIntent.CloseDay -> closeDay(intent.date)
+            is DiaryTimelineIntent.ProcessPreTripPhotos -> processPreTripPhotos(intent.uris)
+            DiaryTimelineIntent.FlushPreTripPhotoSync -> preTripPhotoCaptureCoordinator.flushPendingSync()
         }
     }
 
@@ -33,15 +36,17 @@ public class DiaryTimelineContainer(
         val today = clock.todayIn(TimeZone.currentSystemDefault())
         reduce { state.copy(today = today, ownUserId = uid) }
 
-        timelineDataSource.observe(uid) { (trip, entries, episodesByEntryId) ->
-            val partnerUid = trip?.let { if (it.ownerId == uid) it.memberId else it.ownerId }
+        timelineDataSource.observe(uid) { snapshot ->
+            val partnerUid = snapshot.trip?.let { if (it.ownerId == uid) it.memberId else it.ownerId }
             reduce {
                 state.copy(
-                    trip = trip,
+                    trip = snapshot.trip,
                     partnerUserId = partnerUid,
-                    ownEntries = entries.filter { it.userId == uid },
-                    partnerEntries = entries.filter { partnerUid != null && it.userId == partnerUid },
-                    episodesByDiaryEntryId = episodesByEntryId,
+                    ownEntries = snapshot.entries.filter { it.userId == uid },
+                    partnerEntries = snapshot.entries.filter { partnerUid != null && it.userId == partnerUid },
+                    episodesByDiaryEntryId = snapshot.episodesByDiaryEntryId,
+                    ownPreTripPhotos = snapshot.ownPreTripPhotos,
+                    partnerPreTripPhotos = snapshot.partnerPreTripPhotos,
                 )
             }
         }
@@ -76,5 +81,12 @@ public class DiaryTimelineContainer(
         intent {
             val entry = state.ownEntries.firstOrNull { it.date == date } ?: return@intent
             captureCoordinator.closeDay(entry)
+        }
+
+    private fun processPreTripPhotos(uris: List<String>) =
+        intent {
+            val uid = state.ownUserId ?: authSessionCache.get()?.user?.uid ?: return@intent
+            val trip = state.trip ?: return@intent
+            preTripPhotoCaptureCoordinator.capture(trip.id, uid, uris)
         }
 }

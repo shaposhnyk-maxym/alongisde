@@ -2717,7 +2717,7 @@ Pull-синк — НЕ генеричний. `DiaryContentPuller`/`PlaceContentP
 
 ---
 
-### M19.8 — Pre-trip gallery: Countdown-картка + upload UI
+### M19.8 — Pre-trip gallery: Countdown-картка + upload UI ✅ done
 `feature:diary` (Countdown-картка в Timeline-каруселі). Залежить від
 `M19.7` (увесь дата-шар, включно з pull, мусить уже існувати — картка
 має показувати й партнерові фото, не лише свої). Передумова для
@@ -2765,26 +2765,106 @@ M12.11's WorkManager-надійність), Countdown-картка теж отр
 імплементації, не зафіксоване наперед.
 
 **Accept:**
-- Юніт-тест `DiaryTimelineState.items`: `Countdown`-айтем несе
-  кількість/прев'ю власних pre-trip фото
-- **Юніт-тест (окремий, не той самий, що вище)**: `Countdown`-айтем із
+- [x] Юніт-тест `DiaryTimelineState.items`: `Countdown`-айтем несе
+  кількість/прев'ю власних pre-trip фото — `DiaryTimelineStateTest`:
+  "the countdown carries its own pre-trip photos"
+- [x] **Юніт-тест (окремий, не той самий, що вище)**: `Countdown`-айтем із
   N (>0) pre-trip фото все одно повністю зникає з `items`, щойно
   `daysUntilReunion == 0` — наявність фото не тримає картку живою
-  довше, ніж порожню
-- Юніт-тест: `daysUntilReunion` переходить з 1 в 0 (день старту настав)
+  довше, ніж порожню — "the countdown with pre-trip photos still
+  disappears once the reunion day has arrived"
+- [x] Юніт-тест: `daysUntilReunion` переходить з 1 в 0 (день старту настав)
   → `items` не містить `Countdown` жодної миті після цього, для будь-якої
-  кількості pre-trip фото від 0 до N
-- Compose UI-тест: тап на CTA "додати фото" в Countdown-картці відкриває
-  пікер, обрані фото з'являються в галереї картки
-- Compose UI-тест: Countdown-картка, як вибрана в каруселі, показує той
-  самий `CaptureButtonArea` (обидві кнопки — "Додати фото" і "Закрити
-  день"), що й day-картки
-- Screenshot-тести Countdown-картки: 0 фото / N фото (Roborazzi)
-- Мануальний чекліст: фото, додане на пристрої A до зустрічі, з'являється
-  (з робочим `remoteUrl`) на пристрої B ще до `trip.startDate`
-- Мануальний чекліст: після настання `trip.startDate` картка не
+  кількості pre-trip фото від 0 до N — "the countdown never survives
+  the transition from one day left to zero, regardless of pre-trip
+  photo count" (параметризовано по 0..3 фото)
+- [x] Compose UI-тест: тап на CTA "додати фото" в Countdown-картці відкриває
+  пікер, обрані фото з'являються в галереї картки —
+  `CountdownCaptureTest` (2 тести: onAddPreTripPhotos-виклик +
+  gallery-тайл на кожне фото)
+- [x] Compose UI-тест: Countdown-картка, як вибрана в каруселі, показує той
+  самий `CaptureButtonArea` (обидві кнопки — "Add Photos" і "Close
+  Day" — див. відхилення нижче щодо мови копірайту), що й day-картки —
+  `CountdownCaptureTest` (2 тести: обидві кнопки видимі + Close Day
+  викликає onFlushPreTripPhotoSync)
+- [x] Screenshot-тести Countdown-картки: 0 фото / N фото (Roborazzi) —
+  `CountdownEmptyPreview`/`CountdownWithPhotosPreview`
+  (`CountdownPreviews.kt`)
+- [ ] Мануальний чекліст: фото, додане на пристрої A до зустрічі, з'являється
+  (з робочим `remoteUrl`) на пристрої B ще до `trip.startDate` — чекліст
+  додано в `docs/manual-checklists.md` § M19.8, **сам прогін ще не
+  виконано** (потребує двох реальних пристроїв/emulator-ів і живого
+  Firebase-проєкту — поза можливостями цієї сесії)
+- [ ] Мануальний чекліст: після настання `trip.startDate` картка не
   з'являється в каруселі на жодному з двох пристроїв, навіть якщо на
-  одному з них лишався нескінчений upload/picker з попередньої сесії
+  одному з них лишався нескінчений upload/picker з попередньої сесії —
+  той самий чекліст, **так само не виконаний**
+
+**Відхилення від початкового плану:**
+- **Кнопки — англійською, не українською буквально як в описі мілстоуна
+  вище** (узгоджено з користувачем перед реалізацією) — існуючі
+  day-картки вже показують "Add Photos"/"Close Day" англійською
+  (`timeline-add-photos`/`timeline-close-day` testTags); українська
+  проза в описі мілстоуна — лише описова, не буквальна копі-специфікація.
+  Countdown-картка отримує ті самі два тести англійською для паритету.
+- **"Закрити"-кнопка на Countdown-картці = ручний sync-flush, не жоден
+  еквівалент "закритого дня"** — викликає
+  `backgroundWorkScheduler.scheduleOneOff(SYNC_QUEUE_FLUSH)`, той самий
+  job kind, що `SyncingPreTripPhotoRepository.upsert()` і так планує
+  автоматично. Жодного нового `BackgroundJobKind`, жодного
+  `closedAt`-еквівалента в `PreTripPhoto` не додано — питання, залишене
+  відкритим в описі мілстоуна, вирішено саме так.
+- **DI-борг з M19.7 закрито в межах цього мілстоуна**: `PreTripPhotoRepository`
+  (через `SyncingPreTripPhotoRepository`) заведено в `data/di/DataModule.kt`,
+  `PreTripPhotoUploadClient` (через `FirebasePreTripPhotoUploadClient`) —
+  в `androidApp/di/AndroidAppModule.kt` (той самий модуль, що вже біндить
+  `PhotoUploadClient`/`PlacePhotoUploadClient` з тих самих
+  `FirebaseStorageApi`/`FirebaseStorageConfig` — не `DataModule.kt`,
+  бо останній не має доступу до `storageBucket`-ресурсу).
+- **`PreTripPhotoCaptureCoordinator` — новий, окремий клас**, не метод
+  на `DiaryCaptureCoordinator` — той самий "тримати конструктор під
+  detekt's `LongParameterList`" аргумент, що вже документований для
+  `DiaryCaptureCoordinator`/`DiaryTimelineDataSource`. Upload — eager
+  (як у `EpisodeProcessingPipeline.uploadCluster`), не лінивий через
+  sync-queue: sync-шар пушить лише вже відомі Firestore-поля, тож байти
+  фото мусять бути завантажені й `remoteUrl` виставлений ще до
+  `preTripPhotoRepository.upsert(...)`. Провал upload'у деградує до
+  `remoteUrl = null` (не втрачає фото) — той самий "лог, не throw"
+  патерн.
+- **`DiaryTimelineDataSource`'s `EntriesAndEpisodes` typealias (`Triple`)
+  замінено на named data class `TimelineSnapshot`** (з `ownPreTripPhotos`/
+  `partnerPreTripPhotos` полями за замовчуванням `emptyList()`) — Triple
+  не масштабується на 5 значень; існуюче 3-компонентне destructuring
+  (`val (trip, entries, episodesByEntryId) = snapshot`) лишилось
+  незмінним (Kotlin дозволяє destructure менше компонентів, ніж є).
+- **`CaptureButtonArea` (`DiaryTimelineScreen.kt`) рефакторено на
+  примітивні параметри** (`closedLabel: String?`, `showCloseButton:
+  Boolean`) замість конкретного `DiaryDayCard` — і day-картки, і
+  Countdown-картка тепер керують тим самим composable без нової
+  sealed-обгортки.
+- **`PhotoGalleryGrid<T>` — новий приватний generic composable**,
+  спільний для `EpisodePhotoGallery`/`PreTripPhotoGallery` — обидва
+  типи (`Photo`/`PreTripPhoto`) навмисно різняться формою
+  (`episodeId`/`description` є лише в `Photo`), тож не форсовано один в
+  інший; замість цього узагальнено саме над `photoId`/`loadableModel`/
+  testTag-префіксом, аби не дублювати ~30-рядковий stagger-reveal +
+  fullscreen-viewer код двічі.
+- **Три файли розбито на менші, суто щоб не впертись у detekt-пороги**
+  (`TooManyFunctions`), не з концептуальних причин: нові Countdown-
+  прев'ю — окремий `CountdownPreviews.kt` (не в `DiaryTimelinePreviews.kt`,
+  який після додавання 15-ї функції впирався б у файловий поріг);
+  чотири нові Compose UI-тести Countdown-картки — окремий
+  `CountdownCaptureTest.kt` (не в `DiaryTimelineNavigationTest.kt`, який
+  після 14-ї тест-функції впирався б у класовий поріг). Обидва
+  прецеденти вже задокументовані для інших класів цього ж модуля
+  (`DiaryCaptureCoordinator`/`DiaryTimelineDataSource`).
+- **Обидва мануальні чекліст-пункти лишились невиконаними** — той самий
+  чесний клас обмеження, що вже фіксувався для iOS-частин попередніх
+  мілстоунів: потребують двох реальних пристроїв/emulator-ів зі спільною
+  поїздкою і живого Firebase-проєкту, недоступних у межах цієї сесії.
+  `./gradlew ktlintCheck detekt allTests` + `verifyRoborazziAndroidHostTest`
+  — усе зелене; застосунок вручну не запускався й не перевірявся на
+  реальному/emulated пристрої взагалі жодного разу в цьому мілстоуні.
 
 ---
 

@@ -4,8 +4,11 @@ import com.alongside.core.domain.diary.DiaryContentPuller
 import com.alongside.core.domain.diary.DiaryEntryRepository
 import com.alongside.core.domain.diary.EpisodeRepository
 import com.alongside.core.domain.pairing.PairingRepository
+import com.alongside.core.domain.pretrip.PreTripPhotoContentPuller
+import com.alongside.core.domain.pretrip.PreTripPhotoRepository
 import com.alongside.core.model.diary.DiaryEntry
 import com.alongside.core.model.diary.Episode
+import com.alongside.core.model.pretrip.PreTripPhoto
 import com.alongside.core.model.trip.Trip
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
@@ -20,7 +23,18 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.seconds
 
-public typealias EntriesAndEpisodes = Triple<Trip?, List<DiaryEntry>, Map<String, List<Episode>>>
+/**
+ * [ownPreTripPhotos]/[partnerPreTripPhotos] default empty so every existing 3-component
+ * destructuring (`val (trip, entries, episodesByEntryId) = snapshot`) keeps compiling unchanged -
+ * Kotlin destructuring only calls as many `componentN()` as are actually bound.
+ */
+public data class TimelineSnapshot(
+    val trip: Trip?,
+    val entries: List<DiaryEntry>,
+    val episodesByDiaryEntryId: Map<String, List<Episode>>,
+    val ownPreTripPhotos: List<PreTripPhoto> = emptyList(),
+    val partnerPreTripPhotos: List<PreTripPhoto> = emptyList(),
+)
 
 private val TRIP_CONTENT_POLL_INTERVAL = 5.seconds
 
@@ -44,11 +58,13 @@ public class DiaryTimelineDataSource(
     private val episodeRepository: EpisodeRepository,
     private val diaryContentPuller: DiaryContentPuller,
     private val captureCoordinator: DiaryCaptureCoordinator,
+    private val preTripPhotoRepository: PreTripPhotoRepository,
+    private val preTripPhotoContentPuller: PreTripPhotoContentPuller,
 ) {
     @OptIn(ExperimentalCoroutinesApi::class)
     public suspend fun observe(
         ownUserId: String,
-        onUpdate: suspend (EntriesAndEpisodes) -> Unit,
+        onUpdate: suspend (TimelineSnapshot) -> Unit,
     ) {
         val tripFlow = pairingRepository.observeActiveTrip(ownUserId)
         var nudged = false
@@ -67,10 +83,10 @@ public class DiaryTimelineDataSource(
             }
 
             tripFlow
-                .flatMapLatest { trip -> observeEntriesAndEpisodes(trip) }
+                .flatMapLatest { trip -> observeEntriesAndEpisodes(trip, ownUserId) }
                 .collect { snapshot ->
                     onUpdate(snapshot)
-                    if (!nudged && snapshot.second.isNotEmpty()) {
+                    if (!nudged && snapshot.entries.isNotEmpty()) {
                         nudged = true
                         nudgeIncompleteEpisodesOnce(ownUserId, snapshot)
                     }
@@ -85,6 +101,8 @@ public class DiaryTimelineDataSource(
         while (true) {
             runCatching { diaryContentPuller.pullTripContent(tripId, ownUserId) }
                 .onFailure { println("DiaryTimelineDataSource: pullTripContent failed: $it") }
+            runCatching { preTripPhotoContentPuller.pullTripContent(tripId, ownUserId) }
+                .onFailure { println("DiaryTimelineDataSource: pullTripContent (pre-trip) failed: $it") }
             delay(TRIP_CONTENT_POLL_INTERVAL)
         }
     }
@@ -95,7 +113,7 @@ public class DiaryTimelineDataSource(
     // (event-driven enqueue + periodic sweep) is what actually guarantees healing happens at all.
     private suspend fun nudgeIncompleteEpisodesOnce(
         ownUserId: String,
-        snapshot: EntriesAndEpisodes,
+        snapshot: TimelineSnapshot,
     ) {
         val (_, entries, episodesByEntryId) = snapshot
         val ownEpisodes = entries.filter { it.userId == ownUserId }.flatMap { episodesByEntryId[it.id].orEmpty() }
@@ -105,19 +123,35 @@ public class DiaryTimelineDataSource(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun observeEntriesAndEpisodes(trip: Trip?): Flow<EntriesAndEpisodes> {
-        if (trip == null) return flowOf(Triple(null, emptyList(), emptyMap()))
-        return diaryEntryRepository.observeByTrip(trip.id).flatMapLatest { entries ->
-            if (entries.isEmpty()) {
-                flowOf(Triple(trip, entries, emptyMap()))
-            } else {
-                combine(
-                    entries.map { entry -> episodeRepository.observeByDiaryEntry(entry.id) },
-                ) { episodeLists ->
-                    val byEntryId = entries.indices.associate { index -> entries[index].id to episodeLists[index] }
-                    Triple(trip, entries, byEntryId)
+    private fun observeEntriesAndEpisodes(
+        trip: Trip?,
+        ownUserId: String,
+    ): Flow<TimelineSnapshot> {
+        if (trip == null) return flowOf(TimelineSnapshot(null, emptyList(), emptyMap()))
+        val partnerUserId = if (trip.ownerId == ownUserId) trip.memberId else trip.ownerId
+        val entriesAndEpisodes: Flow<Pair<List<DiaryEntry>, Map<String, List<Episode>>>> =
+            diaryEntryRepository.observeByTrip(trip.id).flatMapLatest { entries ->
+                if (entries.isEmpty()) {
+                    flowOf(entries to emptyMap())
+                } else {
+                    combine(
+                        entries.map { entry -> episodeRepository.observeByDiaryEntry(entry.id) },
+                    ) { episodeLists ->
+                        val byEntryId = entries.indices.associate { index -> entries[index].id to episodeLists[index] }
+                        entries to byEntryId
+                    }
                 }
             }
+        val partnerPreTripPhotos =
+            partnerUserId
+                ?.let { preTripPhotoRepository.observeByTripAndUser(trip.id, it) }
+                ?: flowOf(emptyList())
+        return combine(
+            entriesAndEpisodes,
+            preTripPhotoRepository.observeByTripAndUser(trip.id, ownUserId),
+            partnerPreTripPhotos,
+        ) { (entries, episodesByEntryId), ownPhotos, partnerPhotos ->
+            TimelineSnapshot(trip, entries, episodesByEntryId, ownPhotos, partnerPhotos)
         }
     }
 }
