@@ -6,6 +6,7 @@ import com.alongside.core.database.episodeRepository
 import com.alongside.core.database.pairingTripLocalDataSource
 import com.alongside.core.database.placeCandidateRepository
 import com.alongside.core.database.placeSwipeRepository
+import com.alongside.core.database.preTripPhotoRepository
 import com.alongside.core.database.sync.SyncOperationStore
 import com.alongside.core.database.syncOperationStore
 import com.alongside.core.database.tripRepository
@@ -36,6 +37,7 @@ import com.alongside.data.place.PlaceCandidateSyncEntityBinding
 import com.alongside.data.place.PlaceSwipeSyncEntityBinding
 import com.alongside.data.place.SyncingPlaceCandidateRepository
 import com.alongside.data.place.SyncingPlaceSwipeRepository
+import com.alongside.data.pretrip.PreTripPhotoSyncEntityBinding
 import com.alongside.data.sync.FirestoreRemoteDocumentReader
 import com.alongside.data.sync.RemoteDocumentReader
 import com.alongside.data.sync.SyncCoordinator
@@ -127,6 +129,9 @@ public val dataModule: Module =
         } bind SyncEntityBinding::class
         single {
             PlaceSwipeSyncEntityBinding(get<AlongsideDatabase>().placeSwipeRepository())
+        } bind SyncEntityBinding::class
+        single {
+            PreTripPhotoSyncEntityBinding(get<AlongsideDatabase>().preTripPhotoRepository())
         } bind SyncEntityBinding::class
         single {
             SyncCoordinator(
