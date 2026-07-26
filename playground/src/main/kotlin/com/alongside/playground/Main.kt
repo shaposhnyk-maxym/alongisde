@@ -104,6 +104,7 @@ private fun PlaygroundContent() {
                 StatusSection()
                 AnimationsSection()
                 PhotoGallerySection()
+                StoriesChromeSection()
                 RecapSlidesSection()
             }
         }
