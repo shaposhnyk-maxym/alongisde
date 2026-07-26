@@ -2,6 +2,7 @@ package com.alongside.androidapp
 
 import android.app.Application
 import com.alongside.androidapp.di.androidAppModule
+import com.alongside.app.di.appModule
 import com.alongside.core.domain.work.BackgroundWorkScheduler
 import com.alongside.core.ui.component.installAlongsideImageLoader
 import com.alongside.data.di.dataModule
@@ -35,6 +36,7 @@ class AlongsideApplication :
                     BuildConfig.GEMINI_API_KEY,
                 ),
                 dataModule,
+                appModule,
                 authFeatureModule,
                 onboardingFeatureModule,
                 pairingFeatureModule,

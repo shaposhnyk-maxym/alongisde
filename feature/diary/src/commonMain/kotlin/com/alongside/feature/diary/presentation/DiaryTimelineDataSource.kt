@@ -6,9 +6,11 @@ import com.alongside.core.domain.diary.EpisodeRepository
 import com.alongside.core.domain.pairing.PairingRepository
 import com.alongside.core.domain.pretrip.PreTripPhotoContentPuller
 import com.alongside.core.domain.pretrip.PreTripPhotoRepository
+import com.alongside.core.domain.recap.RecapRepository
 import com.alongside.core.model.diary.DiaryEntry
 import com.alongside.core.model.diary.Episode
 import com.alongside.core.model.pretrip.PreTripPhoto
+import com.alongside.core.model.recap.Recap
 import com.alongside.core.model.trip.Trip
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
@@ -24,7 +26,7 @@ import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * [ownPreTripPhotos]/[partnerPreTripPhotos] default empty so every existing 3-component
+ * [ownPreTripPhotos]/[partnerPreTripPhotos]/[recap] default so every existing 3-component
  * destructuring (`val (trip, entries, episodesByEntryId) = snapshot`) keeps compiling unchanged -
  * Kotlin destructuring only calls as many `componentN()` as are actually bound.
  */
@@ -34,6 +36,7 @@ public data class TimelineSnapshot(
     val episodesByDiaryEntryId: Map<String, List<Episode>>,
     val ownPreTripPhotos: List<PreTripPhoto> = emptyList(),
     val partnerPreTripPhotos: List<PreTripPhoto> = emptyList(),
+    val recap: Recap? = null,
 )
 
 private val TRIP_CONTENT_POLL_INTERVAL = 5.seconds
@@ -60,6 +63,7 @@ public class DiaryTimelineDataSource(
     private val captureCoordinator: DiaryCaptureCoordinator,
     private val preTripPhotoRepository: PreTripPhotoRepository,
     private val preTripPhotoContentPuller: PreTripPhotoContentPuller,
+    private val recapRepository: RecapRepository,
 ) {
     @OptIn(ExperimentalCoroutinesApi::class)
     public suspend fun observe(
@@ -150,8 +154,9 @@ public class DiaryTimelineDataSource(
             entriesAndEpisodes,
             preTripPhotoRepository.observeByTripAndUser(trip.id, ownUserId),
             partnerPreTripPhotos,
-        ) { (entries, episodesByEntryId), ownPhotos, partnerPhotos ->
-            TimelineSnapshot(trip, entries, episodesByEntryId, ownPhotos, partnerPhotos)
+            recapRepository.observeById(trip.id),
+        ) { (entries, episodesByEntryId), ownPhotos, partnerPhotos, recap ->
+            TimelineSnapshot(trip, entries, episodesByEntryId, ownPhotos, partnerPhotos, recap)
         }
     }
 }

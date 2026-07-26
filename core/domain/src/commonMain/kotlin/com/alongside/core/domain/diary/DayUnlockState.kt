@@ -9,9 +9,10 @@ public enum class DayUnlockState {
 public fun resolveDayUnlockState(
     own: DiaryDayStatus,
     partner: DiaryDayStatus,
-): DayUnlockState =
-    if (own == DiaryDayStatus.READY && partner == DiaryDayStatus.READY) {
-        DayUnlockState.UNLOCKED
-    } else {
-        DayUnlockState.LOCKED
-    }
+    isFinalDay: Boolean = false,
+    recapScheduled: Boolean = true,
+): DayUnlockState {
+    val bothReady = own == DiaryDayStatus.READY && partner == DiaryDayStatus.READY
+    val recapGateClear = !isFinalDay || recapScheduled
+    return if (bothReady && recapGateClear) DayUnlockState.UNLOCKED else DayUnlockState.LOCKED
+}

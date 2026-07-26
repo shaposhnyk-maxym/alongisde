@@ -2,6 +2,7 @@ package com.alongside.feature.diary.presentation
 
 import androidx.lifecycle.ViewModel
 import com.alongside.core.domain.auth.AuthSessionCache
+import com.alongside.core.domain.diary.diaryDayStatus
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
@@ -16,6 +17,7 @@ public class DiaryTimelineContainer(
     private val timelineDataSource: DiaryTimelineDataSource,
     private val captureCoordinator: DiaryCaptureCoordinator,
     private val preTripPhotoCaptureCoordinator: PreTripPhotoCaptureCoordinator,
+    private val recapSchedulingCoordinator: RecapSchedulingCoordinator,
     private val clock: Clock = Clock.System,
 ) : ViewModel(),
     ContainerHost<DiaryTimelineState, DiaryTimelineSideEffect> {
@@ -47,9 +49,33 @@ public class DiaryTimelineContainer(
                     episodesByDiaryEntryId = snapshot.episodesByDiaryEntryId,
                     ownPreTripPhotos = snapshot.ownPreTripPhotos,
                     partnerPreTripPhotos = snapshot.partnerPreTripPhotos,
+                    recap = snapshot.recap,
                 )
             }
+            maybeScheduleRecap(uid, partnerUid, today, snapshot)
         }
+    }
+
+    private suspend fun maybeScheduleRecap(
+        uid: String,
+        partnerUid: String?,
+        today: LocalDate,
+        snapshot: TimelineSnapshot,
+    ) {
+        val trip = snapshot.trip ?: return
+        if (snapshot.recap != null) return // cheap short-circuit; ensureScheduled is idempotent regardless
+        val ownEntry = snapshot.entries.firstOrNull { it.userId == uid && it.date == trip.endDate }
+        val partnerEntry =
+            partnerUid?.let { p -> snapshot.entries.firstOrNull { it.userId == p && it.date == trip.endDate } }
+        val ownHasEpisodes = ownEntry?.let { snapshot.episodesByDiaryEntryId[it.id] }?.isNotEmpty() ?: false
+        val partnerHasEpisodes = partnerEntry?.let { snapshot.episodesByDiaryEntryId[it.id] }?.isNotEmpty() ?: false
+        recapSchedulingCoordinator.ensureScheduledIfReady(
+            tripId = trip.id,
+            date = trip.endDate,
+            tripEndDate = trip.endDate,
+            own = diaryDayStatus(ownEntry, trip.endDate, today, ownHasEpisodes),
+            partner = diaryDayStatus(partnerEntry, trip.endDate, today, partnerHasEpisodes),
+        )
     }
 
     // date is whichever day is centered in the carousel, not necessarily today - the UI already

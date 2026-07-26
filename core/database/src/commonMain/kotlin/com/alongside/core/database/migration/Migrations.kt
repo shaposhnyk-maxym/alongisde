@@ -268,3 +268,18 @@ internal val MIGRATION_16_17: Migration =
             )
         }
     }
+
+/**
+ * v17 -> v18 (M20.1): `recaps` - the locally-derived `Recap(tripId, availableAt)` marker, written
+ * once both sides are READY on the trip's last day; no sync metadata, both devices compute the
+ * identical value locally.
+ */
+internal val MIGRATION_17_18: Migration =
+    object : Migration(17, 18) {
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL(
+                "CREATE TABLE IF NOT EXISTS `recaps` (`tripId` TEXT NOT NULL, " +
+                    "`availableAt` TEXT NOT NULL, PRIMARY KEY(`tripId`))",
+            )
+        }
+    }

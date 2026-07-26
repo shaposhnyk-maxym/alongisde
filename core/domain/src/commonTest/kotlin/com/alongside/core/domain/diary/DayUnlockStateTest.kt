@@ -97,6 +97,45 @@ class DayUnlockStateTest {
             resolveDayUnlockState(own = DiaryDayStatus.READY, partner = DiaryDayStatus.MISSED),
         )
     }
+
+    @Test
+    fun `final day both ready but recap not yet scheduled stays locked`() {
+        assertEquals(
+            DayUnlockState.LOCKED,
+            resolveDayUnlockState(
+                own = DiaryDayStatus.READY,
+                partner = DiaryDayStatus.READY,
+                isFinalDay = true,
+                recapScheduled = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `final day both ready and recap scheduled unlocks`() {
+        assertEquals(
+            DayUnlockState.UNLOCKED,
+            resolveDayUnlockState(
+                own = DiaryDayStatus.READY,
+                partner = DiaryDayStatus.READY,
+                isFinalDay = true,
+                recapScheduled = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `non-final day both ready unlocks even without a recap scheduled`() {
+        assertEquals(
+            DayUnlockState.UNLOCKED,
+            resolveDayUnlockState(
+                own = DiaryDayStatus.READY,
+                partner = DiaryDayStatus.READY,
+                isFinalDay = false,
+                recapScheduled = false,
+            ),
+        )
+    }
 }
 
 class DiaryDayStatusTest {

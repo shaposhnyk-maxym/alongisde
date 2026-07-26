@@ -10,6 +10,7 @@ import com.alongside.core.domain.trip.daysUntilReunion
 import com.alongside.core.model.diary.DiaryEntry
 import com.alongside.core.model.diary.Episode
 import com.alongside.core.model.pretrip.PreTripPhoto
+import com.alongside.core.model.recap.Recap
 import com.alongside.core.model.trip.Trip
 import kotlinx.datetime.LocalDate
 import kotlin.time.Instant
@@ -65,6 +66,7 @@ public data class DiaryTimelineState(
     val processingOwnDate: LocalDate? = null,
     val ownPreTripPhotos: List<PreTripPhoto> = emptyList(),
     val partnerPreTripPhotos: List<PreTripPhoto> = emptyList(),
+    val recap: Recap? = null,
 ) {
     /** Derived, never stored, so the carousel can never drift out of sync with the raw data. */
     val items: List<DiaryTimelineItem>
@@ -82,7 +84,13 @@ public data class DiaryTimelineState(
                 )
             val dayItems =
                 days.map { day ->
-                    val unlockState = resolveDayUnlockState(day.ownStatus, day.partnerStatus)
+                    val unlockState =
+                        resolveDayUnlockState(
+                            day.ownStatus,
+                            day.partnerStatus,
+                            isFinalDay = day.date == trip.endDate,
+                            recapScheduled = recap != null,
+                        )
                     val waitingState =
                         when {
                             unlockState == DayUnlockState.UNLOCKED -> null

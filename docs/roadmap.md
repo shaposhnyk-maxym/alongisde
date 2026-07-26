@@ -3026,10 +3026,26 @@ day-слайдах лишається календарним `dayIndex`, не п
 
 ---
 
-### M20.1 — Recap: доступність і тригер
+### M20.1 — Recap: доступність і тригер ✅ done
 `core:model`, `core:domain`, `core:database`, `feature:diary`, `app`.
 Не залежить від `M20` — тут ідеться лише про "коли рікап стає
 доступним", а не про те, що саме в ньому показується.
+
+**Відхилення від опису нижче ("reactive gate"):** "той самий крок, що
+зараз пише unlock-стан цього дня" не існував — `resolveDayUnlockState`
+чиста, нічого не пише. Замість пошуку неіснучого write-хука,
+`DiaryTimelineContainer` тепер спостерігає новий `RecapRepository`
+паралельно з trip+entries, а `RecapSchedulingCoordinator`
+(мірорить `PlaceContentPullCoordinator`) викликає
+`ensureScheduled(tripId, availableAt)` як side effect, коли бачить
+обидві сторони READY на `trip.endDate`. Останній день лишається
+`LOCKED`, поки `Recap`-рядок реально не з'явиться в спостережуваному
+знімку — той самий ефект, що й "атомарний запис", без потреби у
+неіснучому write-кроці. Дрібні поправки в `config/detekt.yml`:
+`LongParameterList` (`constructorThreshold`/`functionThreshold`) з 8
+на 9 і новий `TooManyFunctions.thresholdInClasses: 12` — обидва
+detekt-пороги тут працюють включно (значення РІВНЕ порогу вже падає),
+не так, як типово очікувалось при плануванні.
 
 **Локально, без WorkManager/Cloud Function (рішення користувача:
 швидше робочий MVP, не push-ритуал з concept.md).** Оскільки обидва

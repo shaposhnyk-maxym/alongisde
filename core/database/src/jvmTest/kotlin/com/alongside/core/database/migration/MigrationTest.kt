@@ -9,12 +9,14 @@ import com.alongside.core.database.AlongsideDatabase
 import com.alongside.core.database.entity.OnboardingCompletionEntity
 import com.alongside.core.database.entity.PlaceSwipeEntity
 import com.alongside.core.database.entity.PreTripPhotoEntity
+import com.alongside.core.database.entity.RecapEntity
 import com.alongside.core.database.entity.SyncOperationEntity
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.place.PlacePhoto
 import com.alongside.core.model.place.SwipeDirection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.LocalDate
 import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -141,6 +143,7 @@ class MigrationTest {
                 MIGRATION_14_15,
                 MIGRATION_15_16,
                 MIGRATION_16_17,
+                MIGRATION_17_18,
             ).build()
 
     @Test
@@ -212,6 +215,7 @@ class MigrationTest {
                         MIGRATION_14_15,
                         MIGRATION_15_16,
                         MIGRATION_16_17,
+                        MIGRATION_17_18,
                     ).build()
             try {
                 val episode = database.episodeDao().getById("episode-1")
@@ -246,6 +250,7 @@ class MigrationTest {
                         MIGRATION_14_15,
                         MIGRATION_15_16,
                         MIGRATION_16_17,
+                        MIGRATION_17_18,
                     ).build()
             try {
                 val episode = database.episodeDao().getById("episode-1")
@@ -277,6 +282,7 @@ class MigrationTest {
                     MIGRATION_14_15,
                     MIGRATION_15_16,
                     MIGRATION_16_17,
+                    MIGRATION_17_18,
                 )
             try {
                 val preMigrationEpisode = database.episodeDao().getById("episode-1")
@@ -322,6 +328,7 @@ class MigrationTest {
                         MIGRATION_14_15,
                         MIGRATION_15_16,
                         MIGRATION_16_17,
+                        MIGRATION_17_18,
                     ).build()
             try {
                 val preMigrationEntry = database.diaryEntryDao().getById("entry-1")
@@ -359,6 +366,7 @@ class MigrationTest {
                         MIGRATION_14_15,
                         MIGRATION_15_16,
                         MIGRATION_16_17,
+                        MIGRATION_17_18,
                     ).build()
             try {
                 val preMigrationEpisode = database.episodeDao().getById("episode-1")
@@ -418,17 +426,7 @@ class MigrationTest {
             val v10File = File.createTempFile("migration-test-v10", ".db")
             v10File.delete()
             createVersion10Database(v10File)
-            val database =
-                openDatabase(
-                    v10File,
-                    MIGRATION_10_11,
-                    MIGRATION_11_12,
-                    MIGRATION_12_13,
-                    MIGRATION_13_14,
-                    MIGRATION_14_15,
-                    MIGRATION_15_16,
-                    MIGRATION_16_17,
-                )
+            val database = openVersion10To11Database(v10File)
             try {
                 val preMigrationPlace = database.placeCandidateDao().getById("place-1")
                 // Deliberate, documented data loss - see MIGRATION_10_11's kdoc: photoRef was
@@ -477,6 +475,7 @@ class MigrationTest {
                         MIGRATION_14_15,
                         MIGRATION_15_16,
                         MIGRATION_16_17,
+                        MIGRATION_17_18,
                     ).build()
             try {
                 val preMigrationPlace = database.placeCandidateDao().getById("place-1")
@@ -575,7 +574,7 @@ class MigrationTest {
             val v14File = File.createTempFile("migration-test-v14", ".db")
             v14File.delete()
             createVersion14Database(v14File)
-            val database = openDatabase(v14File, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
+            val database = openDatabase(v14File, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
             try {
                 // The whole point of the migration: place_candidates no longer has swipe columns,
                 // but the pre-existing row survives the table recreation with every other field intact.
@@ -607,7 +606,7 @@ class MigrationTest {
             val v15File = File.createTempFile("migration-test-v15", ".db")
             v15File.delete()
             createVersion15Database(v15File)
-            val database = openDatabase(v15File, MIGRATION_15_16, MIGRATION_16_17)
+            val database = openDatabase(v15File, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
             try {
                 // Pre-existing data survives untouched - this migration only adds a new table.
                 val place = database.placeCandidateDao().getById("place-1")
@@ -627,7 +626,7 @@ class MigrationTest {
             val v16File = File.createTempFile("migration-test-v16", ".db")
             v16File.delete()
             createVersion16Database(v16File)
-            val database = openDatabase(v16File, MIGRATION_16_17)
+            val database = openDatabase(v16File, MIGRATION_16_17, MIGRATION_17_18)
             try {
                 // Pre-existing data survives untouched - this migration only adds a new table.
                 val place = database.placeCandidateDao().getById("place-1")
@@ -652,6 +651,38 @@ class MigrationTest {
                 v16File.delete()
             }
         }
+
+    @Test
+    fun `migration 17 to 18 adds a usable recaps table`() =
+        runTest {
+            val v17File = File.createTempFile("migration-test-v17", ".db")
+            v17File.delete()
+            createVersion17Database(v17File)
+            val database = openDatabase(v17File, MIGRATION_17_18)
+            try {
+                // Pre-existing data survives untouched - this migration only adds a new table.
+                val place = database.placeCandidateDao().getById("place-1")
+                assertEquals("Cafe", place?.name)
+
+                val recap = RecapEntity(tripId = "trip-1", availableAt = LocalDate(2026, 7, 24))
+                database.recapDao().ensureScheduled(recap)
+                assertEquals(recap, database.recapDao().getById("trip-1"))
+            } finally {
+                database.close()
+                v17File.delete()
+            }
+        }
+
+    private fun createVersion17Database(file: File) {
+        createVersion16Database(file)
+        val connection = BundledSQLiteDriver().open(file.absolutePath)
+        try {
+            MIGRATION_16_17.migrate(connection)
+            connection.execSQL("PRAGMA user_version = 17")
+        } finally {
+            connection.close()
+        }
+    }
 
     private fun createVersion16Database(file: File) {
         createVersion15Database(file)
@@ -704,6 +735,21 @@ class MigrationTest {
         }
     }
 
+    private fun openVersion10To11Database(file: File): AlongsideDatabase {
+        val migrations =
+            arrayOf(
+                MIGRATION_10_11,
+                MIGRATION_11_12,
+                MIGRATION_12_13,
+                MIGRATION_13_14,
+                MIGRATION_14_15,
+                MIGRATION_15_16,
+                MIGRATION_16_17,
+                MIGRATION_17_18,
+            )
+        return openDatabase(file, *migrations)
+    }
+
     private fun openVersion9To10Database(file: File): AlongsideDatabase {
         val migrations =
             arrayOf(
@@ -715,12 +761,13 @@ class MigrationTest {
                 MIGRATION_14_15,
                 MIGRATION_15_16,
                 MIGRATION_16_17,
+                MIGRATION_17_18,
             )
         return openDatabase(file, *migrations)
     }
 
     private fun openVersion13To14Database(file: File): AlongsideDatabase {
-        val migrations = arrayOf(MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
+        val migrations = arrayOf(MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
         return openDatabase(file, *migrations)
     }
 
@@ -768,7 +815,15 @@ class MigrationTest {
             .build()
 
     private fun openVersion12To13Database(file: File): AlongsideDatabase {
-        val migrations = arrayOf(MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
+        val migrations =
+            arrayOf(
+                MIGRATION_12_13,
+                MIGRATION_13_14,
+                MIGRATION_14_15,
+                MIGRATION_15_16,
+                MIGRATION_16_17,
+                MIGRATION_17_18,
+            )
         return openDatabase(file, *migrations)
     }
 

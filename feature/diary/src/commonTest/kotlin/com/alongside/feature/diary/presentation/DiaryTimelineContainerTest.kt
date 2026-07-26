@@ -18,6 +18,7 @@ import com.alongside.feature.diary.FakePhotoUploadClient
 import com.alongside.feature.diary.FakePreTripPhotoContentPuller
 import com.alongside.feature.diary.FakePreTripPhotoRepository
 import com.alongside.feature.diary.FakePreTripPhotoUploadClient
+import com.alongside.feature.diary.FakeRecapRepository
 import com.alongside.feature.diary.FakeVisionClient
 import com.alongside.feature.diary.capture.ExifPhotoReader
 import com.alongside.feature.diary.fakeTrip
@@ -51,6 +52,7 @@ class DiaryTimelineContainerTest {
     private val preTripPhotoContentPuller = FakePreTripPhotoContentPuller()
     private val backgroundWorkScheduler = FakeBackgroundWorkScheduler()
     private val preTripPhotoUploadClient = FakePreTripPhotoUploadClient()
+    private val recapRepository = FakeRecapRepository()
 
     private fun containerUnderTest(
         uid: String = "owner-1",
@@ -92,9 +94,11 @@ class DiaryTimelineContainerTest {
                     captureCoordinator = captureCoordinator,
                     preTripPhotoRepository = preTripPhotoRepository,
                     preTripPhotoContentPuller = preTripPhotoContentPuller,
+                    recapRepository = recapRepository,
                 ),
             captureCoordinator = captureCoordinator,
             preTripPhotoCaptureCoordinator = preTripPhotoCaptureCoordinator,
+            recapSchedulingCoordinator = RecapSchedulingCoordinator(recapRepository),
             clock = FixedClock,
         )
     }
@@ -168,6 +172,45 @@ class DiaryTimelineContainerTest {
 
                 cancelAndIgnoreRemainingItems()
             }
+        }
+
+    @Test
+    fun `the last day stays locked until the recap is scheduled then unlocks`() =
+        runTest {
+            val trip =
+                fakeTrip(
+                    id = "trip-1",
+                    ownerId = "owner-1",
+                    memberId = "partner-1",
+                    startDate = FIXED_TODAY,
+                    endDate = FIXED_TODAY,
+                )
+            pairingRepository.activeTrip.value = trip
+            val ownEntry =
+                testDiaryEntry(id = "own-1", tripId = "trip-1", userId = "owner-1", date = FIXED_TODAY, closedAt = FIXED_NOW)
+            val partnerEntry =
+                testDiaryEntry(id = "partner-1", tripId = "trip-1", userId = "partner-1", date = FIXED_TODAY, closedAt = FIXED_NOW)
+            diaryEntryRepository.upsert(ownEntry)
+            diaryEntryRepository.upsert(partnerEntry)
+
+            containerUnderTest().test(this) {
+                runOnCreate()
+                awaitState() // today/ownUserId bootstrap
+                val locked = awaitState() // both sides ready, but recap not scheduled yet
+                val lockedDay = assertIs<DiaryTimelineItem.Day>(locked.items.single()).card
+                assertEquals(DayUnlockState.LOCKED, lockedDay.unlockState)
+
+                val unlocked = awaitState() // re-emits once ensureScheduled lands
+                val unlockedDay = assertIs<DiaryTimelineItem.Day>(unlocked.items.single()).card
+                assertEquals(DayUnlockState.UNLOCKED, unlockedDay.unlockState)
+
+                cancelAndIgnoreRemainingItems()
+            }
+
+            assertEquals(
+                listOf("trip-1" to FIXED_TODAY.plus(1, DateTimeUnit.DAY)),
+                recapRepository.ensureScheduledCalls,
+            )
         }
 
     @Test

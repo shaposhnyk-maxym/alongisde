@@ -31,6 +31,9 @@ kotlin {
             implementation(libs.findLibrary("kotlinx-datetime").get())
             implementation(compose.materialIconsExtended)
         }
+        commonTest.dependencies {
+            implementation(libs.findLibrary("orbit-test").get())
+        }
         androidMain.dependencies {
             implementation(project.dependencies.platform(libs.findLibrary("firebase-bom").get()))
             implementation(libs.findLibrary("firebase-messaging").get())
