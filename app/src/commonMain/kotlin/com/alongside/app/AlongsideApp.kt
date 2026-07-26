@@ -18,6 +18,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.savedstate.serialization.SavedStateConfiguration
 import com.alongside.app.capture.rememberPhotoPickerLauncher
+import com.alongside.app.home.HomeContainer
 import com.alongside.app.navigation.AlongsideNavDisplay
 import com.alongside.app.navigation.Home
 import com.alongside.app.navigation.Login
@@ -69,6 +70,7 @@ import kotlinx.serialization.modules.subclass
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
 /**
@@ -185,6 +187,8 @@ public fun AlongsideApp(
                 }
                 entry<Home> {
                     MainTabScreen(tab = MainTab.HOME, backStack = backStack) {
+                        val homeContainer = koinViewModel<HomeContainer>()
+                        val homeState by homeContainer.collectAsState()
                         Column(modifier = Modifier.fillMaxSize()) {
                             ScreenHeader(title = "Alongside")
                             Box(modifier = Modifier.weight(1f).fillMaxSize()) {
@@ -195,7 +199,9 @@ public fun AlongsideApp(
                                             "fresh matches will gather here.",
                                 ) {
                                     AlongsideTextButton(text = "Settings", onClick = { backStack.add(Settings) })
-                                    AlongsideTextButton(text = "Recap", onClick = { backStack.add(Recap) })
+                                    if (homeState.isRecapAvailable) {
+                                        AlongsideTextButton(text = "Recap", onClick = { backStack.add(Recap) })
+                                    }
                                 }
                             }
                         }

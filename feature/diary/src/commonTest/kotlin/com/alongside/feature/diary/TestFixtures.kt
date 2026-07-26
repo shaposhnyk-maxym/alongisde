@@ -11,12 +11,14 @@ import com.alongside.core.domain.pretrip.PreTripPhotoContentPuller
 import com.alongside.core.domain.pretrip.PreTripPhotoRepository
 import com.alongside.core.domain.pretrip.PreTripPhotoUploadClient
 import com.alongside.core.domain.pretrip.PreTripPhotoUploadResult
+import com.alongside.core.domain.recap.RecapRepository
 import com.alongside.core.domain.work.BackgroundJobKind
 import com.alongside.core.domain.work.BackgroundWorkScheduler
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.diary.DiaryEntry
 import com.alongside.core.model.diary.Photo
 import com.alongside.core.model.pretrip.PreTripPhoto
+import com.alongside.core.model.recap.Recap
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -145,6 +147,24 @@ internal class FakePreTripPhotoContentPuller : PreTripPhotoContentPuller {
     ) {
         pulls += tripId to ownUserId
     }
+}
+
+internal class FakeRecapRepository : RecapRepository {
+    private val recaps = MutableStateFlow<Map<String, Recap>>(emptyMap())
+    val ensureScheduledCalls = mutableListOf<Pair<String, LocalDate>>()
+
+    override suspend fun ensureScheduled(
+        tripId: String,
+        availableAt: LocalDate,
+    ) {
+        ensureScheduledCalls += tripId to availableAt
+        if (recaps.value.containsKey(tripId)) return
+        recaps.value = recaps.value + (tripId to Recap(tripId = tripId, availableAt = availableAt))
+    }
+
+    override suspend fun getById(tripId: String): Recap? = recaps.value[tripId]
+
+    override fun observeById(tripId: String): Flow<Recap?> = recaps.map { it[tripId] }
 }
 
 internal class FakePreTripPhotoUploadClient(

@@ -1,6 +1,9 @@
 package com.alongside.feature.diary.presentation
 
+import com.alongside.core.domain.diary.DayUnlockState
+import com.alongside.core.model.recap.Recap
 import com.alongside.feature.diary.fakeTrip
+import com.alongside.feature.diary.testDiaryEntry
 import com.alongside.feature.diary.testPreTripPhoto
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
@@ -9,6 +12,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 
 private val FIXED_TODAY = LocalDate(2026, 7, 20)
 
@@ -111,5 +115,75 @@ class DiaryTimelineStateTest {
                 "expected no Countdown item with $photoCount photo(s) on the reunion day",
             )
         }
+    }
+
+    @Test
+    fun `the last day stays locked when both sides are ready but no recap has been scheduled yet`() {
+        val trip = fakeTrip(startDate = FIXED_TODAY.plus(-1, DateTimeUnit.DAY), endDate = FIXED_TODAY)
+        val closedAt = Instant.fromEpochMilliseconds(1)
+        val ownEntry = testDiaryEntry(id = "own-last", date = trip.endDate, closedAt = closedAt)
+        val partnerEntry = testDiaryEntry(id = "partner-last", userId = "partner-1", date = trip.endDate, closedAt = closedAt)
+        val state =
+            DiaryTimelineState(
+                today = FIXED_TODAY,
+                trip = trip,
+                ownEntries = listOf(ownEntry),
+                partnerEntries = listOf(partnerEntry),
+                recap = null,
+            )
+
+        val lastDayCard =
+            state.items
+                .filterIsInstance<DiaryTimelineItem.Day>()
+                .last()
+                .card
+        assertEquals(DayUnlockState.LOCKED, lastDayCard.unlockState)
+    }
+
+    @Test
+    fun `the last day unlocks once the recap is scheduled`() {
+        val trip = fakeTrip(startDate = FIXED_TODAY.plus(-1, DateTimeUnit.DAY), endDate = FIXED_TODAY)
+        val closedAt = Instant.fromEpochMilliseconds(1)
+        val ownEntry = testDiaryEntry(id = "own-last", date = trip.endDate, closedAt = closedAt)
+        val partnerEntry = testDiaryEntry(id = "partner-last", userId = "partner-1", date = trip.endDate, closedAt = closedAt)
+        val state =
+            DiaryTimelineState(
+                today = FIXED_TODAY,
+                trip = trip,
+                ownEntries = listOf(ownEntry),
+                partnerEntries = listOf(partnerEntry),
+                recap = Recap(tripId = trip.id, availableAt = trip.endDate.plus(1, DateTimeUnit.DAY)),
+            )
+
+        val lastDayCard =
+            state.items
+                .filterIsInstance<DiaryTimelineItem.Day>()
+                .last()
+                .card
+        assertEquals(DayUnlockState.UNLOCKED, lastDayCard.unlockState)
+    }
+
+    @Test
+    fun `a non-final day unlocks once both sides are ready even without a recap scheduled`() {
+        val nonFinalDate = FIXED_TODAY.plus(-1, DateTimeUnit.DAY)
+        val trip = fakeTrip(startDate = nonFinalDate, endDate = FIXED_TODAY)
+        val closedAt = Instant.fromEpochMilliseconds(1)
+        val ownEntry = testDiaryEntry(id = "own-first", date = nonFinalDate, closedAt = closedAt)
+        val partnerEntry = testDiaryEntry(id = "partner-first", userId = "partner-1", date = nonFinalDate, closedAt = closedAt)
+        val state =
+            DiaryTimelineState(
+                today = FIXED_TODAY,
+                trip = trip,
+                ownEntries = listOf(ownEntry),
+                partnerEntries = listOf(partnerEntry),
+                recap = null,
+            )
+
+        val nonFinalDayCard =
+            state.items
+                .filterIsInstance<DiaryTimelineItem.Day>()
+                .first()
+                .card
+        assertEquals(DayUnlockState.UNLOCKED, nonFinalDayCard.unlockState)
     }
 }

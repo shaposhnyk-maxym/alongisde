@@ -7,6 +7,7 @@ import com.alongside.core.database.pairingTripLocalDataSource
 import com.alongside.core.database.placeCandidateRepository
 import com.alongside.core.database.placeSwipeRepository
 import com.alongside.core.database.preTripPhotoRepository
+import com.alongside.core.database.recapRepository
 import com.alongside.core.database.sync.SyncOperationStore
 import com.alongside.core.database.syncOperationStore
 import com.alongside.core.database.tripRepository
@@ -19,6 +20,7 @@ import com.alongside.core.domain.place.PlaceContentPuller
 import com.alongside.core.domain.place.PlaceSwipeRepository
 import com.alongside.core.domain.pretrip.PreTripPhotoContentPuller
 import com.alongside.core.domain.pretrip.PreTripPhotoRepository
+import com.alongside.core.domain.recap.RecapRepository
 import com.alongside.core.domain.trip.DefaultTripManagementRepository
 import com.alongside.core.domain.trip.TripManagementRepository
 import com.alongside.core.domain.trip.TripRepository
@@ -128,6 +130,10 @@ public val dataModule: Module =
                 localPreTripPhotoRepository = get<AlongsideDatabase>().preTripPhotoRepository(),
             )
         }
+        // No SyncingRecapRepository/SyncEntityBinding, unlike every other repository above -
+        // both devices derive an identical Recap locally from the trip's end date, so there's
+        // nothing to push or reconcile through Firestore.
+        single<RecapRepository> { get<AlongsideDatabase>().recapRepository() }
         // bind SyncEntityBinding::class, not single<SyncEntityBinding> { ... } - three
         // registrations of the exact same type with no qualifier silently overwrite each other in
         // Koin's registry (only the last-declared survives getAll<SyncEntityBinding>()); binding

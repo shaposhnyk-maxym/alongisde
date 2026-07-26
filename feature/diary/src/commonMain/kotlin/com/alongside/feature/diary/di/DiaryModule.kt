@@ -7,6 +7,7 @@ import com.alongside.feature.diary.presentation.DiaryCaptureCoordinator
 import com.alongside.feature.diary.presentation.DiaryTimelineContainer
 import com.alongside.feature.diary.presentation.DiaryTimelineDataSource
 import com.alongside.feature.diary.presentation.PreTripPhotoCaptureCoordinator
+import com.alongside.feature.diary.presentation.RecapSchedulingCoordinator
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -37,6 +38,7 @@ public val diaryFeatureModule =
                 backgroundWorkScheduler = get(),
             )
         }
-        single { DiaryTimelineDataSource(get(), get(), get(), get(), get(), get(), get()) }
-        viewModel { DiaryTimelineContainer(get(), get(), get(), get()) }
+        single { RecapSchedulingCoordinator(get()) }
+        single { DiaryTimelineDataSource(get(), get(), get(), get(), get(), get(), get(), get()) }
+        viewModel { DiaryTimelineContainer(get(), get(), get(), get(), get()) }
     }

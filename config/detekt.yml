@@ -19,9 +19,10 @@ complexity:
     # 10, not the default 6: androidAppModule(...) (M12.5) takes context plus 3 Firebase
     # resource-sourced values (apiKey/projectId/storageBucket, all from google-services.json)
     # plus 2 BuildConfig-sourced keys, EpisodeProcessingPipeline's constructor grew a
-    # photoUploadClient seam alongside its existing 5, and PlaceImportPipeline's grew a
-    # placeGeocodingClient seam (city lookup, M13.2 follow-up) alongside its existing 6, the
-    # same "one more real dependency, not a parameter-object-worthy one-off" reasoning - real
+    # photoUploadClient seam alongside its existing 5, PlaceImportPipeline's grew a
+    # placeGeocodingClient seam (city lookup, M13.2 follow-up) alongside its existing 6, and
+    # DiaryTimelineDataSource's grew a recapRepository seam (M20.1) alongside its existing 7 -
+    # the same "one more real dependency, not a parameter-object-worthy one-off" reasoning - real
     # parameter objects here would only be used at these one-off call sites. buildRecapSlides
     # (M20) genuinely needs 10: 2 trip dates plus 4 own/partner entity-list pairs plus 1 shared
     # candidate list - same reasoning, a params-object here would only ever be built at this one
@@ -33,6 +34,9 @@ complexity:
   TooManyFunctions:
     active: true
     thresholdInFiles: 15
+    # AlongsideDatabase (M20.1): one abstract fun per DAO is the entire class's job - each new
+    # Room-backed entity adds exactly one, not a design smell to refactor away.
+    thresholdInClasses: 12
   # MigrationTest.kt hand-rolls a fresh SQLiteConnection fixture (raw CREATE TABLE/INSERT SQL) for
   # every prior schema version, per-version - the same repetitive-by-design shape M9's own doc
   # comment in that file describes. It's long because there's one migration's worth of history to
