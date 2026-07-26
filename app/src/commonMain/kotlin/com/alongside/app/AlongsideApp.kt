@@ -58,6 +58,8 @@ import com.alongside.feature.places.presentation.PlaceImportContainer
 import com.alongside.feature.places.presentation.PlaceImportScreen
 import com.alongside.feature.places.presentation.PlacesListContainer
 import com.alongside.feature.places.presentation.PlacesListScreen
+import com.alongside.feature.recap.presentation.RecapContainer
+import com.alongside.feature.recap.presentation.RecapScreen
 import com.alongside.feature.settings.presentation.SettingsContainer
 import com.alongside.feature.settings.presentation.SettingsScreen
 import com.alongside.feature.settings.presentation.SettingsSideEffect
@@ -287,10 +289,8 @@ public fun AlongsideApp(
                     SettingsScreen(container, onClose = { backStack.removeLastOrNull() })
                 }
                 entry<Recap> {
-                    PlaceholderScreen(
-                        title = "Recap",
-                        note = "The trip's story, told Stories-style - feature:recap.",
-                    )
+                    val container = koinViewModel<RecapContainer>()
+                    RecapScreen(container, onFinish = { backStack.removeLastOrNull() })
                 }
             },
     )
