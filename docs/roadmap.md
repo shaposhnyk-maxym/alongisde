@@ -3104,7 +3104,7 @@ detekt-пороги тут працюють включно (значення Р�
 
 ---
 
-### M20.2 — Recap: Stories-хром
+### M20.2 — Recap: Stories-хром ✅ done
 `core:ui`, `playground`. Не залежить від `M20`/`M20.1` — generic UI
 над плейсхолдерами, без жодного знання про `RecapSlide` чи `Recap`.
 
@@ -3131,6 +3131,52 @@ detekt-пороги тут працюють включно (значення Р�
 **Свідомо НЕ тестується (чесна межа, не пропуск):** сама робота в
 `playground` — мануальна ітерація через Hot Reload, той самий статус,
 що M12.9's `Zoomable`-прототипування; playground не входить у CI.
+
+**Відхилення від опису вище:**
+- Попередня спроба цього мілстоуна обірвалась на півдорозі: незакомічений
+  stash на `feat/m20.2-stories-chrome` посилався на `StoriesChrome`, якого
+  фізично не існувало в жодній гілці, тоді як його ж власна правка
+  `roadmap.md` вже позначала мілстоун як готовий. Той stash дропнутий —
+  це нова, чиста реалізація, не продовження
+- `StoriesChrome` (`core/ui/component/StoriesChrome.kt`) — контрольований
+  компонент: `activeIndex`/`onActiveIndexChange` підняті назовні (той самий
+  контракт, що `Slider(value, onValueChange)`), а не внутрішній стан —
+  свідоме рішення, щоб майбутній `RecapContainer` (`M20.3`) міг володіти
+  поточним слайдом у своєму Orbit `State`. Прогрес-бари зверху — вже
+  наявний `StorySegmentProgress` (`core/ui/component/StorySegmentProgress.kt`,
+  доданий 2026-07-17 з власним тестом/голденом), `StoriesChrome` його
+  компонує, а не переписує заново
+- `content: @Composable (index: Int, elapsedFraction: Float) -> Unit` —
+  хром передає слайду частку часу показу (0..1), не тільки індекс, щоб
+  слайд із фото міг сам застосувати паралакс/Ken-Burns-панораму, не
+  змушуючи хром знати про існування фото
+- Таймер — один `Animatable(0f)` + `animateTo(1f, tween(slideDurationMillis))`
+  у `LaunchedEffect(activeIndex, ...)`, той самий патерн, що вже є в
+  `CountUpText` (`core/ui/animation/CountUpText.kt`) — нічого нового.
+  Через це `ComposeTestRule.mainClock.advanceTimeBy(...)` прискорює тест
+  без реального очікування, той самий механізм, що вже використовує
+  `TypewriterTextTest.kt`
+- Новий параметр `autoAdvance: Boolean = true` — не з опису мілстоуна вище,
+  доданий виключно для детермінованого `@Preview` (і, за потреби, тестів):
+  той самий прецедент, що `TypewriterText`'s `initiallyRevealed` ("previews/
+  screenshots use it so goldens capture the [...] frame instead of the
+  [in-flight] one"). M20.3.5 вже двічі ловив CI-only скріншот-флейки саме
+  через анімацію/асинхронний тайминг — цей параметр прибирає цей клас
+  багів повністю, а не сподівається, що preview-сканер осяде однаково
+  локально й у CI
+- Тап-зліва на першому слайді — no-op (лишається на місці); тап-справа на
+  останньому слайді викликає `onFinish()` замість виходу за межі індексу —
+  природне читання "тап рухає індекс" на межах, той самий підхід, що
+  реальні Stories-застосунки
+- Свідомо НЕ реалізовано (не в Accept-списку цього мілстоуна, не
+  забігання наперед на M20.3): кнопка закриття/dismiss і hold-to-pause —
+  останнє згадано лише в загальному описі Stories у
+  `docs/trip-app-concept.md` item 10, не в Accept-критеріях M20.2
+- Плейграунд-секція (`StoriesChromeSection`) винесена в окремий файл
+  `playground/StoriesChromePlayground.kt`, а не додана в `Main.kt` — той
+  самий прецедент, що вже є для `RecapSlidesPlayground.kt` (`M20.3.5`),
+  замість того, щоб піднімати `TooManyFunctions.thresholdInFiles` в
+  `config/detekt.yml`
 
 ---
 
