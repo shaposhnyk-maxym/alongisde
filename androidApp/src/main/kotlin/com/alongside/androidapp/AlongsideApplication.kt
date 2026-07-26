@@ -12,6 +12,7 @@ import com.alongside.feature.matcher.di.matcherFeatureModule
 import com.alongside.feature.onboarding.di.onboardingFeatureModule
 import com.alongside.feature.pairing.di.pairingFeatureModule
 import com.alongside.feature.places.di.placesFeatureModule
+import com.alongside.feature.recap.di.recapFeatureModule
 import com.alongside.feature.settings.di.settingsFeatureModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.component.KoinComponent
@@ -44,6 +45,7 @@ class AlongsideApplication :
                 placesFeatureModule,
                 matcherFeatureModule,
                 settingsFeatureModule,
+                recapFeatureModule,
             )
         }
         // Idempotent (ExistingPeriodicWorkPolicy.KEEP) - safe to call on every process start,

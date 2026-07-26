@@ -52,6 +52,7 @@ dependencies {
     implementation(projects.feature.places)
     implementation(projects.feature.matcher)
     implementation(projects.feature.settings)
+    implementation(projects.feature.recap)
     implementation(projects.core.network)
     implementation(projects.core.database)
     implementation(projects.core.domain)
