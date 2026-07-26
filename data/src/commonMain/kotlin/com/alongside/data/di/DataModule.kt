@@ -17,6 +17,7 @@ import com.alongside.core.domain.pairing.PairingTripDataSource
 import com.alongside.core.domain.place.PlaceCandidateRepository
 import com.alongside.core.domain.place.PlaceContentPuller
 import com.alongside.core.domain.place.PlaceSwipeRepository
+import com.alongside.core.domain.pretrip.PreTripPhotoContentPuller
 import com.alongside.core.domain.trip.DefaultTripManagementRepository
 import com.alongside.core.domain.trip.TripManagementRepository
 import com.alongside.core.domain.trip.TripRepository
@@ -37,6 +38,7 @@ import com.alongside.data.place.PlaceCandidateSyncEntityBinding
 import com.alongside.data.place.PlaceSwipeSyncEntityBinding
 import com.alongside.data.place.SyncingPlaceCandidateRepository
 import com.alongside.data.place.SyncingPlaceSwipeRepository
+import com.alongside.data.pretrip.FirestorePreTripPhotoContentPuller
 import com.alongside.data.pretrip.PreTripPhotoSyncEntityBinding
 import com.alongside.data.sync.FirestoreRemoteDocumentReader
 import com.alongside.data.sync.RemoteDocumentReader
@@ -109,6 +111,12 @@ public val dataModule: Module =
                 api = get(),
                 localPlaceCandidateRepository = get<AlongsideDatabase>().placeCandidateRepository(),
                 localPlaceSwipeRepository = get<AlongsideDatabase>().placeSwipeRepository(),
+            )
+        }
+        single<PreTripPhotoContentPuller> {
+            FirestorePreTripPhotoContentPuller(
+                api = get(),
+                localPreTripPhotoRepository = get<AlongsideDatabase>().preTripPhotoRepository(),
             )
         }
         // bind SyncEntityBinding::class, not single<SyncEntityBinding> { ... } - three

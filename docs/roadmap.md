@@ -2644,7 +2644,7 @@ Syncing-обгортка-репозиторій поки не потрібна.
 
 ---
 
-### M19.7 — Pre-trip photo: pull-синк + повний round-trip
+### M19.7 — Pre-trip photo: pull-синк + повний round-trip ✅ done
 `core:domain`, `data`. Залежить від `M19.6` (push-код і задеплоєні
 rules мусять уже існувати — round-trip-тест генерує "серверний" стан
 саме через push-шлях, а мануальний смоук потребує задеплоєних rules).
@@ -2652,10 +2652,10 @@ Pull-синк — НЕ генеричний. `DiaryContentPuller`/`PlaceContentP
 (`core:domain`) — окремі явні компоненти, кожен зі своєю
 `Firestore...ContentPuller`-реалізацією (`data`) і власним викликом з
 фіча-шару. Без нового `PreTripPhotoContentPuller` партнерове фото ляже
-в Firestore і ніколи не долетить до другого пристрою.
+в Firestore і ніколи не долетить до другого пристрою.   
 
 **Accept:**
-- Новий `PreTripPhotoContentPuller` (`core:domain`) + Firestore-реалізація
+- [x] Новий `PreTripPhotoContentPuller` (`core:domain`) + Firestore-реалізація
   (`data`), за зразком `FirestoreDiaryContentPuller`/`FirestorePlaceContentPuller`.
   `FirestorePreTripPhotoContentPullerTest` (`data/src/jvmTest`, той
   самий Ktor `MockEngine`-підхід, що `FirestorePlaceContentPullerTest`,
@@ -2664,7 +2664,7 @@ Pull-синк — НЕ генеричний. `DiaryContentPuller`/`PlaceContentP
   перезаписується; відсутність ремоут-документів нічого не підтягує;
   незмінений партнерський запис не перезаписується повторно; змінений
   партнерський запис перезаписується
-- **Повний push→pull round-trip, не лише кожна половина ізольовано**:
+- [x] **Повний push→pull round-trip, не лише кожна половина ізольовано**:
   інтеграційний тест (`data/src/jvmTest`), що (1) пушить `PreTripPhoto`
   через `SyncingPreTripPhotoRepository`/`SyncCoordinator` у фейковий
   Firestore-бекенд, (2) синканий запис у цьому бекенді містить
@@ -2672,7 +2672,48 @@ Pull-синк — НЕ генеричний. `DiaryContentPuller`/`PlaceContentP
   (3) `PreTripPhotoContentPuller`, читаючи той самий фейковий бекенд
   "з іншого пристрою", повертає сутність, ідентичну полю-в-поле
   оригіналу — закриває цикл push+pull одним тестом, а не двома
-  ізольованими половинами, яким довелось би довіряти нарізно
+  ізольованими половинами, яким довелось би довіряти нарізно —
+  `PreTripPhotoPushPullRoundTripTest` (`data/src/jvmTest`, 2 сценарії:
+  партнерове фото на "пристрій B" через overwrite-гілку puller'а;
+  власне фото того ж юзера на "пристрій B" через gap-fill-гілку)
+
+**Відхилення від початкового плану (усі узгоджені з користувачем перед
+реалізацією):**
+- **`SyncingPreTripPhotoRepository`** (`data/pretrip`) створено в цьому
+  мілстоуні, хоч M19.6 свідомо відклав його ("реального споживача (UI,
+  M19.8) ще нема") — round-trip-тест з Accept-критерія вимагає push
+  саме через syncing-обгортку, не напряму через `SyncEntityBinding`.
+  На відміну від кожного іншого `Syncing*Repository`, `upsert` НЕ
+  штампує `updatedAt` — у `PreTripPhoto` такого поля нема (свідомо,
+  з M19.5/M19.6). Це й є причина, чому `SyncCoordinator.preflight()`
+  для цієї сутності завжди пушить без ремоут-preflight-читання:
+  `PreTripPhotoFirestoreMapper.toFields` ніколи не серіалізує
+  `updatedAt`. Клас навмисно НЕ забіндений у `DataModule.kt` як
+  `PreTripPhotoRepository` (той самий "нема споживача" аргумент, що
+  й раніше) — лише `PreTripPhotoContentPuller` доданий у Koin-граф.
+  Додатковий стандартний unit-тест `SyncingPreTripPhotoRepositoryTest`
+  (`data/src/commonTest`, 4 тести, за зразком
+  `SyncingPlaceCandidateRepositoryTest`) — не було буквально в Accept-
+  критеріях, але існуючий прецедент для кожного іншого `Syncing*Repository`.
+- **Round-trip тест розбитий на два сценарії**, а не один — буквальний
+  текст Accept-критерія говорить про "одним тестом", але явно
+  узгоджено з користувачем розширити до обох гілок `PreTripPhotoContentPuller`
+  (partner-overwrite і own-gap-fill), а не лише партнерської, для
+  паритету з 6-кейсовим unit-тестом puller'а.
+- **Фейковий Firestore-бекенд для round-trip тесту** — нова
+  тест-інфраструктура (нічого подібного не існувало раніше): push-половина —
+  `FakeFirestoreBackendNetworkClient` (реалізує `SyncNetworkClient`,
+  без жодного HTTP, пише напряму в спільну `MutableMap`), pull-половина —
+  справжній `FirestoreApi` над Ktor `MockEngine`, що читає ту саму
+  мапу. `FakeRemoteDocumentReader` (наявний, з `data/src/commonTest`)
+  використаний без змін — оскільки в `PreTripPhoto` нема `updatedAt`,
+  він гарантовано ніколи не викликається для цієї сутності; тест явно
+  це перевіряє (`readDocumentIds.isEmpty()`) як регрес-guard.
+- **`runBlocking`, не `runTest`**, для обох нових `data/src/jvmTest`
+  файлів (той самий M3-прецедент з puller-тестів M15.5) — round-trip
+  тест додатково поєднує Room (`Dispatchers.IO`) із реальним
+  `FirestoreApi`/`MockEngine`, для якого несумісність з virtual-time
+  `runTest` уже задокументована.
 
 ---
 
