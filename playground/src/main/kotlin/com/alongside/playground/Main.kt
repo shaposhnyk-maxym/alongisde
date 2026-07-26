@@ -72,7 +72,7 @@ private const val PAGER_LOOP_MILLIS = 5000
 private const val PAGER_PAGES = 5
 
 @Composable
-private fun Section(
+internal fun Section(
     title: String,
     content: @Composable () -> Unit,
 ) {
@@ -104,6 +104,7 @@ private fun PlaygroundContent() {
                 StatusSection()
                 AnimationsSection()
                 PhotoGallerySection()
+                RecapSlidesSection()
             }
         }
     }

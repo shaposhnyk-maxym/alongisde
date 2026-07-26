@@ -3150,7 +3150,7 @@ day-слайдах лишається календарним `dayIndex`, не п
 
 ---
 
-### M20.3.5 — Recap: слайд-композабли (`core:ui`, `playground`)
+### M20.3.5 — Recap: слайд-композабли (`core:ui`, `playground`) ✅ done
 Залежить лише від `M20` (потрібна сама сутність `RecapSlide`, щоб
 знати які поля рендерити) — не залежить від `M20.1` (гейт доступності)
 чи `M20.2` (Stories-хром), обидва окремі паралельні концерни.
@@ -3184,6 +3184,46 @@ M12.9 і M20.2.** Кожен слайд-композабл збирається 
 **Свідомо НЕ входить сюди:** auto-advance/тап-навігація/прогрес-бари —
 це вже `M20.2`'s `StoriesChrome`; цей мілстоун лише постачає `content`
 для нього.
+
+**Відхилення від опису вище:**
+- **`core:ui` отримує нову залежність на `core:model`** (`api`, не
+  `implementation` — sub-типи `RecapSlide` з'являються в публічних
+  сигнатурах цих композаблів, тож і `feature:recap`, і `playground`
+  мають бачити їх транзитивно, той самий принцип, що `core:domain`'s
+  `api(projects.core.model)`) — перший прецедент, коли `core:ui`
+  залежить від domain-типів, а не лишається generic дизайн-системою;
+  сам мілстоун це прямо вимагає (докладніше в описі вище)
+- Дизайн-мокап (`design/main_app_design/Alongside - Main App and Recap
+  (standalone).html`) покриває лише 4 з 8 варіантів (`Intro`,
+  `ParallelLives`, `DayHighlight`, `Final`) — `ClosestMoment`/
+  `SwipeArchetype`/`UnresolvedQuestion` не мали візуального мокапу
+  взагалі (додані в `RecapSlide` вже після того, як мокап був
+  намальований), і спроєктовані з нуля за спільним хромом/типографікою/
+  палітрою мокапу (ink-канвас, курсивний serif на заголовках, mono
+  eyebrow/цифри, amber-акцент — усі значення вже існували як токени в
+  `AlongsideColor`, нових не додано)
+- `ParallelLives`/`ClosestMoment`: копірайт мокапу наративить час
+  ("weeks apart, before Kyiv"), а реальне поле — `distanceMeters`
+  (haversine, метри), тож підпис показує відформатовану відстань
+  ("482 km apart, before this trip"), не буквальний текст мокапу
+- `MatchList` — адаптація світлого "Our Matches" екрану головного
+  застосунку (окремий, не-Stories екран у мокапі) під темний
+  Stories-канвас через уже наявний `MediaListRow`, не буквальна копія
+- Playground-версії `ParallelLives`/`ClosestMoment`/`DayHighlight`
+  лишились суто кольоровими плейсхолдерами з захардкодженим текстом
+  (без реальних `RecapSlide`-фікстур) — той самий підхід, що M12.9's
+  `PhotoGallerySection`, тільки для photo-фону, а не жестів; фактичну
+  коректність полів (форматування відстані, day-index, city, quote)
+  перевіряє вже `core:ui`-версія й Roborazzi-golden, не playground
+- `playground`/`core:ui`: обидва отримали нову залежність на
+  `kotlinx-datetime` (`RecapSlide.DayHighlight`/`ClosestMoment`'s
+  `date: LocalDate`) — `core:model` декларує цю бібліотеку лише як
+  `implementation`, тож типом `LocalDate` не можна скористатись
+  транзитивно навіть через `api(projects.core.model)`
+- Screenshot-тест — не окремий hand-written `*Test.kt`, а сам
+  `@Preview` на кожному композаблі (той самий стандарт, що вже діє для
+  усього `core:ui`): `RoborazziConventionPlugin` автогенерує тест з
+  кожного `@Preview` в пакеті модуля
 
 ---
 
