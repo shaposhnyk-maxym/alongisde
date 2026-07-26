@@ -2903,7 +2903,7 @@ M12.11's WorkManager-надійність), Countdown-картка теж отр
 
 ---
 
-### M20 — Recap: слайд-модель і генерація
+### M20 — Recap: слайд-модель і генерація ✅ done
 `core:model`, `core:domain`. Чисто дані й чисті функції — без UI, без
 `Recap`-сутності доступності (та в `M20.1`), без Firestore.
 
@@ -2988,6 +2988,41 @@ day-слайдах лишається календарним `dayIndex`, не п
   → "свайп-архетип" відсутній
 - Юніт-тест: нуль `MATCHED`-кандидатів → Match-лист-слайд відсутній,
   генерація не падає й не рендерить порожню сітку
+
+**Відхилення від опису вище:**
+- Порядок слайдів у `buildRecapSlides` — буквальний порядок типів із
+  цього документа (`Intro → ParallelLives → DayHighlight(и) →
+  ClosestMoment → SwipeArchetype → UnresolvedQuestion → MatchList →
+  Final`), не наративний порядок з `trip-app-concept.md` (де
+  day-слайди йдуть одразу після інтро) — узгоджено з користувачем,
+  Accept-критерії перевіряють лише кількість day-слайдів і що `Final`
+  завжди останній, не повний порядок
+- `haversineDistanceMeters` уже існував (`core/domain/.../diary/
+  processing/EpisodeClustering.kt`, з M12's кластеризації фото) без
+  власного тесту — M20 не переписує його, лише додає
+  `HaversineDistanceMetersTest.kt`
+- "Детекція незакритого" не отримала окремої функції — `PENDING`
+  зі стандартного `resolveMatchStatus` (`core/domain/.../place/
+  PlaceMatchResolver.kt`, вже протестований) вже точно означає
+  "PENDING або однобічний", тож `UnresolvedQuestion`/`MatchList`
+  просто фільтрують за ним напряму
+- `core:domain`-логіка розбита на 5 файлів у пакеті `recap/`
+  (`RecapSlideBuilder.kt`, `RecapDateUtils.kt`,
+  `ParallelLivesSelector.kt`, `ClosestMomentFinder.kt`,
+  `SwipeArchetypeBuilder.kt`) замість одного файлу — той самий
+  прецедент, що `diary/`-пакет (`DiaryTimelineDay.kt`/
+  `DayUnlockState.kt`/`DiaryDayStatus.kt` окремо), і потрібно, щоб не
+  впертись у `TooManyFunctions.thresholdInFiles`
+- `config/detekt.yml`: `LongParameterList.functionThreshold`/
+  `constructorThreshold` з 8 на 11 — `buildRecapSlides` реально
+  потребує 10 параметрів (2 дати трипу + 4 пари own/partner-списків +
+  1 спільний список кандидатів), і це правило виявилось включним
+  (функція РІВНО з порогом параметрів уже падає), тож знадобився поріг
+  на одиницю вищий за фактичну кількість
+- **Нова задача, додана в план за запитом користувача:** побудова
+  самих `RecapSlide`-композаблів (`core:ui`) винесена в окремий
+  мілстоун `M20.3.5` (нижче, після `M20.3`) замість того, щоб бути
+  частиною `M20.3`
 
 ---
 
@@ -3085,11 +3120,14 @@ day-слайдах лишається календарним `dayIndex`, не п
 
 ### M20.3 — Recap: інтеграція (`feature:recap`)
 `feature:recap`, `app`. Залежить від `M20` (готова дека), `M20.1`
-(гейт доступності) і `M20.2` (хром) — усі три мусять уже існувати.
+(гейт доступності), `M20.2` (хром) і `M20.3.5` (слайд-композабли,
+нижче) — усі чотири мусять уже існувати. `M20.3.5` номерується після
+цього мілстоуна лише тому, що доданий пізніше в план — фактично
+`M20.3` на нього залежить, не навпаки.
 
 `feature:recap` — тільки Orbit `RecapContainer`, що читає готовий
 `List<RecapSlide>` від `core:domain` (`M20`) і мапить кожен варіант на
-конкретний Composable-контент усередині `core:ui`'s Stories-хрому
+відповідний Composable з `core:ui` (`M20.3.5`) усередині Stories-хрому
 (`M20.2`). Жодного рішення "показувати цей слайд чи ні" тут не
 приймається — воно вже прийняте на рівні `core:domain`, коли деку
 зібрано. Сам `entry<Recap>` (зараз `PlaceholderScreen`) при відкритті
@@ -3107,12 +3145,45 @@ day-слайдах лишається календарним `dayIndex`, не п
   UI-стан — те саме, що вже тестується ізольовано в `M20`, тепер
   перевіряється й на рівні реального Container'а
 - Юніт-тест: кожен варіант `RecapSlide` мапиться на свій, і тільки
-  свій, Composable-контент (вичерпний `when`, компілятор гарантує, що
-  жоден варіант не забуто)
-- Screenshot-тест кожного типу слайду з реальним `RecapSlide`-даними
-  (не плейсхолдер із `core:ui`, а фактичний вигляд Intro/ParallelLives/
-  DayHighlight/ClosestMoment/SwipeArchetype/UnresolvedQuestion/
-  MatchList/Final)
+  свій, Composable з `M20.3.5` (вичерпний `when`, компілятор гарантує,
+  що жоден варіант не забуто)
+
+---
+
+### M20.3.5 — Recap: слайд-композабли (`core:ui`, `playground`)
+Залежить лише від `M20` (потрібна сама сутність `RecapSlide`, щоб
+знати які поля рендерити) — не залежить від `M20.1` (гейт доступності)
+чи `M20.2` (Stories-хром), обидва окремі паралельні концерни.
+**Номер `M20.3.5` відображає коли цей мілстоун додано до плану, не
+порядок виконання чи залежностей** — `M20.3` фактично залежить від
+цього мілстоуна (`RecapContainer` мапить кожен `RecapSlide`-варіант на
+Composable, побудований тут), хоч і йде в документі раніше.
+
+`core:ui` отримує по одному Composable на кожен варіант `RecapSlide`
+(`IntroSlideContent`, `ParallelLivesSlideContent`,
+`DayHighlightSlideContent`, `ClosestMomentSlideContent`,
+`SwipeArchetypeSlideContent`, `UnresolvedQuestionSlideContent`,
+`MatchListSlideContent`, `FinalSlideContent`) — чистий рендер уже
+готових даних слайду, без жодної бізнес-логіки, без знання про
+репозиторії/Firestore. Кожен приймає свій конкретний `RecapSlide`
+sub-type (не весь sealed interface) як параметр — виключає потребу в
+`when`/`is`-перевірках усередині самого композабла, ця відповідальність
+лишається за `M20.3`'s `RecapContainer`.
+
+**Порядок розробки — спочатку `playground`, той самий прецедент, що
+M12.9 і M20.2.** Кожен слайд-композабл збирається й ітерується в
+`playground` першим на фейкових `RecapSlide`-інстансах (кольорові
+плейсхолдери там, де потрібні фото — той самий підхід, що M20.2's
+`StoriesChromeSection`), і лише після цього переноситься в `core:ui` з
+власним screenshot-тестом.
+
+**Accept:**
+- Screenshot-тест кожного типу слайду (по одному golden на варіант) на
+  представницьких фікстурних даних `RecapSlide`
+
+**Свідомо НЕ входить сюди:** auto-advance/тап-навігація/прогрес-бари —
+це вже `M20.2`'s `StoriesChrome`; цей мілстоун лише постачає `content`
+для нього.
 
 ---
 
