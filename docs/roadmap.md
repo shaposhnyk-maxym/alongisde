@@ -2590,7 +2590,7 @@ M19.6/M19.7, коли зʼявиться реальний споживач.
 
 ---
 
-### M19.6 — Pre-trip photo: push-синк (Firestore rules + SyncEntityBinding)
+### M19.6 — Pre-trip photo: push-синк (Firestore rules + SyncEntityBinding) ✅ done
 `firebase/firestore.rules`, `data`. Залежить від `M19.5` (модель уже
 мусить існувати). Push-синк генеричний (`SyncEntityBinding`), але тут
 чекають дві речі, які легко забути, бо весь наявний sync-код ховає їх
@@ -2611,18 +2611,31 @@ M19.6/M19.7, коли зʼявиться реальний споживач.
    `bind`, не `single<SyncEntityBinding>`.
 
 **Accept:**
-- Новий блок `match /preTripPhotos/{id}` у `firestore.rules` (див. п.1
-  вище). **Чесне обмеження**: у проєкті немає
-  `@firebase/rules-unit-testing` інфраструктури (наявний
-  `test:emulator` у `functions/` ганяє Cloud Function-логіку через
-  Admin SDK, який rules повністю обходить, — це не тест самих правил).
-  Верифікація тут мануальна: деплой rules + реальний крос-акаунт смоук,
-  той самий шлях, яким і так верифікувався попередній firestore-auth
-  фікс
-- `PreTripPhotoSyncEntityBinding` зареєстрований у `DataModule.kt` через
-  `bind SyncEntityBinding::class` (див. п.2 вище) + тест, що
-  `SyncCoordinator.bindings` реально підбирає операції з новим
-  `collectionPath`
+- [x] Новий блок `match /preTripPhotos/{id}` у `firestore.rules` (див. п.1
+      вище). **Чесне обмеження**: у проєкті немає
+      `@firebase/rules-unit-testing` інфраструктури (наявний
+      `test:emulator` у `functions/` ганяє Cloud Function-логіку через
+      Admin SDK, який rules повністю обходить, — це не тест самих правил).
+      Верифікація тут мануальна: деплой rules + реальний крос-акаунт смоук,
+      той самий шлях, яким і так верифікувався попередній firestore-auth
+      фікс. **Це відкладено на користувача** — блок написаний і
+      узгоджений з `diaryEntries`, але не задеплоєний і не прогнаний
+      крос-акаунт цією сесією
+- [x] `PreTripPhotoSyncEntityBinding` зареєстрований у `DataModule.kt` через
+      `bind SyncEntityBinding::class` (див. п.2 вище) + тест, що
+      `SyncCoordinator.bindings` реально підбирає операції з новим
+      `collectionPath` (`SyncCoordinatorTest.kt`: `SyncCoordinator routes
+      each operation to the binding matching its own collectionPath`,
+      два різні bindings в одному sync-циклі, кожен отримує лише свою
+      операцію)
+
+`PreTripPhotoFirestoreMapper`/`PreTripPhotoSyncEntityBinding` (`data/pretrip`)
+додані за зразком `PlaceSwipeFirestoreMapper`/`PlaceSwipeSyncEntityBinding`.
+`PreTripPhotoRepository` свідомо НЕ забіндений у Koin як самостійний тип —
+`PreTripPhotoSyncEntityBinding` будується напряму з
+`get<AlongsideDatabase>().preTripPhotoRepository()`, так само як усі інші
+bindings; реального споживача (UI, M19.8) ще нема, тож окрема
+Syncing-обгортка-репозиторій поки не потрібна.
 
 ---
 

@@ -3,10 +3,16 @@ package com.alongside.data.sync
 import com.alongside.core.database.sync.PersistedSyncOperationStatus
 import com.alongside.core.database.sync.SyncOperationStore
 import com.alongside.core.model.SyncStatus
+import com.alongside.core.model.pretrip.PreTripPhoto
 import com.alongside.core.network.firestore.model.FirestoreDocument
 import com.alongside.core.network.queue.MaxAttemptsRetryPolicy
+import com.alongside.core.network.queue.SyncOperation
+import com.alongside.core.network.queue.SyncOperationType
 import com.alongside.core.network.queue.SyncQueueProcessor
 import com.alongside.data.FakeBackgroundWorkScheduler
+import com.alongside.data.pretrip.PreTripPhotoFirestoreMapper
+import com.alongside.data.pretrip.PreTripPhotoSyncEntityBinding
+import com.alongside.data.pretrip.RecordingPreTripPhotoRepository
 import com.alongside.data.testTrip
 import com.alongside.data.trip.RecordingTripRepository
 import com.alongside.data.trip.SyncingTripRepository
@@ -196,6 +202,49 @@ class SyncCoordinatorTest {
             orderedCoordinator.sync()
 
             assertEquals(listOf("markStatus:trip-1", "remove:op-1"), callOrder)
+        }
+
+    // --- Accept criterion M19.6: multi-binding dispatch by collectionPath ---
+
+    @Test
+    fun `SyncCoordinator routes each operation to the binding matching its own collectionPath`() =
+        runTest {
+            val photoLocal = RecordingPreTripPhotoRepository()
+            val multiBindingCoordinator =
+                SyncCoordinator(
+                    store = store,
+                    processor = SyncQueueProcessor(networkClient, MaxAttemptsRetryPolicy(MAX_ATTEMPTS)),
+                    remoteReader = remoteReader,
+                    bindings = listOf(TripSyncEntityBinding(local), PreTripPhotoSyncEntityBinding(photoLocal)),
+                )
+            val photo =
+                PreTripPhoto(
+                    id = "photo-1",
+                    tripId = "trip-1",
+                    userId = "owner-1",
+                    uri = "content://photos/photo-1",
+                    takenAt = FIXED_NOW,
+                    latitude = 49.0,
+                    longitude = 24.0,
+                    syncStatus = SyncStatus.PENDING,
+                )
+            photoLocal.upsert(photo)
+            val photoOperation =
+                SyncOperation(
+                    id = "op-photo-1",
+                    collectionPath = PreTripPhotoFirestoreMapper.COLLECTION_PATH,
+                    documentId = photo.id,
+                    type = SyncOperationType.UPSERT,
+                    fields = PreTripPhotoFirestoreMapper.toFields(photo),
+                )
+            store.append(SyncOperationCodec.toPersisted(photoOperation, enqueuedAt = FIXED_NOW))
+            repository.upsert(testTrip(id = "trip-1"))
+
+            val result = multiBindingCoordinator.sync()
+
+            assertEquals(setOf("trip-1", "photo-1"), result.succeeded.map { it.documentId }.toSet())
+            assertEquals(SyncStatus.SYNCED, local.getById("trip-1")?.syncStatus)
+            assertEquals(SyncStatus.SYNCED, photoLocal.getById("photo-1")?.syncStatus)
         }
 
     // --- Preflight and DELETE edge cases ---

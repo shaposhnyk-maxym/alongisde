@@ -8,6 +8,8 @@ rules_version = '2';
 //   placeCandidates/{placeId}    - field tripId
 //   placeSwipes/{swipeId}        - fields tripId, candidateId, userId (doc id is deterministic:
 //                                   "$candidateId::$userId", one doc per user per candidate)
+//   preTripPhotos/{id}           - fields tripId, userId (M19.5-M19.8; not attached to any
+//                                   diaryEntry/episode, so it carries its own tripId/userId)
 //   pushTokens/{userId}          - one FCM token per user, doc id == owner's uid
 //
 // Scope of "owner-only delete" (docs/backend-plan.md): interpreted here as applying to the Trip
@@ -124,6 +126,17 @@ service cloud.firestore {
       allow create, update: if isSignedIn() &&
         request.resource.data.userId == request.auth.uid &&
         isTripMember(request.resource.data.tripId);
+    }
+
+    match /preTripPhotos/{id} {
+      // Same resource == null reasoning as diaryEntries' read rule.
+      allow read: if isSignedIn() && (resource == null || isTripMember(resource.data.tripId));
+
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        isTripMember(request.resource.data.tripId);
+
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
     // The doc id IS the owner's uid, so ownership is a path check, no resource.data read needed.
