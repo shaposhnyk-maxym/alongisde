@@ -222,7 +222,7 @@ class HomeContainerTest {
         }
 
     @Test
-    fun `recent matches only include mutually liked candidates, newest first, capped at four`() =
+    fun `recent matches only include mutually liked candidates - newest first - capped at four`() =
         runTest {
             val trip = fakeTrip(id = "trip-1", ownerId = "uid-1", memberId = "partner-1", startDate = TRIP_START_DATE)
             pairingRepository.activeTrip.value = trip
