@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import com.alongside.core.ui.theme.AlongsideSpacing
 import com.alongside.core.ui.theme.AlongsideTheme
@@ -31,6 +32,7 @@ import com.alongside.core.ui.theme.alongsideTypography
 public fun ScreenHeader(
     title: String,
     modifier: Modifier = Modifier,
+    titleStyle: TextStyle = MaterialTheme.typography.headlineSmall,
     trailing: @Composable () -> Unit = {},
 ) {
     Row(
@@ -41,7 +43,7 @@ public fun ScreenHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = title, style = MaterialTheme.typography.headlineSmall)
+        Text(text = title, style = titleStyle)
         trailing()
     }
 }
