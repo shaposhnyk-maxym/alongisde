@@ -33,6 +33,11 @@ googleid = "1.1.1"
 # EXIF reading for feature:diary's photo capture step - Android-only (see docs/roadmap.md M10;
 # iOS EXIF/photo-library reading is deferred, same as M7).
 androidx-exifinterface = "1.3.7"
+# NotificationCompat/NotificationManagerCompat for the local recap-ready notification
+# (docs/roadmap.md M20.5) - Android-only, same shell as the rest of this section. Pinned below
+# the latest release - 1.19.0+ requires compileSdk 37, this project is still on 36
+# (ALONGSIDE_COMPILE_SDK, build-logic/convention/.../KmpLibraryPlugin.kt).
+androidx-core-ktx = "1.15.0"
 
 # Firebase Cloud Messaging (Android-only - native SDK, not the multiplatform
 # wrapper the ADR in kmp-module-architecture.md avoids; see docs/roadmap.md M17)
@@ -105,6 +110,7 @@ androidx-credentials = { module = "androidx.credentials:credentials", version.re
 androidx-credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "androidx-credentials" }
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "androidx-exifinterface" }
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core-ktx" }
 
 # Firebase Cloud Messaging (Android-only)
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }

@@ -187,6 +187,11 @@ private fun unusedBackgroundWorkScheduler() =
         override fun scheduleOneOff(kind: BackgroundJobKind) = error("not used by this test")
 
         override fun ensurePeriodicSweepScheduled() = error("not used by this test")
+
+        override fun scheduleRecapReadyNotification(
+            tripId: String,
+            fireAt: LocalDate,
+        ) = error("not used by this test")
     }
 
 /** Records the queried userId (if any), always resolving to "no active trip" - see file kdoc. */

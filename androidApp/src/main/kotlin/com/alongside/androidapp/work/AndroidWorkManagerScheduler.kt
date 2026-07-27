@@ -9,9 +9,13 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.alongside.core.domain.recap.durationUntilRecapNotification
 import com.alongside.core.domain.work.BackgroundJobKind
 import com.alongside.core.domain.work.BackgroundWorkScheduler
+import kotlinx.datetime.LocalDate
 import java.util.concurrent.TimeUnit
+import kotlin.time.Clock
+import kotlin.time.toJavaDuration
 
 private const val PERIODIC_SWEEP_UNIQUE_NAME = "background-work-periodic-sweep"
 
@@ -35,6 +39,7 @@ private val CONNECTED_CONSTRAINTS: Constraints =
  */
 internal class AndroidWorkManagerScheduler(
     private val context: Context,
+    private val clock: Clock = Clock.System,
 ) : BackgroundWorkScheduler {
     override fun scheduleOneOff(kind: BackgroundJobKind) {
         val request =
@@ -53,5 +58,22 @@ internal class AndroidWorkManagerScheduler(
         WorkManager
             .getInstance(context)
             .enqueueUniquePeriodicWork(PERIODIC_SWEEP_UNIQUE_NAME, ExistingPeriodicWorkPolicy.KEEP, request)
+    }
+
+    // Deliberately no Constraints() here, unlike the two methods above - this is a purely local,
+    // time-based notification, not a network-dependent sync job.
+    override fun scheduleRecapReadyNotification(
+        tripId: String,
+        fireAt: LocalDate,
+    ) {
+        val delay = durationUntilRecapNotification(fireAt, clock.now())
+        val request =
+            OneTimeWorkRequestBuilder<RecapReadyNotificationWorker>()
+                .setInitialDelay(delay.toJavaDuration())
+                .setInputData(Data.Builder().putString(KEY_TRIP_ID, tripId).build())
+                .build()
+        WorkManager
+            .getInstance(context)
+            .enqueueUniqueWork("recap-ready-$tripId", ExistingWorkPolicy.KEEP, request)
     }
 }

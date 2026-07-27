@@ -1,6 +1,7 @@
 package com.alongside.feature.diary.presentation
 
 import com.alongside.core.domain.diary.DiaryDayStatus
+import com.alongside.feature.diary.FakeBackgroundWorkScheduler
 import com.alongside.feature.diary.FakeRecapRepository
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
@@ -15,7 +16,8 @@ class RecapSchedulingCoordinatorTest {
     fun `last day with both sides ready schedules the recap exactly once`() =
         runTest {
             val recapRepository = FakeRecapRepository()
-            val coordinator = RecapSchedulingCoordinator(recapRepository)
+            val backgroundWorkScheduler = FakeBackgroundWorkScheduler()
+            val coordinator = RecapSchedulingCoordinator(recapRepository, backgroundWorkScheduler)
 
             coordinator.ensureScheduledIfReady(
                 tripId = "trip-1",
@@ -29,13 +31,18 @@ class RecapSchedulingCoordinatorTest {
                 listOf("trip-1" to LocalDate(2026, 7, 20)),
                 recapRepository.ensureScheduledCalls,
             )
+            assertEquals(
+                listOf("trip-1" to LocalDate(2026, 7, 20)),
+                backgroundWorkScheduler.scheduledRecapNotifications,
+            )
         }
 
     @Test
     fun `a non-final day with both sides ready schedules nothing`() =
         runTest {
             val recapRepository = FakeRecapRepository()
-            val coordinator = RecapSchedulingCoordinator(recapRepository)
+            val backgroundWorkScheduler = FakeBackgroundWorkScheduler()
+            val coordinator = RecapSchedulingCoordinator(recapRepository, backgroundWorkScheduler)
 
             coordinator.ensureScheduledIfReady(
                 tripId = "trip-1",
@@ -46,13 +53,15 @@ class RecapSchedulingCoordinatorTest {
             )
 
             assertTrue(recapRepository.ensureScheduledCalls.isEmpty())
+            assertTrue(backgroundWorkScheduler.scheduledRecapNotifications.isEmpty())
         }
 
     @Test
     fun `last day with one side not ready schedules nothing`() =
         runTest {
             val recapRepository = FakeRecapRepository()
-            val coordinator = RecapSchedulingCoordinator(recapRepository)
+            val backgroundWorkScheduler = FakeBackgroundWorkScheduler()
+            val coordinator = RecapSchedulingCoordinator(recapRepository, backgroundWorkScheduler)
 
             coordinator.ensureScheduledIfReady(
                 tripId = "trip-1",
@@ -63,5 +72,6 @@ class RecapSchedulingCoordinatorTest {
             )
 
             assertTrue(recapRepository.ensureScheduledCalls.isEmpty())
+            assertTrue(backgroundWorkScheduler.scheduledRecapNotifications.isEmpty())
         }
 }

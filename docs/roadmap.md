@@ -3327,6 +3327,111 @@ M12.9 і M20.2.** Кожен слайд-композабл збирається 
 
 ---
 
+### M20.5 — Recap: локальна нотифікація "рекап готовий" ✅ done (Android)
+`core:domain`, `androidApp`, `feature:diary`. **Без Firebase, без M17,
+без жодного серверного компонента** — узгоджено з користувачем: на
+відміну від "partner ready" (M17, реагує на дію іншого пристрою, тож
+серверний push — єдиний спосіб доставити її, коли застосунок закритий),
+"рекап доступний" — детермінована функція вже наявних локальних даних
+(`recapAvailableAt(tripEndDate) = tripEndDate + 1 day`, `M20.1`). Кожен
+з двох пристроїв рахує цю дату однаково й незалежно — надсилати її
+через Firestore/Cloud Function нема сенсу, коли можна просто
+заскедулити локальну нотифікацію на дату, яку пристрій уже знає.
+
+**Механізм — той самий `BackgroundWorkScheduler`-патерн** (`core:domain/
+work/BackgroundWorkScheduler.kt`), що вже використовується для sync-
+retry джобів, новий метод
+`scheduleRecapReadyNotification(tripId: String, fireAt: LocalDate)`.
+Android-реалізація — `WorkManager` з `setInitialDelay(...)` до `fireAt`
+(без `Constraints(NetworkType.CONNECTED)` — на відміну від існуючих
+джобів, ця нотифікація локальна, мережа не потрібна),
+`enqueueUniqueWork("recap-ready-$tripId", ExistingWorkPolicy.KEEP, ...)`
+— той самий ідемпотентний "повторний виклик — безкоштовний no-op"
+контракт, що вже в `scheduleOneOff`. **Не `AlarmManager`+
+`BroadcastReceiver`** — тут не потрібна секундна точність, а
+`WorkManager` вже є залежністю проєкту й краще переживає Doze/App
+Standby без окремого `SCHEDULE_EXACT_ALARM`-дозволу. Delay-математика
+винесена в чисту, крос-платформну функцію
+`durationUntilRecapNotification(availableAt, now, zone)`
+(`core:domain/recap/RecapNotificationTiming.kt`) — той самий
+clamp-at-zero ідіом, що `daysUntilReunion`.
+
+**Тригер — той самий момент, що вже пише `Recap`-рядок.** У `feature:diary`'s
+`RecapSchedulingCoordinator` (`M20.1`) — той самий виклик, що вже робить
+`RecapRepository.ensureScheduled(tripId, availableAt)`, атомарно поруч
+викликає й `backgroundWorkScheduler.scheduleRecapReadyNotification(tripId, availableAt)`.
+Один тригер, одна ідемпотентна дія, не два окремих механізми.
+
+**Тап на нотифікацію відкриває застосунок на Home** (не напряму в
+Recap-стек) — той самий мінімалізм, що вже в `M20.1`: користувач сам
+тисне "Recap" з Home, коли готовий дивитись; звичайний launch-intent на
+`MainActivity` без спеціального deep-link'у досить, якщо сесія жива.
+
+**Відхилення від початкового плану:**
+- `androidx.core:core-ktx` (для `NotificationCompat`/
+  `NotificationManagerCompat`) — новий каталог-запис. Останній реліз
+  (1.19.0) вимагає `compileSdk 37`; проєкт ще на 36
+  (`ALONGSIDE_COMPILE_SDK`), тож запінено на 1.15.0
+- `androidApp` не має жодного `res/`-каталогу (кастомної іконки
+  застосунку теж нема) — `RecapReadyNotificationWorker` тимчасово
+  використовує системну `android.R.drawable.ic_dialog_info` як
+  `smallIcon`, з `TODO` на власну брендовану іконку
+- Перевірка дозволу — не `ContextCompat.checkSelfPermission`, а
+  `NotificationManagerCompat.areNotificationsEnabled()`: покриває і
+  Android 13+ runtime-дозвіл, і app-level тумблер до 13-ї, одним
+  викликом, без `Build.VERSION.SDK_INT`-розгалуження
+- Worker захищається від реального сценарію "Delete Trip"
+  (`feature:settings`): якщо `RecapRepository.getById(tripId)`
+  повертає `null` (трип видалено між скедулюванням і спрацюванням —
+  дні потому), нотифікація просто не постується, `Result.success()`
+
+**Новий, явний TODO для iOS** (за прямим проханням користувача, щоб не
+загубити): третій override у вже наявному
+`NoOpBackgroundWorkScheduler` (`app/src/iosMain/.../work/`) — великий,
+детальний коментар-блок з точним планом (`UNUserNotificationCenter`,
+`UNCalendarNotificationTrigger`/`UNTimeIntervalNotificationTrigger`,
+перевикористання `durationUntilRecapNotification`, ідентифікатор
+`"recap-ready-$tripId"` для ідемпотентного `addNotificationRequest`) —
+заблоковано тим самим Apple dev account блокером, що й M7/M12.11.
+
+**Accept:**
+- Юніт-тест `durationUntilRecapNotification` (`core:domain`,
+  `RecapNotificationTimingTest`): рівно доба до півночі → 24 години;
+  частина дня → залишок годин; `now` уже на півночі `availableAt` →
+  нуль; `availableAt` уже в минулому → clamp до нуля, ніколи не
+  від'ємне
+- Юніт-тест `RecapSchedulingCoordinator` (розширює вже наявний
+  `RecapSchedulingCoordinatorTest`, `FakeBackgroundWorkScheduler` уже є
+  в `feature:diary`'s `TestFixtures.kt`): той самий момент, що вже
+  викликає `ensureScheduled`, викликає й
+  `scheduleRecapReadyNotification(tripId, availableAt)` рівно один раз;
+  будь-який інший день чи неповне закриття — жодного разу
+- Юніт-тест `AndroidWorkManagerScheduler` (розширює вже наявний
+  `AndroidWorkManagerSchedulerTest`, `WorkManagerTestInitHelper`):
+  enqueue унікальної роботи `"recap-ready-$tripId"` без мережевого
+  constraint'у; повторний виклик для того самого trip'у лишається
+  однією унікальною роботою; різні трипи — незалежні
+- Android host test (Robolectric, `ShadowNotificationManager`,
+  `RecapReadyNotificationWorkerTest`): виклик Worker'а напряму (не
+  чекаючи реальний `WorkManager`-делей) постить нотифікацію з
+  правильним заголовком і tap-інтентом на `MainActivity`, коли recap
+  ще існує й нотифікації дозволені; нічого не постить, коли трип
+  видалено або нотифікації вимкнено; `Result.failure()` на
+  відсутньому `tripId` — на відміну від push-варіанту цей шлях
+  повністю локальний, тож реально автоматизується в CI, не лише
+  мануальним чеклістом
+- **Чесне обмеження:** що саме `WorkManager` реально розбудить
+  застосунок через N днів на реальному пристрої (Doze, App Standby,
+  OEM battery-optimization) — не автоматизується надійно в CI;
+  мануальна перевірка перед мержем
+- **Поза скоупом цього мілстоуна:** runtime-дозвіл `POST_NOTIFICATIONS`
+  (Android 13+) — потребує окремого onboarding-кроку
+  (`feature:onboarding` вже має permission-флоу для фото, M6), не
+  додається тут, щоб не розширювати мілстоун; без дозволу нотифікація
+  просто мовчки не покажеться, `WorkManager`-джоба однаково відпрацює
+
+---
+
 ### M21 — Release readiness
 Наскрізна перевірка перед реальним використанням у поїздці.
 

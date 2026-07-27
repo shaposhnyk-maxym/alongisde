@@ -98,7 +98,7 @@ class DiaryTimelineContainerTest {
                 ),
             captureCoordinator = captureCoordinator,
             preTripPhotoCaptureCoordinator = preTripPhotoCaptureCoordinator,
-            recapSchedulingCoordinator = RecapSchedulingCoordinator(recapRepository),
+            recapSchedulingCoordinator = RecapSchedulingCoordinator(recapRepository, backgroundWorkScheduler),
             clock = FixedClock,
         )
     }
