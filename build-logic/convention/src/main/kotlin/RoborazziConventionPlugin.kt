@@ -66,6 +66,12 @@ class RoborazziConventionPlugin : Plugin<Project> {
             // recommended by Roborazzi itself to avoid Robolectric pixel-copy fidelity issues.
             tasks.withType(Test::class.java).configureEach {
                 systemProperty("robolectric.pixelCopyRenderMode", "hardware")
+                // The forked test-worker JVM's heap is independent of the Gradle daemon's own
+                // `-Xmx` (gradle.properties' org.gradle.jvmargs only affects the daemon) and
+                // defaults to a few hundred MB - too little once a module accumulates enough
+                // Robolectric/Compose screenshot tests in one worker process (confirmed live:
+                // OutOfMemoryError in an unrelated test while another was mid-Roborazzi-record).
+                maxHeapSize = "4g"
             }
 
             extensions.configure<KotlinMultiplatformExtension> {
