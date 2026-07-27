@@ -75,6 +75,7 @@ internal class FakeBackgroundWorkScheduler : BackgroundWorkScheduler {
     val scheduledOneOffs = mutableListOf<BackgroundJobKind>()
     var periodicSweepEnsured: Boolean = false
         private set
+    val scheduledRecapNotifications = mutableListOf<Pair<String, LocalDate>>()
 
     override fun scheduleOneOff(kind: BackgroundJobKind) {
         scheduledOneOffs += kind
@@ -82,6 +83,13 @@ internal class FakeBackgroundWorkScheduler : BackgroundWorkScheduler {
 
     override fun ensurePeriodicSweepScheduled() {
         periodicSweepEnsured = true
+    }
+
+    override fun scheduleRecapReadyNotification(
+        tripId: String,
+        fireAt: LocalDate,
+    ) {
+        scheduledRecapNotifications += tripId to fireAt
     }
 }
 

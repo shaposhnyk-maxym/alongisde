@@ -2,6 +2,7 @@ package com.alongside.androidapp
 
 import android.app.Application
 import com.alongside.androidapp.di.androidAppModule
+import com.alongside.androidapp.work.createRecapNotificationChannel
 import com.alongside.app.di.appModule
 import com.alongside.core.domain.work.BackgroundWorkScheduler
 import com.alongside.core.ui.component.installAlongsideImageLoader
@@ -51,5 +52,7 @@ class AlongsideApplication :
         // Idempotent (ExistingPeriodicWorkPolicy.KEEP) - safe to call on every process start,
         // docs/roadmap.md M12.11's backstop for missed event-driven scheduleOneOff enqueues.
         get<BackgroundWorkScheduler>().ensurePeriodicSweepScheduled()
+        // Idempotent - safe to call on every process start (docs/roadmap.md M20.5).
+        createRecapNotificationChannel(this)
     }
 }

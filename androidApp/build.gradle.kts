@@ -64,6 +64,8 @@ dependencies {
     implementation(versionCatalog.findLibrary("ktor-client-core").get())
     implementation(versionCatalog.findLibrary("room-runtime").get())
     implementation(versionCatalog.findLibrary("androidx-work-runtime-ktx").get())
+    implementation(versionCatalog.findLibrary("androidx-core-ktx").get())
+    implementation(versionCatalog.findLibrary("kotlinx-datetime").get())
     testImplementation(versionCatalog.findLibrary("junit").get())
     testImplementation(versionCatalog.findLibrary("robolectric").get())
     testImplementation(versionCatalog.findLibrary("androidx-work-testing").get())

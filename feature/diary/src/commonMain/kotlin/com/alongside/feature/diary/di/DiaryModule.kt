@@ -38,7 +38,7 @@ public val diaryFeatureModule =
                 backgroundWorkScheduler = get(),
             )
         }
-        single { RecapSchedulingCoordinator(get()) }
+        single { RecapSchedulingCoordinator(get(), get()) }
         single { DiaryTimelineDataSource(get(), get(), get(), get(), get(), get(), get(), get()) }
         viewModel { DiaryTimelineContainer(get(), get(), get(), get(), get()) }
     }

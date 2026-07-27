@@ -1,5 +1,7 @@
 package com.alongside.core.domain.work
 
+import kotlinx.datetime.LocalDate
+
 /** Reliability job kinds that can be handed off to a durable background scheduler. */
 public enum class BackgroundJobKind { EPISODE_RETRY, PLACE_RETRY, SYNC_QUEUE_FLUSH, PLACE_CONTENT_PULL }
 
@@ -22,4 +24,14 @@ public interface BackgroundWorkScheduler {
      * kind. This is a backstop for a missed [scheduleOneOff], not the primary reliability path.
      */
     public fun ensurePeriodicSweepScheduled()
+
+    /**
+     * Fires once, locally, at [fireAt] - no server/network involved (docs/roadmap.md M20.5).
+     * Unlike [scheduleOneOff], [fireAt] is a deterministic date every device already computes
+     * identically (`recapAvailableAt`), so there's nothing to coordinate over a network for.
+     */
+    public fun scheduleRecapReadyNotification(
+        tripId: String,
+        fireAt: LocalDate,
+    )
 }
