@@ -2484,19 +2484,24 @@ foreground-полінг) — не виконаний з цього середо�
 
 ---
 
-### M17 — Push notifications
-FCM-інтеграція (Android + iOS/APNs) + Cloud Function.
+### M17 — Push notifications — скасовано (рішення користувача, 2026-07-27)
 
-**Accept:**
-- Cloud Function (тригер "обидва дні готові") — юніт-тест через
-  Firebase Local Emulator Suite (Firestore + Functions емулюються
-  локально, реальний Firebase не потрібен)
-- Юніт-тести побудови payload пуша (правильний текст/дані для кожного
-  типу: partner-day-ready, days-until-reunion)
-- **Чесне обмеження:** фактична доставка пуша на реальний пристрій —
-  не автоматизується надійно в CI (залежить від APNs/FCM живої
-  інфраструктури). Мануальний чекліст: пуш реально приходить на
-  Android і iOS пристрій хоча б раз перед мержем.
+FCM-інтеграція (Android + iOS/APNs) + Cloud Function для
+"partner-day-ready"/"days-until-reunion" пушів визнана зайвою.
+Apple Developer Program membership протух, і користувач свідомо не
+платить $99/рік за відновлення — без нього неможливо налаштувати
+APNs Authentication Key для iOS-доставки (див.
+[[ios-apple-dev-account-blocked]]), а Android-only push — половинчасте
+рішення, яке не вартує окремого Cloud Function + FCM-інфраструктури.
+Застосунок і без цього працює непогано: symmetric-unlock стан уже
+видно в самому UI (Timeline/Home) при відкритті застосунку, а
+"рекап готовий" (єдиний сценарій, де сповіщення справді бракувало)
+уже закрито локально в M20.5, без Firebase взагалі. Нічого в
+M18-M21 не залежить від M17, тож скасування нічого не блокує.
+
+Існуючий `AlongsideFirebaseMessagingService.kt` (`app/src/androidMain/
+.../push/`) лишається стубом з `TODO(M17)` — не видаляється, про всяк
+випадок, якщо рішення переглянеться, але активно не розвивається.
 
 ---
 
