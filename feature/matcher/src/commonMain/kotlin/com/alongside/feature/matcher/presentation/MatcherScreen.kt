@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.unit.dp
 import com.alongside.core.model.place.PlaceCandidate
 import com.alongside.core.model.place.SwipeDirection
 import com.alongside.core.ui.component.CircleIconButton
@@ -166,6 +167,10 @@ internal fun MatcherContent(
                         onClick = { decide(top, SwipeDirection.DISLIKE) },
                         contentDescription = "Skip ${top.name}",
                         style = CircleIconButtonStyle.Dark,
+                        // Design mockup sizes the dislike button 56dp, 8dp under the 64dp like
+                        // button - closer to it than the shared CircleIconButtonStyle.Dark
+                        // default (48dp) reads on this screen specifically.
+                        size = 56.dp,
                     ) {
                         Text("✕")
                     }

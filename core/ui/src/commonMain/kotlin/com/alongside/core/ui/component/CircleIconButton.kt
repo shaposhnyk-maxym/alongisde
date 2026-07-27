@@ -14,12 +14,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.alongside.core.ui.theme.AlongsideSpacing
 import com.alongside.core.ui.theme.AlongsideTheme
 import com.alongside.core.ui.theme.alongsideColors
 
-/** Circular action button pair from the matcher screen. */
+/**
+ * Circular action button pair from the matcher screen. [size] overrides [style]'s own default
+ * for one call site (e.g. the matcher's dislike button, sized to match the design mockup) without
+ * resizing every other [CircleIconButtonStyle.Dark] consumer ([FullscreenPhotoViewer]'s close
+ * button, Settings) that relies on the shared default.
+ */
 @Composable
 public fun CircleIconButton(
     onClick: () -> Unit,
@@ -27,10 +33,11 @@ public fun CircleIconButton(
     modifier: Modifier = Modifier,
     style: CircleIconButtonStyle = CircleIconButtonStyle.Dark,
     enabled: Boolean = true,
+    size: Dp? = null,
     content: @Composable () -> Unit,
 ) {
-    val size =
-        when (style) {
+    val resolvedSize =
+        size ?: when (style) {
             CircleIconButtonStyle.Dark -> 48.dp
             CircleIconButtonStyle.Primary -> 64.dp
         }
@@ -52,7 +59,7 @@ public fun CircleIconButton(
         }
     Surface(
         onClick = onClick,
-        modifier = semanticsModifier.size(size),
+        modifier = semanticsModifier.size(resolvedSize),
         enabled = enabled,
         shape = CircleShape,
         color = containerColor,
