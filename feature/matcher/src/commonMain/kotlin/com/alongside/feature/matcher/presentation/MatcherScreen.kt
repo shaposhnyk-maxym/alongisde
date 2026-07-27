@@ -24,7 +24,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.unit.dp
-import com.alongside.core.model.place.PlaceCandidate
 import com.alongside.core.model.place.SwipeDirection
 import com.alongside.core.ui.component.CircleIconButton
 import com.alongside.core.ui.component.CircleIconButtonStyle
@@ -92,10 +91,18 @@ internal fun MatcherContent(
 ) {
     val queue = remember { mutableStateListOf<String>() }
     val candidatesById = remember(state.candidates) { state.candidates.associateBy { it.id } }
+    // The front card currently mid-fling-off (docs: SwipeableCard's kdoc) - excluded from
+    // reconciliation below so it stays put and visible for its whole exit animation instead of
+    // being yanked out the instant the container's own state confirms the swipe (which can easily
+    // land before a 200ms animation finishes, this being a local-first app). Its own
+    // onSwipeAnimationEnd handles removing/re-queuing it once the animation actually completes.
+    var exitingCandidateId by remember { mutableStateOf<String?>(null) }
+    var pendingSwipeDirection by remember { mutableStateOf<SwipeDirection?>(null) }
 
     LaunchedEffect(state.myTurnDeck) {
         val myTurnIds = state.myTurnDeck.map { it.id }.toSet()
-        queue.retainAll(myTurnIds)
+        val idsToKeep = exitingCandidateId?.let { myTurnIds + it } ?: myTurnIds
+        queue.retainAll(idsToKeep)
         state.myTurnDeck
             .map { it.id }
             .filterNot { it in queue }
@@ -103,14 +110,6 @@ internal fun MatcherContent(
     }
 
     val top = queue.firstOrNull()?.let(candidatesById::get)
-
-    fun decide(
-        candidate: PlaceCandidate,
-        direction: SwipeDirection,
-    ) {
-        queue.removeAt(0)
-        onSwipe(candidate.id, direction)
-    }
 
     InkBackground(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -139,7 +138,17 @@ internal fun MatcherContent(
                     key(top.id) {
                         SwipeableCard(
                             candidate = top,
-                            onSwipe = { direction -> decide(top, direction) },
+                            onSwipe = { direction ->
+                                exitingCandidateId = top.id
+                                onSwipe(top.id, direction)
+                            },
+                            pendingSwipe = pendingSwipeDirection,
+                            onSwipeAnimationEnd = {
+                                queue.remove(top.id)
+                                if (top.id in state.myTurnDeck.map { it.id }) queue.add(top.id)
+                                exitingCandidateId = null
+                                pendingSwipeDirection = null
+                            },
                             modifier = Modifier.fillMaxSize(CARD_STACK_FRACTION),
                         )
                     }
@@ -164,7 +173,7 @@ internal fun MatcherContent(
                     horizontalArrangement = Arrangement.spacedBy(AlongsideSpacing.xxl, Alignment.CenterHorizontally),
                 ) {
                     CircleIconButton(
-                        onClick = { decide(top, SwipeDirection.DISLIKE) },
+                        onClick = { pendingSwipeDirection = SwipeDirection.DISLIKE },
                         contentDescription = "Skip ${top.name}",
                         style = CircleIconButtonStyle.Dark,
                         // Design mockup sizes the dislike button 56dp, 8dp under the 64dp like
@@ -175,7 +184,7 @@ internal fun MatcherContent(
                         Text("✕")
                     }
                     CircleIconButton(
-                        onClick = { decide(top, SwipeDirection.LIKE) },
+                        onClick = { pendingSwipeDirection = SwipeDirection.LIKE },
                         contentDescription = "Want to go to ${top.name}",
                         style = CircleIconButtonStyle.Primary,
                     ) {
