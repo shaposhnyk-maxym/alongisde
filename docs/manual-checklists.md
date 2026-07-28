@@ -36,14 +36,68 @@ Google-акаунтом, його не можна надійно автомат�
       requesting credential (filterByAuthorizedAccounts=true)` +
       `signIn: success`), користувач одразу бачить залогинений стан
 
-### iOS
+### iOS (Simulator, 2026-07-29)
 
-- [ ] **BLOCKED** — `iosApp` (Xcode-проєкт) ще не існує, Apple
-      Developer акаунт заблокований (див. пам'ять сесії). `GoogleAuthProvider`
-      спроєктований під Swift-реалізацію (callback-based, без suspend),
-      але сам GIDSignIn-код і мануальна перевірка відкладені до моменту,
-      коли iOS-таргет реально з'явиться в проєкті. Зафіксовано як
-      свідоме відхилення від Accept-критерію M5, а не пропуск.
+- [x] `iosApp` реально існує (з M7) — `GoogleSignInAuthProvider.swift`
+      реалізує реальний GIDSignIn виклик
+- [x] Натискання "Continue with Google" відкриває справжній Google
+      account picker (через `ASWebAuthenticationSession`/Safari), не
+      мок
+- [x] Вибір реального акаунта успішно завершує sign-in: підтверджено
+      логом `AuthContainer: signed in as <email>` — повний ланцюг
+      GIDSignIn → ID token → обмін через Firebase Auth REST
+- [x] Force-quit + релонч: сесія відновлюється тихо через Keychain
+      (`GTMAppAuth`), без повторного пікера — підтверджено live
+
+**Пункти нижче — все ще не пройдено (потрібен реальний пристрій,
+не Simulator):**
+- [ ] Той самий флоу на фізичному iOS-пристрої (безкоштовна Personal
+      Team, `PL79685NB4`, дозволяє коротко-живі білди без платного
+      Apple Developer Program — див. `iosApp/project.yml`)
+- [ ] Airplane mode / мережевий збій під час обміну токена на iOS
+- [ ] Ізольований кейс протермінованої сесії на iOS (silent
+      re-auth через `restorePreviousSignIn`)
+
+---
+
+## M7 — iOS Onboarding
+
+**Чому вручну:** системні дозволи (Photos/Notifications) і Share
+Extension — те саме обґрунтування, що й M5/M6: живий системний UI-флоу,
+який CI надійно не автоматизує.
+
+### iOS (Simulator, 2026-07-29)
+
+- [x] Photo permission: `NOT_DETERMINED` → тап "Allow Photo Access" →
+      з'являється справжній системний `PHPhotoLibrary`-діалог
+- [x] Notification permission: аналогічно, справжній
+      `UNUserNotificationCenter`-діалог
+- [x] Share Extension з'являється як окремий Xcode-таргет, вбудований
+      в `Alongside.app/PlugIns/ShareExtension.appex` (підтверджено
+      структурою білду)
+- [x] App Group hand-off (`group.com.alongside.app`): запис
+      `pendingShareText` напряму в shared UserDefaults-контейнер +
+      релонч застосунку → значення підхоплюється й коректно очищується
+      (idempotent) — підтверджено вручну на Simulator без проходження
+      через реальний Share Sheet UI
+- [ ] `DENIED_PERMANENTLY` → "Open Settings" реально відкриває iOS
+      Settings (не перевірено — потрібен тап користувача, не
+      автоматизовано в цій сесії)
+
+**Пункти нижче — все ще не пройдено (Accept-критерій M7 явно вимагає
+реальний пристрій):**
+- [ ] Sharing a place з Google Maps на **реальному iOS-пристрої**
+      показує "Alongside" в списку "Поділитися" (напряму або через
+      "More" — крок онбордингу пояснює обидва варіанти)
+- [ ] Тап на "Alongside" в реальному Share Sheet повертає в Maps без
+      візуальних глюків, застосунок підхоплює текст при наступному
+      foreground
+- [ ] **Відомо, і це очікувано:** повний імпорт після шерингу поки НЕ
+      працює навіть на реальному пристрої (Koin `NoDefinitionFoundException`
+      на `PlaceImportContainer` — Places/Storage DI свідомо не підключені
+      в M7, див. `docs/roadmap.md`). Тестер має зупинитись на "extension
+      з'явилась в списку" / "текст дійшов до застосунку", не очікувати
+      завершеного імпорту.
 
 ---
 
@@ -145,11 +199,10 @@ M5), не автоматизується в CI.
 
 ### iOS
 
-- [ ] **BLOCKED** — `iosApp` (Xcode-проєкт) ще не існує, той самий
-      Apple Developer account issue, що M5/M7/M10. Share Extension
-      спроєктований лише на рівні Accept-критерію M13.2 (мануальний
-      чекліст), сам код і перевірка відкладені до появи реального
-      iOS-таргету.
+- [x] **Superseded — see M7's checklist above.** Share Extension код і
+      App Group hand-off тепер реально існують і частково перевірені
+      (Simulator); реальний пристрій і повний наскрізний імпорт
+      (Places/Storage DI, поза скоупом M7) — все ще не пройдено.
 
 ---
 

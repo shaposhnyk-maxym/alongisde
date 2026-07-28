@@ -366,6 +366,12 @@ Episode+Photo, PlaceCandidate).
   але сам GIDSignIn-код і його мануальна перевірка відкладені до моменту,
   коли iOS-таргет реально з'явиться в проєкті — зафіксовано в
   `docs/manual-checklists.md`, а не приховано.
+  *Оновлення (M7, 2026-07-29):* `iosApp` реально з'явився, і
+  `GoogleSignInAuthProvider.swift` — робоча Swift-реалізація поверх
+  реального `GIDSignIn` — підтверджено живим sign-in на Simulator
+  (справжній акаунт, справжній ID-token, успішний обмін через Firebase
+  Auth REST). Мануальна перевірка на реальному пристрої — все ще
+  окремий пункт (див. M7).
 - **`core:network` тепер залежить від `core:domain`** (раніше — незалежний
   шар) — `FirebaseAuthSessionRepository` імплементує
   `core.domain.auth.AuthSessionRepository`; дозволено доком
@@ -471,17 +477,69 @@ Episode+Photo, PlaceCandidate).
 
 ---
 
-### M7 — iOS Onboarding
+### M7 — iOS Onboarding ✅ done (мануальна перевірка на реальному пристрої — не проведена)
 `feature:onboarding`, iOS-специфічна частина.
 
 **Accept:**
-- Той самий набір критеріїв, що й M6, адаптований під iOS:
+- [x] Той самий набір критеріїв, що й M6, адаптований під iOS:
   Photos permission, Share Extension (окремий крок з поясненням "як
   додати вручну, якщо не з'явилось одразу"), notification permission
-- Screenshot-тести на iOS-специфічні кроки (Share Extension
+- [x] Screenshot-тести на iOS-специфічні кроки (Share Extension
   інструкція — це унікальний для iOS екран, якого нема в M6)
-- Мануальна перевірка на реальному iOS-пристрої: Share Extension
-  дійсно з'являється в списку "Поділитися" після проходження кроку
+- [ ] Мануальна перевірка на реальному iOS-пристрої: Share Extension
+  дійсно з'являється в списку "Поділитися" після проходження кроку —
+  перевірено на Simulator (живий App Group hand-off, підтверджено
+  логами), реальний пристрій ще не пройдено
+
+**Передумова, закрита цією ж сесією:** `iosApp` (Xcode-проєкт) на
+момент написання цього мілстоуна вже реально існує й білдиться
+(`iosApp/run.sh`) — старий блокер "iosApp ще не існує", на який
+посилаються M5/M10/M13.2, більше не актуальний.
+
+**Відхилення від початкового плану:**
+- **`IosPermissionController` — чистий Kotlin, без Swift** —
+  на відміну від `GoogleAuthProvider` (мусив бути Swift, бо GIDSignIn —
+  SPM-пакет), `PHPhotoLibrary`/`UNUserNotificationCenter` — системні
+  Apple-фреймворки з авто-згенерованими cinterop-байндінгами, напряму
+  доступні з `iosMain` (підтверджено компіляцією). `PermissionStatusFactory`-
+  обхідний шлях (як для `GoogleSignInResultFactory`) не знадобився.
+- **iOS ніколи не повертає `PermissionStatus.DENIED`, тільки
+  `DENIED_PERMANENTLY`** — на відміну від Android, iOS не має аналога
+  `shouldShowRequestPermissionRationale`: раз вийшовши з
+  "not determined", системний діалог більше ніколи не з'явиться знову.
+  Це навмисна платформна різниця (паралельно до M6's "4 стани, не 2"
+  нотатки), не баг — `nextOnboardingStep`/`PermissionActions` вже
+  однаково обробляють обидва "denied"-стани, різниться лише копірайтинг.
+- **`PHAuthorizationStatusLimited` → `PermissionStatus.GRANTED`** —
+  немає 5-го стану в domain-моделі, і limited-доступ все одно дозволяє
+  пікер фото працювати, тож це найменш неочікуване мапування.
+- **`SharePlatform` enum замість `expect`/`actual` для
+  `ShareSetupStep`** — Roborazzi-скріншот-тести виконуються тільки на
+  `androidHostTest` (Robolectric/JVM); `iosMain actual`-композабл був би
+  фізично недосяжний з цього тесту, тож неможливо було б
+  скріншот-тестувати iOS-унікальний контент. Тому iOS-специфічний
+  контент (`ShareSetupStep` копірайтинг + мок) лишається в `commonMain`,
+  вибирається через звичайний параметр `SharePlatform`, а не через
+  target-специфічний файл — саме це і робить крок скріншот-тестованим
+  узагалі.
+- **Share Extension — окремий Xcode-таргет** (`iosApp/ShareExtension`,
+  `com.apple.share-services`, App Group `group.com.alongside.app`) —
+  без залежності на KMP-фреймворк/Koin/Compose (екстеншени — окремі,
+  пам'яттю-обмежені процеси). `ShareViewController` — звичайний
+  `UIViewController`, не `SLComposeServiceViewController` (уникає
+  "compose a post" chrome від Apple) — мовчки передає рядок і
+  завершується, той самий UX, що й Android (справжній
+  підтверджувальний UI — вже `PlaceImportScreen` в самому застосунку).
+  Живий App Group hand-off підтверджено вручну (запис у shared
+  UserDefaults на Simulator + релонч).
+- **Свідомо НЕ підключено в цьому мілстоуні:** `iosAppModule`'s
+  Places/Storage Koin-байндінги (Google Places API key, Firebase
+  Storage bucket) — Accept-критерій вимагає лише "з'явитися в списку
+  шерингу", не "успішно імпортувати". Реальний шер сьогодні доходить до
+  `PlaceImportContainer` і падає на Koin `NoDefinitionFoundException`
+  (підтверджено вручну — Compose ловить це як порожній екран, не
+  hard-crash). `IosAppModule.kt`'s kdoc вже документує цей гап; те саме
+  стосується diary-фото пайплайну (M10).
 
 ---
 
@@ -745,7 +803,9 @@ Places геокодинг, Gemini vision-опис.
   migration-тест (`core:database`, hand-rolled v4-фікстура, той самий
   підхід, що v3→v4 в M9).
 
-**iOS TODO (накопичено в M10, перевірити коли `iosApp` реально стартує):**
+**iOS TODO (накопичено в M10; `iosApp` тепер реально існує з M7, але
+жоден з пунктів нижче ще не реалізований — окрема робота, поза
+скоупом M7):**
 - [ ] `ExifPhotoReader` — немає `iosMain`-реалізації взагалі (тільки
       commonMain-інтерфейс). На Android — `ContentResolver` +
       `androidx.exifinterface`; на iOS еквівалент — швидше за все
@@ -777,9 +837,10 @@ Places геокодинг, Gemini vision-опис.
       `.xcconfig` + `Info.plist`, або окремий `Secrets.swift`, не
       закритий у Git — треба спроєктувати, коли `iosApp` з'явиться, не
       раніше).
-- [ ] `iosApp` (Xcode-проєкт) все ще не існує — жодна з вищенаведених
-      точок не тестована на реальному пристрої/симуляторі. Заблоковано
-      тим самим Apple dev account issue, що й M7.
+- [x] ~~`iosApp` (Xcode-проєкт) все ще не існує~~ — з'явився в M7
+      (`iosApp/run.sh`), тож усі пункти вище тепер тестовані на
+      Simulator/реальному пристрої, коли до них дійде черга — саме
+      написання цих `iosMain`-реалізацій все ще не зроблено.
 
 **Знайдено при підготовці реальних тестових фото (не iOS, Android-специфічно):**
 `AndroidExifPhotoReader` спершу читав GPS через звичайний
