@@ -1,0 +1,56 @@
+name: Alongside
+options:
+  bundleIdPrefix: com.alongside
+configs:
+  Debug: debug
+settings:
+  base:
+    IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+packages:
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    from: 9.2.0
+targets:
+  Alongside:
+    type: application
+    platform: iOS
+    sources:
+      - path: iosApp
+    dependencies:
+      - package: GoogleSignIn
+        product: GoogleSignIn
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.alongside.app
+        CODE_SIGN_STYLE: Automatic
+        # Free "Personal Team" (no paid Apple Developer Program needed for Simulator work) -
+        # required for real code signing, which GTMAppAuth/GIDSignIn need for Keychain access
+        # (keychain-access-group is tied to the team ID; an unsigned/empty-team build makes every
+        # Keychain read/write fail immediately - confirmed live as "provider failure - keychain
+        # error"). See docs/roadmap.md / [[ios-apple-dev-account-blocked]] - that blocker is only
+        # about APNs + long-lived physical-device testing, not this.
+        DEVELOPMENT_TEAM: PL79685NB4
+        FRAMEWORK_SEARCH_PATHS: "$(inherited) $(SRCROOT)/../app/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"
+        OTHER_LDFLAGS: "$(inherited) -framework app"
+    prebuildScripts:
+      - name: Build KMP framework (Gradle)
+        script: |
+          cd "$SRCROOT/.."
+          ./gradlew :app:embedAndSignAppleFrameworkForXcode
+        basedOnDependencyAnalysis: false
+    info:
+      path: Generated-Info.plist
+      properties:
+        CFBundleDisplayName: Alongside
+        UILaunchScreen: {}
+        # Required by Compose Multiplatform's ComposeUIViewController sanity check - without it,
+        # the app throws kotlin.IllegalStateException and aborts on launch (confirmed live).
+        CADisableMinimumFrameDurationOnPhone: true
+        # Real GIDSignIn wiring (M7's Google Sign-In half) - same Firebase project
+        # (alongside-b05f2) as Android's `default_web_client_id`. GIDClientID lets GIDSignIn
+        # auto-configure without a GoogleService-Info.plist (we don't use the Firebase SDK - ADR
+        # #3); the URL scheme is required for the OAuth redirect to come back into the app.
+        GIDClientID: 965813009948-3eevg32ptnnth9kdtit8sin87tg0oq1r.apps.googleusercontent.com
+        CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - com.googleusercontent.apps.965813009948-3eevg32ptnnth9kdtit8sin87tg0oq1r

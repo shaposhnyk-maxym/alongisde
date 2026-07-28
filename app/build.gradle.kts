@@ -43,5 +43,14 @@ kotlin {
             // targets fall back to AlongsideNavDisplay's plain top-entry renderer.
             implementation(libs.findLibrary("navigation3-ui").get())
         }
+        // Android's equivalent DI wiring (AndroidAppModule.kt) lives in the separate `androidApp`
+        // Gradle module, which declares these directly - there is no `iosApp` Gradle module
+        // (Xcode isn't Gradle), so the iOS Koin bootstrap lives in this module's iosMain instead
+        // (see MainViewController.kt/IosAppModule.kt), and needs these deps only here.
+        iosMain.dependencies {
+            implementation(projects.core.database)
+            implementation(projects.core.network)
+            implementation(projects.data)
+        }
     }
 }

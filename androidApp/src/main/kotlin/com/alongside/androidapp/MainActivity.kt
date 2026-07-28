@@ -8,7 +8,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.alongside.app.AlongsideApp
-import com.alongside.core.ui.theme.AlongsideTheme
 import com.alongside.feature.auth.CredentialManagerGoogleAuthProvider
 import com.alongside.feature.onboarding.AndroidPermissionController
 
@@ -25,14 +24,12 @@ class MainActivity : ComponentActivity() {
         val googleAuthProvider = CredentialManagerGoogleAuthProvider(this, getString(R.string.default_web_client_id))
         val permissionController = AndroidPermissionController(this)
         setContent {
-            AlongsideTheme {
-                AlongsideApp(
-                    googleAuthProvider = googleAuthProvider,
-                    permissionController = permissionController,
-                    pendingShareText = pendingShareText,
-                    onShareTextConsume = { pendingShareText = null },
-                )
-            }
+            AlongsideApp(
+                googleAuthProvider = googleAuthProvider,
+                permissionController = permissionController,
+                pendingShareText = pendingShareText,
+                onShareTextConsume = { pendingShareText = null },
+            )
         }
     }
 
