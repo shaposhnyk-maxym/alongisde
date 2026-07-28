@@ -19,6 +19,8 @@ targets:
     dependencies:
       - package: GoogleSignIn
         product: GoogleSignIn
+      - target: ShareExtension
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.alongside.app
@@ -32,6 +34,14 @@ targets:
         DEVELOPMENT_TEAM: PL79685NB4
         FRAMEWORK_SEARCH_PATHS: "$(inherited) $(SRCROOT)/../app/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"
         OTHER_LDFLAGS: "$(inherited) -framework app"
+    entitlements:
+      path: Generated-Alongside.entitlements
+      properties:
+        # Shared with ShareExtension so the extension can hand a shared URL/text off to the main
+        # app (docs/roadmap.md M7) - the extension runs as a separate process, this is the only
+        # channel between them.
+        com.apple.security.application-groups:
+          - group.com.alongside.app
     prebuildScripts:
       - name: Build KMP framework (Gradle)
         script: |
@@ -58,3 +68,32 @@ targets:
         # crashes with NSInvalidArgumentException on the real call (M7's IosPermissionController).
         # No equivalent key is needed for UNUserNotificationCenter's authorization request.
         NSPhotoLibraryUsageDescription: "Alongside turns your camera roll into a shared diary with your partner."
+
+  ShareExtension:
+    type: app-extension
+    platform: iOS
+    # Deliberately no dependency on the `app` KMP framework/Koin/Compose - extensions are
+    # separate, memory-constrained processes; this stays plain Swift/UIKit (docs/roadmap.md M7).
+    sources:
+      - path: ShareExtension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.alongside.app.ShareExtension
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: PL79685NB4
+    entitlements:
+      path: Generated-ShareExtension.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.alongside.app
+    info:
+      path: Generated-ShareExtension-Info.plist
+      properties:
+        CFBundleDisplayName: Alongside
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsText: true

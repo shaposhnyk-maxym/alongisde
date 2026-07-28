@@ -3,6 +3,8 @@ package com.alongside.app
 import androidx.compose.ui.window.ComposeUIViewController
 import com.alongside.app.di.appModule
 import com.alongside.app.di.iosAppModule
+import com.alongside.app.share.currentIosPendingShareText
+import com.alongside.app.share.setIosPendingShareText
 import com.alongside.data.di.dataModule
 import com.alongside.feature.auth.GoogleAuthProvider
 import com.alongside.feature.auth.di.authFeatureModule
@@ -51,6 +53,11 @@ public fun initKoin() {
  * see [GoogleAuthProvider]'s kdoc. [IosPermissionController], unlike the auth provider, is plain
  * Kotlin (PHPhotoLibrary/UNUserNotificationCenter are system frameworks, directly reachable via
  * cinterop - no Swift needed).
+ *
+ * [currentIosPendingShareText] is read directly in the Compose body - `AlongsideiOSApp.swift`
+ * pushes into it (via [setIosPendingShareText]) on cold start and every foreground, after reading
+ * the Share Extension's App Group hand-off. No Swift-facing signature change needed here, same
+ * as Android's `pendingShareText`/`onShareTextConsume` pair in `MainActivity`.
  */
 @Suppress("FunctionName")
 public fun MainViewController(googleAuthProvider: GoogleAuthProvider): UIViewController =
@@ -59,5 +66,7 @@ public fun MainViewController(googleAuthProvider: GoogleAuthProvider): UIViewCon
             googleAuthProvider = googleAuthProvider,
             permissionController = IosPermissionController(),
             sharePlatform = SharePlatform.IOS,
+            pendingShareText = currentIosPendingShareText(),
+            onShareTextConsume = { setIosPendingShareText(null) },
         )
     }

@@ -5,6 +5,10 @@ import app
 @main
 struct AlongsideiOSApp: App {
     private let googleAuthProvider = GoogleSignInAuthProvider()
+    @Environment(\.scenePhase) private var scenePhase
+
+    private static let appGroupSuiteName = "group.com.alongside.app"
+    private static let pendingShareTextKey = "pendingShareText"
 
     init() {
         // Kotlin/Native's ObjC export renames any `init*`-named function to `doInit*` - `init` is
@@ -16,6 +20,7 @@ struct AlongsideiOSApp: App {
         GIDSignIn.sharedInstance.configuration = GIDConfiguration(
             clientID: "965813009948-3eevg32ptnnth9kdtit8sin87tg0oq1r.apps.googleusercontent.com"
         )
+        consumeSharedText()
     }
 
     var body: some Scene {
@@ -27,5 +32,19 @@ struct AlongsideiOSApp: App {
                     GIDSignIn.sharedInstance.handle(url)
                 }
         }
+        .onChange(of: scenePhase) { newPhase in
+            // Mirrors Android's onCreate + onNewIntent dual entry points - a warm relaunch (app
+            // already running, user shares again, returns to it) needs this too, not just cold start.
+            if newPhase == .active {
+                consumeSharedText()
+            }
+        }
+    }
+
+    private func consumeSharedText() {
+        guard let defaults = UserDefaults(suiteName: Self.appGroupSuiteName),
+              let text = defaults.string(forKey: Self.pendingShareTextKey) else { return }
+        defaults.removeObject(forKey: Self.pendingShareTextKey)
+        IosPendingShareTextKt.setIosPendingShareText(text: text)
     }
 }
