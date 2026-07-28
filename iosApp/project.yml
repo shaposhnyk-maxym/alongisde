@@ -54,3 +54,7 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLSchemes:
               - com.googleusercontent.apps.965813009948-3eevg32ptnnth9kdtit8sin87tg0oq1r
+        # Required for PHPhotoLibrary.requestAuthorizationForAccessLevel - missing this key
+        # crashes with NSInvalidArgumentException on the real call (M7's IosPermissionController).
+        # No equivalent key is needed for UNUserNotificationCenter's authorization request.
+        NSPhotoLibraryUsageDescription: "Alongside turns your camera roll into a shared diary with your partner."

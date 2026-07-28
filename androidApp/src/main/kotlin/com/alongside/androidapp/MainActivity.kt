@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import com.alongside.app.AlongsideApp
 import com.alongside.feature.auth.CredentialManagerGoogleAuthProvider
 import com.alongside.feature.onboarding.AndroidPermissionController
+import com.alongside.feature.onboarding.SharePlatform
 
 class MainActivity : ComponentActivity() {
     // Not `remember`ed inside setContent - onNewIntent (a plain Activity callback, not
@@ -27,6 +28,7 @@ class MainActivity : ComponentActivity() {
             AlongsideApp(
                 googleAuthProvider = googleAuthProvider,
                 permissionController = permissionController,
+                sharePlatform = SharePlatform.ANDROID,
                 pendingShareText = pendingShareText,
                 onShareTextConsume = { pendingShareText = null },
             )

@@ -8,7 +8,8 @@ import com.alongside.feature.auth.GoogleAuthProvider
 import com.alongside.feature.auth.di.authFeatureModule
 import com.alongside.feature.diary.di.diaryFeatureModule
 import com.alongside.feature.matcher.di.matcherFeatureModule
-import com.alongside.feature.onboarding.StubPermissionController
+import com.alongside.feature.onboarding.IosPermissionController
+import com.alongside.feature.onboarding.SharePlatform
 import com.alongside.feature.onboarding.di.onboardingFeatureModule
 import com.alongside.feature.pairing.di.pairingFeatureModule
 import com.alongside.feature.places.di.placesFeatureModule
@@ -47,13 +48,16 @@ public fun initKoin() {
  * The iOS host's equivalent of MainActivity. [googleAuthProvider] is constructed in Swift
  * (`GoogleSignInAuthProvider.swift`) since `GoogleAuthProvider` is deliberately callback-based,
  * not `suspend`, so a Swift class can implement it directly against the real GIDSignIn SDK -
- * see [GoogleAuthProvider]'s kdoc. [StubPermissionController] is still temporary until M7 lands
- * real iOS permissions.
+ * see [GoogleAuthProvider]'s kdoc. [IosPermissionController], unlike the auth provider, is plain
+ * Kotlin (PHPhotoLibrary/UNUserNotificationCenter are system frameworks, directly reachable via
+ * cinterop - no Swift needed).
  */
+@Suppress("FunctionName")
 public fun MainViewController(googleAuthProvider: GoogleAuthProvider): UIViewController =
     ComposeUIViewController {
         AlongsideApp(
             googleAuthProvider = googleAuthProvider,
-            permissionController = StubPermissionController(),
+            permissionController = IosPermissionController(),
+            sharePlatform = SharePlatform.IOS,
         )
     }

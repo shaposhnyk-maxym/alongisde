@@ -9,6 +9,7 @@ import com.alongside.feature.onboarding.FakeOnboardingCompletionCache
 import com.alongside.feature.onboarding.FakePermissionController
 import com.alongside.feature.onboarding.OnboardingPermission
 import com.alongside.feature.onboarding.PermissionStatus
+import com.alongside.feature.onboarding.SharePlatform
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -89,7 +90,7 @@ class OnboardingScreenNavigationTest {
         val container = OnboardingContainer(controller, FakeOnboardingCompletionCache())
         composeTestRule.setContent {
             AlongsideTheme {
-                OnboardingScreen(container)
+                OnboardingScreen(container, platform = SharePlatform.ANDROID)
             }
         }
     }

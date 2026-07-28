@@ -44,6 +44,7 @@ import com.alongside.feature.matcher.presentation.MatchListScreen
 import com.alongside.feature.matcher.presentation.MatcherContainer
 import com.alongside.feature.matcher.presentation.MatcherScreen
 import com.alongside.feature.onboarding.PermissionController
+import com.alongside.feature.onboarding.SharePlatform
 import com.alongside.feature.onboarding.presentation.OnboardingContainer
 import com.alongside.feature.onboarding.presentation.OnboardingScreen
 import com.alongside.feature.onboarding.presentation.OnboardingSideEffect
@@ -120,6 +121,7 @@ private val NavKeySavedStateConfiguration =
 public fun AlongsideApp(
     googleAuthProvider: GoogleAuthProvider,
     permissionController: PermissionController,
+    sharePlatform: SharePlatform,
     modifier: Modifier = Modifier,
     pendingShareText: String? = null,
     onShareTextConsume: () -> Unit = {},
@@ -173,7 +175,7 @@ public fun AlongsideApp(
                         container.collectSideEffect { effect ->
                             if (effect is OnboardingSideEffect.Completed) backStack.resetTo(Pairing)
                         }
-                        OnboardingScreen(container)
+                        OnboardingScreen(container, platform = sharePlatform)
                     }
                     entry<Pairing> {
                         val container = koinViewModel<PairingContainer>()

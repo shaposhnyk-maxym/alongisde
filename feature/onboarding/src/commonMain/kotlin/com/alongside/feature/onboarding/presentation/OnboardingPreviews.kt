@@ -7,14 +7,19 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.alongside.core.ui.theme.AlongsideTheme
 import com.alongside.feature.onboarding.PermissionStatus
+import com.alongside.feature.onboarding.SharePlatform
 
 private val PreviewSize = Modifier.size(360.dp, 640.dp)
 
 @Composable
-private fun OnboardingPreview(state: OnboardingState) {
+private fun OnboardingPreview(
+    state: OnboardingState,
+    platform: SharePlatform = SharePlatform.ANDROID,
+) {
     AlongsideTheme {
         OnboardingContent(
             state = state,
+            platform = platform,
             onRequestPhotoPermission = {},
             onAcknowledgeCameraGeolocation = {},
             onAcknowledgeShareSetup = {},
@@ -57,6 +62,15 @@ private fun OnboardingCameraGeolocationPreview() {
 private fun OnboardingShareSetupPreview() {
     OnboardingPreview(
         OnboardingState(photoPermission = PermissionStatus.GRANTED, cameraGeolocationAcknowledged = true),
+    )
+}
+
+@Preview
+@Composable
+private fun OnboardingShareSetupIosPreview() {
+    OnboardingPreview(
+        state = OnboardingState(photoPermission = PermissionStatus.GRANTED, cameraGeolocationAcknowledged = true),
+        platform = SharePlatform.IOS,
     )
 }
 
