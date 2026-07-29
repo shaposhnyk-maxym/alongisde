@@ -21,18 +21,24 @@ import com.alongside.core.network.auth.asIdTokenRefresher
 import com.alongside.core.network.client.createFirestoreHttpClient
 import com.alongside.core.network.firestore.FirestoreConfig
 import com.alongside.core.network.firestore.FirestoreTokenProvider
+import com.alongside.feature.diary.capture.ExifPhotoReader
+import com.alongside.feature.diary.capture.IosExifPhotoReader
+import com.alongside.feature.diary.capture.IosPhotoByteReader
+import com.alongside.feature.diary.capture.PhotoByteReader
 import org.koin.dsl.module
 
 /**
  * Bootstrap-scoped iOS DI module - the minimum needed to get the Login -> Onboarding -> Pairing
  * gate and Home tab rendering in Simulator, ahead of docs/roadmap.md M7.
  *
- * Deliberately NOT ported yet (no iOS implementation exists for these - see docs/roadmap.md M10's
- * iOS TODO and M13.2's Share Extension note): GooglePlaces/Gemini config, ExifPhotoReader,
- * PhotoByteReader, PhotoCompressor, PhotoUploadClient, FirebaseStorage, and the Places share-link
- * import bindings. Diary capture and Places import will fail on iOS with a Koin
- * NoDefinitionFoundException until those land - everything else (auth, onboarding gate, pairing,
- * timeline read path, settings, recap) only depends on bindings already present below.
+ * Deliberately NOT ported yet (see docs/roadmap.md M10's iOS TODO and M13.2's Share Extension
+ * note): GooglePlaces/Gemini config, PhotoCompressor, PhotoUploadClient, FirebaseStorage, and the
+ * Places share-link import bindings - and `diaryFeatureModule` itself isn't included in this
+ * module's graph yet, so [ExifPhotoReader]/[PhotoByteReader] below aren't reachable from any
+ * consumer until a diary capture entry point exists on iOS. Places import will still fail on iOS
+ * with a Koin NoDefinitionFoundException until those land - everything else (auth, onboarding
+ * gate, pairing, timeline read path, settings, recap) only depends on bindings already present
+ * below.
  *
  * [firebaseApiKey]/[firebaseProjectId] mirror the same Firebase project's values committed in
  * `androidApp/google-services.json` - there is no iOS-side equivalent file to read these from
@@ -57,4 +63,6 @@ public fun iosAppModule(
     single { InviteCodeGenerator() }
     single<BackgroundWorkScheduler> { NoOpBackgroundWorkScheduler() }
     single<PairingRepository> { DefaultPairingRepository(get(), get()) }
+    single<ExifPhotoReader> { IosExifPhotoReader() }
+    single<PhotoByteReader> { IosPhotoByteReader() }
 }
