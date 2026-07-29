@@ -3,6 +3,10 @@ options:
   bundleIdPrefix: com.alongside
 configs:
   Debug: debug
+# Secrets.xcconfig is gitignored (docs/local-setup.md) - GOOGLE_PLACES_API_KEY/GEMINI_API_KEY,
+# the iOS equivalent of local.properties. Substituted into Generated-Info.plist below.
+configFiles:
+  Debug: Secrets.xcconfig
 settings:
   base:
     IPHONEOS_DEPLOYMENT_TARGET: "15.0"
@@ -30,8 +34,12 @@ targets:
         # (keychain-access-group is tied to the team ID; an unsigned/empty-team build makes every
         # Keychain read/write fail immediately - confirmed live as "provider failure - keychain
         # error"). See docs/roadmap.md / [[ios-apple-dev-account-blocked]] - that blocker is only
-        # about APNs + long-lived physical-device testing, not this.
-        DEVELOPMENT_TEAM: PL79685NB4
+        # about APNs + long-lived physical-device testing, not this. Whichever Apple ID's Personal
+        # Team this is, it must actually be signed into Xcode > Settings > Accounts on the
+        # machine building this project - "Automatic" signing silently falls back to "Sign to Run
+        # Locally" (which strips ALL entitlements, including this one) if the team ID below isn't
+        # a currently signed-in account, with no build error - confirmed live 2026-07-30.
+        DEVELOPMENT_TEAM: KZKC9CNZ73
         FRAMEWORK_SEARCH_PATHS: "$(inherited) $(SRCROOT)/../app/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"
         OTHER_LDFLAGS: "$(inherited) -framework app"
     entitlements:
@@ -68,6 +76,11 @@ targets:
         # crashes with NSInvalidArgumentException on the real call (M7's IosPermissionController).
         # No equivalent key is needed for UNUserNotificationCenter's authorization request.
         NSPhotoLibraryUsageDescription: "Alongside turns your camera roll into a shared diary with your partner."
+        # Substituted at build time from Secrets.xcconfig (gitignored) - read at runtime via
+        # NSBundle.mainBundle in MainViewController.kt, mirroring Android's local.properties ->
+        # BuildConfig -> androidAppModule(...) parameter pattern.
+        GooglePlacesAPIKey: $(GOOGLE_PLACES_API_KEY)
+        GeminiAPIKey: $(GEMINI_API_KEY)
 
   ShareExtension:
     type: app-extension
@@ -80,7 +93,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.alongside.app.ShareExtension
         CODE_SIGN_STYLE: Automatic
-        DEVELOPMENT_TEAM: PL79685NB4
+        DEVELOPMENT_TEAM: KZKC9CNZ73
     entitlements:
       path: Generated-ShareExtension.entitlements
       properties:

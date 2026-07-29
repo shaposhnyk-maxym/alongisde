@@ -25,3 +25,7 @@ local.properties
 iosApp/*.xcodeproj/
 iosApp/Generated-*.plist
 iosApp/Generated-*.entitlements
+
+# iOS equivalent of local.properties - GOOGLE_PLACES_API_KEY/GEMINI_API_KEY, never committed
+# (see docs/local-setup.md).
+iosApp/Secrets.xcconfig
