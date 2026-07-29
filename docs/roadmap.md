@@ -803,26 +803,55 @@ Places геокодинг, Gemini vision-опис.
   migration-тест (`core:database`, hand-rolled v4-фікстура, той самий
   підхід, що v3→v4 в M9).
 
-**iOS TODO (накопичено в M10; `iosApp` тепер реально існує з M7, але
-жоден з пунктів нижче ще не реалізований — окрема робота, поза
-скоупом M7):**
-- [ ] `ExifPhotoReader` — немає `iosMain`-реалізації взагалі (тільки
-      commonMain-інтерфейс). На Android — `ContentResolver` +
-      `androidx.exifinterface`; на iOS еквівалент — швидше за все
-      `PHAsset`/`PHImageManager` (доступ до фото) + `CGImageSource`/
-      `CGImageSourceCopyPropertiesAtIndex` (читання EXIF GPS+
-      DateTimeOriginal з `kCGImagePropertyExifDictionary`/
-      `kCGImagePropertyGPSDictionary`) — інший API, інша структура даних,
-      писати з нуля, не портувати Android-код.
-- [ ] `PhotoByteReader` — та сама історія: немає `iosMain`, на Android —
-      `ContentResolver.openInputStream`, на iOS — читання байтів з
-      `PHAsset` через `PHImageManager.requestImageDataAndOrientation`
-      (async callback-based API, не suspend напряму — знадобиться
-      обгортка, як `GoogleAuthProvider` в M5).
-- [ ] `androidx.exifinterface` — Android-only бібліотека в
-      `libs.versions.toml`; для iOS жодної бібліотеки ще не обрано
-      (ImageIO — системний фреймворк, не Gradle-залежність, тож питання
-      radше в `iosApp`/cinterop налаштуванні, коли Xcode-проєкт з'явиться).
+**iOS TODO (накопичено в M10; реалізовано окремо, `feat/m10-ios-exif-reader`,
+2026-07-30):**
+- [x] `ExifPhotoReader` — `IosExifPhotoReader` (`feature:diary/src/iosMain`).
+      **Відхилення від початкового плану**: замість `CGImageSource`/
+      `CGImageSourceCopyPropertiesAtIndex` (ручний парсинг сирого EXIF-словника
+      з байтів фото) використано `PHAsset.location`/`.creationDate` напряму —
+      Photos вже парсить EXIF у ці asset-рівневі властивості, тож не треба
+      завантажувати повне зображення заради двох полів метаданих, і зникає
+      ризик мостування `CFDictionaryRef` (C API-тип, непередбачувана
+      bridging-поведінка в Kotlin/Native) на Kotlin `Map`. `ImageIO` в підсумку
+      не знадобився взагалі. Фото відкидається (як і на Android — `mapNotNull`),
+      якщо `location`/`creationDate` відсутні (скріншоти, фото без Location
+      Services). `PHAsset` — той самий системний фреймворк, що вже
+      використовує `IosPermissionController` (M7) без жодного кастомного
+      cinterop `.def` файлу.
+- [x] `PhotoByteReader` — `IosPhotoByteReader` (`feature:diary/src/iosMain`),
+      через `PHImageManager.requestImageDataAndOrientationForAsset`
+      (completion-handler API), обгорнутий у `suspendCancellableCoroutine`
+      прямо в `iosMain`-класі — без окремого Swift-проміжного шару чи
+      `AuthContainer`-подібної обгортки, бо `readBytes` вже `suspend`-форми на
+      рівні самого інтерфейсу (на відміну від `GoogleAuthProvider`, який
+      залишається callback-based саме тому, що реалізований у Swift).
+- [x] Бібліотека для iOS — не знадобилась жодна: `Photos` (той самий
+      фреймворк, що й M7) покриває обидва читачі без `ImageIO`,
+      без Gradle-залежності, без кастомного cinterop.
+- **Нюанс Kotlin/Native cinterop, вартий занотувати**: `NSDate.timeIntervalSince1970`
+  резолвиться лише через явний `import platform.Foundation.timeIntervalSince1970`
+  — це категорійний метод, який Kotlin/Native експортує як top-level
+  extension-функцію, а не як member-властивість класу `NSDate`, тож звичайний
+  member-виклик (`creationDate.timeIntervalSince1970`) без цього імпорту падає
+  з `Unresolved reference` навіть при коректному типі.
+- **Без нових юніт-тестів** — той самий, вже задокументований прецедент, що й
+  `AndroidExifPhotoReader`/`AndroidPhotoByteReader`: реальний виклик
+  `PHAsset`/`PHImageManager` не підробити дешево, фейку для жодного з
+  інтерфейсів немає в `commonTest` (пайплайн тестується проти
+  `imageBytesLoader`-лямбди, не цих інтерфейсів напряму).
+- **Koin-біндинги додано** (`single<ExifPhotoReader>`/`single<PhotoByteReader>`
+  в `IosAppModule.kt`), але `diaryFeatureModule` сам ще не підключений до
+  iOS DI-графа, і на iOS досі немає жодного diary capture entry point (той
+  самий "немає entry point" блокер, що й у M9-M13) — обидва лишаються
+  окремими, вже задокументованими прогалинами.
+- **Живі тестові дані**: 5 реальних geo-tagged HEIC-фото з iPhone 12 mini
+  (експортовані з локальної Photos-бібліотеки через AppleScript, завантажені
+  в Simulator через `xcrun simctl addmedia`) підтверджують, що GPS/timestamp
+  EXIF в принципі коректно читається цим підходом — але без entry point це
+  не є наскрізною перевіркою самого коду `IosExifPhotoReader`/
+  `IosPhotoByteReader` (компіляція + `iosSimulatorArm64Test` пройшли
+  зелено; побудова окремої live-Simulator інтеграційної перевірки — більша,
+  окрема робота, поза цим мілстоуном).
 - [ ] **Google Places/Gemini Ktor-клієнти (`core:network`) технічно
       мультиплатформні** (`ktor-client-darwin` вже підключений для iOS в
       `core:network/build.gradle.kts`), **але жодного разу не перевірені
