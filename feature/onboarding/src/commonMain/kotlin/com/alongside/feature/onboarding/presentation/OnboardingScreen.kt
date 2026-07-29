@@ -16,11 +16,13 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.alongside.core.ui.component.DotBanner
 import com.alongside.core.ui.component.InkGradientBackground
 import com.alongside.feature.onboarding.OnboardingStep
+import com.alongside.feature.onboarding.SharePlatform
 import org.orbitmvi.orbit.compose.collectAsState
 
 @Composable
 public fun OnboardingScreen(
     container: OnboardingContainer,
+    platform: SharePlatform,
     modifier: Modifier = Modifier,
 ) {
     val state by container.collectAsState()
@@ -39,6 +41,7 @@ public fun OnboardingScreen(
 
     OnboardingContent(
         state = state,
+        platform = platform,
         onRequestPhotoPermission = { container.onIntent(OnboardingIntent.RequestPhotoPermission) },
         onAcknowledgeCameraGeolocation = { container.onIntent(OnboardingIntent.AcknowledgeCameraGeolocation) },
         onAcknowledgeShareSetup = { container.onIntent(OnboardingIntent.AcknowledgeShareSetup) },
@@ -51,6 +54,7 @@ public fun OnboardingScreen(
 @Composable
 internal fun OnboardingContent(
     state: OnboardingState,
+    platform: SharePlatform,
     onRequestPhotoPermission: () -> Unit,
     onAcknowledgeCameraGeolocation: () -> Unit,
     onAcknowledgeShareSetup: () -> Unit,
@@ -87,6 +91,7 @@ internal fun OnboardingContent(
                     )
                 OnboardingStep.SHARE_SETUP ->
                     ShareSetupStep(
+                        platform = platform,
                         onContinue = onAcknowledgeShareSetup,
                         animateEntrance = animateEntrance,
                     )

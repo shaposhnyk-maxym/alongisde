@@ -44,6 +44,7 @@ import com.alongside.core.ui.theme.alongsideColors
 import com.alongside.core.ui.theme.alongsideTypography
 import com.alongside.feature.onboarding.OnboardingStep
 import com.alongside.feature.onboarding.PermissionStatus
+import com.alongside.feature.onboarding.SharePlatform
 import org.jetbrains.compose.resources.painterResource
 
 private const val STEP_COUNT = 4
@@ -269,6 +270,7 @@ private const val SHARE_HIGHLIGHT_ALPHA = 0.1f
 
 @Composable
 internal fun ShareSetupStep(
+    platform: SharePlatform,
     onContinue: () -> Unit,
     animateEntrance: Boolean,
 ) {
@@ -287,18 +289,36 @@ internal fun ShareSetupStep(
             StepLabel(OnboardingStep.SHARE_SETUP)
             Spacer(Modifier.height(AlongsideSpacing.lg))
             Text(
-                text = "Send us a place from Maps",
+                text =
+                    when (platform) {
+                        SharePlatform.ANDROID -> "Send us a place from Maps"
+                        SharePlatform.IOS -> "Share a place from Maps"
+                    },
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(AlongsideSpacing.sm))
             Text(
-                text = "Tap Share on any place card, then choose Alongside from the list.",
+                text =
+                    when (platform) {
+                        SharePlatform.ANDROID -> "Tap Share on any place card, then choose Alongside from the list."
+                        SharePlatform.IOS -> "Tap Share on any place in Maps, then choose Alongside."
+                    },
                 modifier = Modifier.widthIn(max = ShareBodyMaxWidth),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
+            if (platform == SharePlatform.IOS) {
+                Spacer(Modifier.height(AlongsideSpacing.sm))
+                Text(
+                    text = "Don't see Alongside? Tap More at the end of the app row, then turn on Alongside.",
+                    modifier = Modifier.widthIn(max = ShareBodyMaxWidth),
+                    style = MaterialTheme.alongsideTypography.meta,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Center,
+                )
+            }
             Spacer(Modifier.height(AlongsideSpacing.xxl))
             AlongsidePrimaryButton(
                 text = "Continue",
@@ -311,7 +331,10 @@ internal fun ShareSetupStep(
             delayMillis = CARD_REVEAL_DELAY_MILLIS,
             initiallyRevealed = !animateEntrance,
         ) {
-            ShareSheetMock(modifier = Modifier.fillMaxWidth())
+            when (platform) {
+                SharePlatform.ANDROID -> ShareSheetMock(modifier = Modifier.fillMaxWidth())
+                SharePlatform.IOS -> IosShareSheetMock(modifier = Modifier.fillMaxWidth())
+            }
         }
     }
 }
@@ -387,6 +410,62 @@ private fun ShareTargetRow(
         Text(
             text = name,
             style = MaterialTheme.typography.bodyLarge,
+            fontWeight = if (highlighted) FontWeight.SemiBold else null,
+        )
+    }
+}
+
+/** Non-interactive mock of the iOS share sheet's app row, with Alongside and a "More" tile. */
+@Composable
+private fun IosShareSheetMock(modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        color = MaterialTheme.alongsideColors.paperWhite,
+        contentColor = MaterialTheme.alongsideColors.onPaper,
+        shape = RoundedCornerShape(topStart = ShareSheetCorner, topEnd = ShareSheetCorner),
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .navigationBarsPadding()
+                    .padding(
+                        start = AlongsideSpacing.sm,
+                        end = AlongsideSpacing.sm,
+                        top = ShareSheetTopPadding,
+                        bottom = ShareSheetBottomPadding,
+                    ),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = AlongsideSpacing.lg),
+                horizontalArrangement = Arrangement.spacedBy(AlongsideSpacing.xl),
+            ) {
+                IosShareAppTile(name = "Alongside", highlighted = true)
+                IosShareAppTile(name = "Messages")
+                IosShareAppTile(name = "Mail")
+                IosShareAppTile(name = "More")
+            }
+        }
+    }
+}
+
+@Composable
+private fun IosShareAppTile(
+    name: String,
+    highlighted: Boolean = false,
+) {
+    val tileColor =
+        if (highlighted) MaterialTheme.colorScheme.primary else MaterialTheme.alongsideColors.iconTileOnPaper
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier =
+                Modifier
+                    .size(MockAvatarSize)
+                    .background(tileColor, CircleShape),
+        )
+        Spacer(Modifier.height(AlongsideSpacing.xs))
+        Text(
+            text = name,
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = if (highlighted) FontWeight.SemiBold else null,
         )
     }

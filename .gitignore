@@ -7,6 +7,7 @@
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
+/.idea/xcode.xml
 .DS_Store
 build/
 .kotlin/
@@ -18,3 +19,9 @@ build/
 *_compare.png
 local.properties
 /.claude/skills/kmp-compose-multiplatform
+
+# iosApp/Alongside.xcodeproj and Generated-*.plist/entitlements are regenerated from
+# iosApp/project.yml by `xcodegen generate` (see iosApp/run.sh) - only the yml is source of truth.
+iosApp/*.xcodeproj/
+iosApp/Generated-*.plist
+iosApp/Generated-*.entitlements
