@@ -179,6 +179,7 @@ private fun TimelineWithAddPhotosButtonPreview() {
     AlongsideTheme {
         DiaryTimelineContent(
             items = listOf(DiaryTimelineItem.Day(previewDayCard())),
+            today = LocalDate(2026, 7, 19),
             modifier = Modifier.fillMaxSize(),
         )
     }
@@ -205,6 +206,7 @@ private fun TimelineWithUnclosedEntryShowsCloseDayButtonPreview() {
                         ),
                     ),
                 ),
+            today = LocalDate(2026, 7, 19),
             modifier = Modifier.fillMaxSize(),
         )
     }
@@ -248,6 +250,7 @@ private fun TimelineWithClosedEntryShowsClosedLabelPreview() {
                         ),
                     ),
                 ),
+            today = LocalDate(2026, 7, 19),
             modifier = Modifier.fillMaxSize(),
         )
     }
