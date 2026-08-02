@@ -230,6 +230,23 @@ private fun AuthGateAndStackedScreens(
                     }
                     PairingScreen(container)
                 }
+                // Safety net, not the normal render path: MainShell's own `if (currentMainTab !=
+                // null)` branch in AlongsideApp intercepts all five tab keys before
+                // AlongsideNavDisplay/NavDisplay ever gets a chance to render them - but a
+                // backStack mutation made from a coroutine (e.g. this entry<Pairing>'s
+                // `resetTo(Home)` above, or entry<Settings>'s below) is a snapshot write outside
+                // composition, and NavDisplay's own internal `rememberDecoratedNavEntries` can
+                // independently recompose against the new top-of-stack before AlongsideApp's own
+                // branch switch disposes it - without an entry<Home> here, that raced recompose
+                // crashed with "Unknown screen Home" (confirmed live: every cold start into an
+                // already-paired trip hit this, since Pairing's Paired effect fires immediately).
+                // Rendering the plain tab content (no MainShell/bottom-bar wrapper) for one frame
+                // during that race is a fine trade for "doesn't crash".
+                entry<Home> { HomeTabContent(backStack) }
+                entry<Timeline> { TimelineTabContent() }
+                entry<Places> { PlacesTabContent() }
+                entry<Matcher> { MatcherTabContent() }
+                entry<MatchList> { MatchListTabContent() }
                 entry<PlaceImport> { placeImport ->
                     // key = shareText: without a distinguishing key, koinViewModel() resolves by
                     // class name alone against this Activity's single ViewModelStore (Navigation3
