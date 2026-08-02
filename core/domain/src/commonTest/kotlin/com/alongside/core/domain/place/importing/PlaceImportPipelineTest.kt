@@ -179,6 +179,30 @@ class PlaceImportPipelineTest {
         }
 
     @Test
+    fun `shareUrl that already contains a resolved Google Maps place URL skips the redirect resolver`() =
+        runTest {
+            val redirectResolver =
+                FakeShareLinkRedirectResolver(ShareLinkRedirectResult.Failure(IllegalStateException("should not be called")))
+            val pipeline =
+                PlaceImportPipeline(
+                    redirectResolver = redirectResolver,
+                    detailsLookupClient = FakePlaceDetailsLookupClient(FOUND_RESULT),
+                    photoClient = FakePlacePhotoClient(mapOf("ref-1" to byteArrayOf(1), "ref-2" to byteArrayOf(2))),
+                    photoUploadClient = FakePlacePhotoUploadClient(),
+                    placeGeocodingClient = FakePlaceGeocodingClient(),
+                    generatePlaceId = { "place-1" },
+                    clock = FixedClock,
+                )
+            val alreadyResolvedUrl = "https://www.google.com/maps/place/Lviv+Coffee+Manufacture/@49.8397,24.0297,17z"
+
+            val result = pipeline.import(shareUrl = alreadyResolvedUrl, tripId = "trip-1", addedByUserId = "owner-1")
+
+            val imported = assertIs<PlaceImportResult.Imported>(result)
+            assertEquals("Lviv Coffee Manufacture", imported.place.name)
+            assertEquals(null, redirectResolver.lastShortUrl)
+        }
+
+    @Test
     fun `redirect resolve failure surfaces as Failure without calling the lookup client`() =
         runTest {
             val cause = IllegalStateException("network down")

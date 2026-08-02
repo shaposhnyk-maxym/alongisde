@@ -197,12 +197,29 @@ M5), не автоматизується в CI.
       `PlaceRetryDataSource` дозаливає фото, що не встигли (30с
       poll-інтервал)
 
-### iOS
+### iOS (Simulator, 2026-08-02, `feat/m13.2-ios-place-import`)
 
-- [x] **Superseded — see M7's checklist above.** Share Extension код і
-      App Group hand-off тепер реально існують і частково перевірені
-      (Simulator); реальний пристрій і повний наскрізний імпорт
-      (Places/Storage DI, поза скоупом M7) — все ще не пройдено.
+- [x] Реальний Share Sheet із Safari (сторінка Google Maps) →
+      "Alongside" в списку → тихо повертає в Safari, без крашу/глюків
+- [x] Після цього — локальна нотифікація "Місце готове до імпорту"
+      з'являється (миттєво, `UNUserNotificationCenter`)
+- [x] Тап на нотифікацію → застосунок виходить на передній план і
+      одразу показує `PlaceImportScreen` з реальною назвою/фото/
+      рейтингом місця (не placeholder/помилка) — Places/Storage DI
+      (`IosAppModule.kt`'s `placesBindings()`) підтверджено робочим
+- [x] Реальний лінк, скопійований з адресного рядка Safari (вже
+      повний `/maps/place/...`, без редиректу) — коректно
+      розпарсився й показав реальні дані (регресія "got HTTP 200"
+      знайдена й виправлена тут-таки, `PlaceImportPipeline`)
+- [ ] Другий share до підтвердження першого (warm-foreground,
+      `koinViewModel(key=...)`-регресія з 2026-07-23) — не
+      перевірено в цій сесії
+- [ ] Airplane mode одразу після імпорту (`PlaceRetryDataSource`
+      poll) — не перевірено в цій сесії
+- [ ] Реальний Google Maps застосунок (не Safari-шер сторінки) як
+      джерело — не перевірено, Maps не встановлюється на Simulator
+- [ ] Реальний пристрій — усе ще заблоковано протермінованим Apple
+      dev account (`ios_apple_dev_account_blocked.md`)
 
 ---
 
