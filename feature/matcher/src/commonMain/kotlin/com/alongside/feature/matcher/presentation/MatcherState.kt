@@ -16,6 +16,11 @@ import com.alongside.core.model.trip.Trip
  * A candidate whose sides disagree (one LIKE, one DISLIKE) resolves to [MatchStatus.PENDING] -
  * the exact same bucket as "nobody has swiped yet" - so it stays in [deck] and gets shown again,
  * without either [PlaceSwipe] record ever needing to be reset or touched by the other user.
+ *
+ * [deck] additionally excludes candidates the current user imported themselves
+ * (docs/roadmap.md M21.5) - swiping on a place you just picked yourself defeats the "element of
+ * surprise" the deck exists for. [matches] is NOT filtered this way: a match already required
+ * both sides to say yes, so who originally imported it is no longer relevant once it's mutual.
  */
 @Immutable
 public data class MatcherState(
@@ -25,7 +30,8 @@ public data class MatcherState(
     val swipes: List<PlaceSwipe> = emptyList(),
 ) {
     val deck: List<PlaceCandidate>
-        get() = candidates.filter { matchStatus(it) == MatchStatus.PENDING }
+        get() =
+            candidates.filter { matchStatus(it) == MatchStatus.PENDING && it.addedByUserId != ownUserId }
 
     val matches: List<PlaceCandidate>
         get() = candidates.filter { matchStatus(it) == MatchStatus.MATCHED }

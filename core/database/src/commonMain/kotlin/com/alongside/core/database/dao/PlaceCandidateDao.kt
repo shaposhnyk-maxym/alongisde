@@ -18,6 +18,12 @@ internal interface PlaceCandidateDao {
     @Query("SELECT * FROM place_candidates WHERE tripId = :tripId")
     fun observeByTrip(tripId: String): Flow<List<PlaceCandidateEntity>>
 
+    @Query("SELECT * FROM place_candidates WHERE tripId = :tripId AND addedByUserId = :addedByUserId")
+    fun observeByTripAndAddedBy(
+        tripId: String,
+        addedByUserId: String,
+    ): Flow<List<PlaceCandidateEntity>>
+
     @Query("DELETE FROM place_candidates WHERE id = :id")
     suspend fun delete(id: String)
 }

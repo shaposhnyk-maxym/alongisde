@@ -50,6 +50,11 @@ public class SyncingPlaceCandidateRepository
 
         override fun observeByTrip(tripId: String): Flow<List<PlaceCandidate>> = local.observeByTrip(tripId)
 
+        override fun observeByTripAndAddedBy(
+            tripId: String,
+            addedByUserId: String,
+        ): Flow<List<PlaceCandidate>> = local.observeByTripAndAddedBy(tripId, addedByUserId)
+
         override suspend fun delete(id: String) {
             local.delete(id)
             val operation =

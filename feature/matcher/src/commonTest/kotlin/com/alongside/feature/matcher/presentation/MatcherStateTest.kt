@@ -101,4 +101,23 @@ class MatcherStateTest {
 
         assertEquals(emptyList(), state.myTurnDeck)
     }
+
+    @Test
+    fun `a candidate I imported myself is excluded from deck even with no swipes`() {
+        val ownCandidate = fakeCandidate("place-own", addedByUserId = "owner-1")
+        val state = MatcherState(ownUserId = "owner-1", trip = trip, candidates = listOf(ownCandidate))
+
+        assertEquals(emptyList(), state.deck)
+        assertEquals(emptyList(), state.myTurnDeck)
+    }
+
+    @Test
+    fun `a candidate the partner imported still shows in deck alongside a self-imported one`() {
+        val ownCandidate = fakeCandidate("place-own", addedByUserId = "owner-1")
+        val partnerCandidate = fakeCandidate("place-partner", addedByUserId = "member-1")
+        val state =
+            MatcherState(ownUserId = "owner-1", trip = trip, candidates = listOf(ownCandidate, partnerCandidate))
+
+        assertEquals(listOf("place-partner"), state.deck.map { it.id })
+    }
 }

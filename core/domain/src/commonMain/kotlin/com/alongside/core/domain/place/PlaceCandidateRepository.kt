@@ -10,5 +10,11 @@ public interface PlaceCandidateRepository {
 
     public fun observeByTrip(tripId: String): Flow<List<PlaceCandidate>>
 
+    /** Same as [observeByTrip], narrowed to places [addedByUserId] added themselves. */
+    public fun observeByTripAndAddedBy(
+        tripId: String,
+        addedByUserId: String,
+    ): Flow<List<PlaceCandidate>>
+
     public suspend fun delete(id: String)
 }

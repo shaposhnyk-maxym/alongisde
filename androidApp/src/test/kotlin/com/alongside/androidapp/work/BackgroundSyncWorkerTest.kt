@@ -135,6 +135,11 @@ private fun unusedPlaceCandidateRepository() =
 
         override fun observeByTrip(tripId: String): Flow<List<PlaceCandidate>> = error("not reached in this test")
 
+        override fun observeByTripAndAddedBy(
+            tripId: String,
+            addedByUserId: String,
+        ): Flow<List<PlaceCandidate>> = error("not reached in this test")
+
         override suspend fun delete(id: String) = error("not reached in this test")
     }
 

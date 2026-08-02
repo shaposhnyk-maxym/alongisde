@@ -69,6 +69,26 @@ class MatcherContainerTest {
         }
 
     @Test
+    fun `deck excludes a candidate the current user imported themselves`() =
+        runTest {
+            pairingRepository.activeTrip.value = fakeTrip()
+            placeCandidateRepository.seed(
+                fakeCandidate("place-own", addedByUserId = "owner-1"),
+                fakeCandidate("place-partner", addedByUserId = "member-1"),
+            )
+
+            containerUnderTest(uid = "owner-1").test(this) {
+                runOnCreate()
+                awaitState() // ownUserId bootstrap
+                val loaded = awaitState() // trip + candidates loaded
+
+                assertEquals(listOf("place-partner"), loaded.deck.map { it.id })
+
+                cancelAndIgnoreRemainingItems()
+            }
+        }
+
+    @Test
     fun `swiping a candidate the partner hasn't seen yet keeps it pending in the deck`() =
         runTest {
             pairingRepository.activeTrip.value = fakeTrip()
