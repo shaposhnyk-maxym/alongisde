@@ -3786,22 +3786,47 @@ unfiltered запит, і `MatcherState.deck`/`myTurnDeck` фільтрують 
 ---
 
 **Відхилення:**
-- **Три мануальні пункти (3, 4, 6) не пройдені інтерактивно в цій
-  сесії** — не через складність фічі, а через середовище: немає `adb`
-  (Android emulator/device взагалі недоступний для перевірки), а
-  iPhone 17 Simulator, хоч і реально забілджений і запущений
-  (`iosApp/run.sh`), сидів на окремому macOS Space, тож координатний
-  tap-automation (`cliclick`/AppleScript) не міг по ньому клікнути.
-  Що реально перевірено автоматично: збірка проходить на всіх трьох
-  таргетах (jvm/android/iosSimulatorArm64), весь `allTests` +
-  `ktlintCheck`/`detekt` зелені по всьому проєкту, і M21.3/M21.4's
-  збірка встановлена й запущена на живому Simulator (скріншотом
-  підтверджено видимий контраст `indicatorColor` з пункту 4). Три
-  пункти лишаються реальним ручним чекліст-пунктом перед мержем:
-  (3) нотифікація реально приходить і тап відкриває застосунок,
-  (4) тап між табами дає видимий кросфейд контенту з нерухомим баром
-  на обох платформах, (6) тап на matched-картку відкриває мапс-
-  застосунок з правильною позначкою на Android і iOS.
+- **iOS-екосистема тестувалась живцем, знайшла 2 реальних баги поза
+  скоупом M21, обидва виправлені** — `iosApp/run.sh`-збірка встановлена
+  й запущена на iPhone 17 Simulator; live-тест M21.6's "tap matched
+  card" підняв `BUG IN CLIENT OF UIKIT: ... UIApplication.openURL(_:)
+  ... Force returning false` — цей одноаргументний виклик тепер
+  просто мовчки нічого не робить на iOS 18 Simulator (не просто
+  deprecation warning). Виправлено на
+  `openURL(url:options:completionHandler:)` в `IosMapsLauncher.kt`, і
+  той самий виклик в `IosPermissionController.openAppSettings()`
+  (M6/M7, поза M21) — той самий баг, той самий фікс.
+- **Android-емулятор виявився доступним** — `adb` не був у PATH, але
+  реально існує (`~/Library/Android/sdk/platform-tools/adb`), і Pixel
+  8 Pro AVD вже був запущений (той самий, що видно в Android Studio).
+  Live-тест на ньому підняв РЕАЛЬНИЙ, детермінований краш з M21.4:
+  `java.lang.IllegalStateException: Unknown screen Home` в
+  `NavDisplay.rememberDecoratedNavEntries` — коли `backStack`
+  мутується з корутини (`entry<Pairing>`'s `Paired` side effect →
+  `backStack.resetTo(Home)`, поза композицією), `NavDisplay`
+  (усередині ще старої `AuthGateAndStackedScreens`-гілки) незалежно
+  читає той самий `backStack` і може recompose проти нового
+  top-of-stack РАНІШЕ, ніж батьківський `if (currentMainTab != null)`
+  встигає перемкнути гілку й розмонтувати `NavDisplay` — а
+  `entry<Home>` більше не був зареєстрований (M21.4 прибрав його,
+  розраховуючи, що `NavDisplay` ніколи його не побачить). Падало
+  детерміновано на кожному холодному старті з уже спареним трипом —
+  саме такий шлях і запускає `singleTask`-launch через
+  `ACTION_SEND`-шер, тому спершу виглядало як "шер зламався".
+  Виправлено: `entry<Home>`/`entry<Timeline>`/`entry<Places>`/
+  `entry<Matcher>`/`entry<MatchList>` повернуто в `entryProvider` як
+  safety net (не основний шлях рендеру — `MainShell`'s гілка й далі
+  перехоплює всі п'ять ключів у звичайному випадку), щоб рейснутий
+  recompose показав один кадр контенту без бару замість краху.
+  Перевірено живцем на тому ж AVD: холодний старт з уже спареним
+  трипом і `ACTION_SEND`-шер (реальний `adb shell am start -a
+  android.intent.action.SEND`) обидва тепер доходять до потрібного
+  екрана без краху.
+- **Пункт 4 (кросфейд між табами) і частина пункту 6 (правильна
+  позначка на карті) лишаються не пройденими interactively** —
+  видимий контраст індикатора підтверджено скріншотом на обох
+  платформах; сам кросфейд-перехід і фінальний вигляд відкритої мапи
+  — ручний чекліст-пункт перед мержем.
 - **`allTests` не ловить Roborazzi-регресії** — виявлено живцем під
   час пункту 6: `feature:matcher:allTests` пройшов зелено одразу
   після пункту 5's зміни `MatcherState.deck` (новий фільтр
