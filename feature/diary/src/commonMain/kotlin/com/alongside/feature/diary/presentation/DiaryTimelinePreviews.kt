@@ -212,6 +212,22 @@ private fun TimelineWithUnclosedEntryShowsCloseDayButtonPreview() {
 
 @Preview
 @Composable
+private fun TimelinePagerDotsCenteredPreview() {
+    AlongsideTheme {
+        DiaryTimelineContent(
+            items =
+                listOf(
+                    DiaryTimelineItem.Day(previewDayCard()),
+                    DiaryTimelineItem.Day(previewDayCard()),
+                    DiaryTimelineItem.Day(previewDayCard()),
+                ),
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+@Preview
+@Composable
 private fun TimelineWithClosedEntryShowsClosedLabelPreview() {
     AlongsideTheme {
         DiaryTimelineContent(
