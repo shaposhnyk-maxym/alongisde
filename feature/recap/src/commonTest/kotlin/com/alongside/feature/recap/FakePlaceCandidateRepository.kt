@@ -18,6 +18,14 @@ internal class FakePlaceCandidateRepository : PlaceCandidateRepository {
     override fun observeByTrip(tripId: String): Flow<List<PlaceCandidate>> =
         candidates.map { it.values.filter { candidate -> candidate.tripId == tripId } }
 
+    override fun observeByTripAndAddedBy(
+        tripId: String,
+        addedByUserId: String,
+    ): Flow<List<PlaceCandidate>> =
+        candidates.map { all ->
+            all.values.filter { candidate -> candidate.tripId == tripId && candidate.addedByUserId == addedByUserId }
+        }
+
     override suspend fun delete(id: String) {
         candidates.value = candidates.value - id
     }

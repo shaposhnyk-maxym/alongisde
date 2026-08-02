@@ -229,6 +229,11 @@ internal class FakePlaceCandidateRepository : PlaceCandidateRepository {
 
     override fun observeByTrip(tripId: String): Flow<List<PlaceCandidate>> = candidates.map { list -> list.filter { it.tripId == tripId } }
 
+    override fun observeByTripAndAddedBy(
+        tripId: String,
+        addedByUserId: String,
+    ): Flow<List<PlaceCandidate>> = error("not used by Home")
+
     override suspend fun delete(id: String): Unit = error("not used by Home")
 }
 

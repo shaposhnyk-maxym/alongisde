@@ -20,6 +20,15 @@ internal class PlaceCandidateRepositoryImpl(
     override fun observeByTrip(tripId: String): Flow<List<PlaceCandidate>> =
         database.placeCandidateDao().observeByTrip(tripId).map { places -> places.map { it.toDomain() } }
 
+    override fun observeByTripAndAddedBy(
+        tripId: String,
+        addedByUserId: String,
+    ): Flow<List<PlaceCandidate>> =
+        database
+            .placeCandidateDao()
+            .observeByTripAndAddedBy(tripId, addedByUserId)
+            .map { places -> places.map { it.toDomain() } }
+
     override suspend fun delete(id: String) {
         database.placeCandidateDao().delete(id)
     }

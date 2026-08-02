@@ -16,6 +16,7 @@ import kotlin.time.Instant
 private fun place(
     id: String,
     tripId: String,
+    addedByUserId: String = "uid-1",
 ) = PlaceCandidate(
     id = id,
     tripId = tripId,
@@ -23,7 +24,7 @@ private fun place(
     latitude = 0.0,
     longitude = 0.0,
     note = null,
-    addedByUserId = "owner-1",
+    addedByUserId = addedByUserId,
     syncStatus = SyncStatus.PENDING,
     createdAt = Instant.fromEpochMilliseconds(0),
     updatedAt = Instant.fromEpochMilliseconds(0),
@@ -57,6 +58,21 @@ class PlacesListDataSourceTest {
             runCurrent()
 
             assertEquals(listOf("place-1"), updates.last().map { it.id })
+        }
+
+    @Test
+    fun `places the partner added are excluded - only the caller's own places show`() =
+        runTest {
+            val pairingRepository = FakePairingRepository(initialActiveTrip = fakeTrip(id = "trip-1"))
+            val dataSource = PlacesListDataSource(pairingRepository, placeCandidateRepository, FakePlaceContentPuller())
+            placeCandidateRepository.upsert(place(id = "own-place", tripId = "trip-1", addedByUserId = "uid-1"))
+            placeCandidateRepository.upsert(place(id = "partner-place", tripId = "trip-1", addedByUserId = "uid-2"))
+            val updates = mutableListOf<List<PlaceCandidate>>()
+
+            backgroundScope.launch { dataSource.observe("uid-1") { updates += it } }
+            runCurrent()
+
+            assertEquals(listOf("own-place"), updates.last().map { it.id })
         }
 
     @Test

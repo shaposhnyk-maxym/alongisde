@@ -18,12 +18,15 @@ import kotlin.time.Duration.Companion.seconds
 private val TRIP_CONTENT_POLL_INTERVAL = 5.seconds
 
 /**
- * The Places tab's reactive read side: active trip -> that trip's places, straight from Room
+ * The Places tab's reactive read side: active trip -> the caller's OWN places from that trip
+ * (docs/roadmap.md M21.5 - the partner's imports stay out of this list), straight from Room
  * (already kept in sync with Firestore by `SyncingPlaceCandidateRepository`/`SyncCoordinator`) -
  * the same trip-resolution idiom `PlaceRetryDataSource` already uses. Also drives the remote
  * trip-content pull loop (partner-imported places, see [PlaceContentPuller]) while this screen is
  * open - the same idiom `feature:diary`'s `DiaryTimelineDataSource` already uses; the periodic
- * WorkManager sweep (`PlaceContentPullCoordinator`) is the backstop for when it isn't.
+ * WorkManager sweep (`PlaceContentPullCoordinator`) is the backstop for when it isn't. The pull
+ * still fetches BOTH sides' places into Room (Matcher's deck needs the partner's), this class
+ * just narrows what it reads back out.
  */
 public class PlacesListDataSource(
     private val pairingRepository: PairingRepository,
@@ -51,7 +54,8 @@ public class PlacesListDataSource(
 
             tripFlow
                 .flatMapLatest { trip ->
-                    trip?.let { placeCandidateRepository.observeByTrip(it.id) } ?: flowOf(emptyList())
+                    trip?.let { placeCandidateRepository.observeByTripAndAddedBy(it.id, ownUserId) }
+                        ?: flowOf(emptyList())
                 }.collect { onUpdate(it) }
         }
     }

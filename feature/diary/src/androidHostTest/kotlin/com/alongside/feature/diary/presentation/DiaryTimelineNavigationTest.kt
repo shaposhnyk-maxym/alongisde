@@ -177,6 +177,7 @@ class DiaryTimelineNavigationTest {
             AlongsideTheme {
                 DiaryTimelineContent(
                     items = captureTestItems(),
+                    today = LocalDate(2026, 7, 19),
                     modifier = Modifier.fillMaxSize(),
                     onAddPhotos = { date -> addPhotosDate = date },
                 )
@@ -195,6 +196,7 @@ class DiaryTimelineNavigationTest {
             AlongsideTheme {
                 DiaryTimelineContent(
                     items = captureTestItems(ownEpisodes = listOf(testEpisode())),
+                    today = LocalDate(2026, 7, 19),
                     modifier = Modifier.fillMaxSize(),
                     onAddPhotos = { addPhotosCalled = true },
                 )
@@ -218,6 +220,7 @@ class DiaryTimelineNavigationTest {
             AlongsideTheme {
                 DiaryTimelineContent(
                     items = captureTestItems(ownEpisodes = listOf(testEpisode())),
+                    today = LocalDate(2026, 7, 19),
                     modifier = Modifier.fillMaxSize(),
                     onCloseDay = { date -> closeDayDate = date },
                 )
@@ -233,7 +236,11 @@ class DiaryTimelineNavigationTest {
     fun `a day with no own episodes never shows Close Day, even though Add Photos is available`() {
         composeTestRule.setContent {
             AlongsideTheme {
-                DiaryTimelineContent(items = captureTestItems(), modifier = Modifier.fillMaxSize())
+                DiaryTimelineContent(
+                    items = captureTestItems(),
+                    today = LocalDate(2026, 7, 19),
+                    modifier = Modifier.fillMaxSize(),
+                )
             }
         }
 
@@ -259,6 +266,23 @@ class DiaryTimelineNavigationTest {
     }
 
     @Test
+    fun `a day whose date is still in the future hides Add Photos and Close Day entirely`() {
+        composeTestRule.setContent {
+            AlongsideTheme {
+                DiaryTimelineContent(
+                    items = captureTestItems(ownEpisodes = listOf(testEpisode())),
+                    today = LocalDate(2026, 7, 18),
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("timeline-add-photos").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("timeline-close-day").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("timeline-day-closed-label").assertDoesNotExist()
+    }
+
+    @Test
     fun `a closed entry hides both Add Photos and Close Day, showing a closed label instead`() {
         composeTestRule.setContent {
             AlongsideTheme {
@@ -268,6 +292,7 @@ class DiaryTimelineNavigationTest {
                             ownEpisodes = listOf(testEpisode()),
                             ownClosedAt = Instant.fromEpochMilliseconds(1),
                         ),
+                    today = LocalDate(2026, 7, 19),
                     modifier = Modifier.fillMaxSize(),
                 )
             }

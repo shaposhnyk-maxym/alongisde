@@ -3584,7 +3584,7 @@ Recap-стек) — той самий мінімалізм, що вже в `M20.
 
 ---
 
-### M21 — Trip readiness
+### M21 — Trip readiness ✅ done (з ручним чек-листом)
 
 Шість незалежних UX/логічних доробок, знайдених через реальне
 використання застосунку перед поїздкою — не одна велика фіча, а пул
@@ -3606,12 +3606,12 @@ Recap-стек) — той самий мінімалізм, що вже в `M20.
 передається, і центрування працює як слід.
 
 **Accept:**
-- [ ] `PagerDots.kt`: `Arrangement.spacedBy(DotSize)` →
+- [x] `PagerDots.kt`: `Arrangement.spacedBy(DotSize)` →
       `Arrangement.spacedBy(DotSize, Alignment.CenterHorizontally)`
       (фікс у самому компоненті, не в кожному виклику)
-- [ ] Скріншот-тест (`core:ui`, Roborazzi) підтверджує центрування в
+- [x] Скріншот-тест (`core:ui`, Roborazzi) підтверджує центрування в
       `DiaryTimelineScreen`-контексті (`fillMaxWidth` + `BottomCenter`)
-- [ ] Існуючий скріншот-тест `FullscreenPhotoViewer` не регресує (той
+- [x] Існуючий скріншот-тест `FullscreenPhotoViewer` не регресує (той
       самий компонент, інший виклик — без `fillMaxWidth`)
 
 ---
@@ -3627,12 +3627,12 @@ Recap-стек) — той самий мінімалізм, що вже в `M20.
 `clock.todayIn(TimeZone.currentSystemDefault())`).
 
 **Accept:**
-- [ ] Гейт замінено на `selectedDay.date == today` (поглинає стару
+- [x] Гейт замінено на `selectedDay.date == today` (поглинає стару
       `!isPastDay`-перевірку, додатково виключає майбутні дні)
-- [ ] Юніт/скріншот-тест: кнопка не показується ні для минулого, ні
+- [x] Юніт/скріншот-тест: кнопка не показується ні для минулого, ні
       для майбутнього дня, лише для today
-- [ ] Countdown-картка (pre-trip capture, окрема гілка коду) — не
-      зачіпати, її не стосується
+- [x] Countdown-картка (pre-trip capture, окрема гілка коду) — не
+      зачіпали, її не стосується
 
 ---
 
@@ -3655,22 +3655,25 @@ BackgroundWorkScheduler.kt:33`) — мережево-незалежний вик
 реальний майбутньо-датований тригер.
 
 **Accept:**
-- [ ] Новий `IosBackgroundWorkScheduler` (iosMain), підключений в
+- [x] Новий `IosBackgroundWorkScheduler` (iosMain), підключений в
       `IosAppModule.kt` замість `NoOpBackgroundWorkScheduler` —
       **лише** для `scheduleRecapReadyNotification`; два інші методи
       (episode/place sync retry) лишаються no-op — легітимно
       потребують `BGTaskScheduler`, поза скоупом цього пункту
-- [ ] Використовує вже наявну чисту функцію
+- [x] Використовує вже наявну чисту функцію
       `durationUntilRecapNotification` (`core/domain/.../recap/
       RecapNotificationTiming.kt`) для обчислення тригера
-      (`UNCalendarNotificationTrigger`/`UNTimeIntervalNotificationTrigger`)
-- [ ] Ідентифікатор запиту — `"recap-ready-$tripId"` (той самий, що
+      (`UNTimeIntervalNotificationTrigger`, не `UNCalendarNotificationTrigger`
+      — секундний інтервал напряму з `Duration`, простіше й без
+      часової зони окремо)
+- [x] Ідентифікатор запиту — `"recap-ready-$tripId"` (той самий, що
       Android's `enqueueUniqueWork`-ключ) — повторний виклик
       перезаписує, не дублює
 - [ ] Мануальна Simulator-перевірка: майбутньо-датований тригер
       реально доставляє нотифікацію (можна прискорити тестовим
       коротким delay), тап відкриває застосунок на Home (не
-      deep-лінк, той самий UX, що Android)
+      deep-лінк, той самий UX, що Android) — **не пройдено в цій
+      сесії**, див. "Відхилення" нижче
 
 ---
 
@@ -3693,21 +3696,31 @@ Nav3 crossfade цілого дерева (`AlongsideNavDisplay.android.kt`, бе
 (`SurfaceInk`, теж темний) — контраст майже нульовий.
 
 **Accept:**
-- [ ] `MainShell`/`NavigationBar` піднято НАД навігацією як один
+- [x] `MainShell`/`NavigationBar` піднято НАД навігацією як один
       persistent інстанс (не всередині кожного `entry<Tab>`);
       `currentTab` — похідне з `backStack.last()`
-- [ ] Лише контент-область обгорнута в `AnimatedContent`/`Crossfade`,
+- [x] Лише контент-область обгорнута в `AnimatedContent`/`Crossfade`,
       keyed по табу — однаково на Android і iOS (не покладатись на
-      Nav3-ui, якого нема на iOS)
-- [ ] `indicatorColor` виправлено на видимий контраст (напр.
-      дефолтний M3 `secondaryContainer`-похідний колір замість
+      Nav3-ui, якого нема на iOS). П'ять табів більше не рендеряться
+      через `entryProvider`/`AlongsideNavDisplay` взагалі — Nav3's
+      top-of-stack рендер не дає справжнього кросфейду (обидва боки
+      переходу читали б той самий уже-змінений `backStack`), тож
+      таб-контент диспетчериться напряму (`HomeTabContent`/
+      `TimelineTabContent`/... в `AlongsideApp.kt`), а
+      `AlongsideNavDisplay` лишається тільки для не-табових екранів
+      (Login/Onboarding/Pairing/PlaceImport/Settings/Recap)
+- [x] `indicatorColor` виправлено на видимий контраст
+      (`MaterialTheme.colorScheme.secondaryContainer` замість
       `background`) — вже наявна pill-анімація стає видимою
-- [ ] Локальна `private const val ..._DURATION_MILLIS`-константа
-      біля нової анімації (той самий патерн, що `Shimmer.kt`/
-      `FadeUpReveal.kt` — жодного нового спільного токен-об'єкта)
+- [x] Локальна `private const val TAB_CONTENT_CROSSFADE_DURATION_MILLIS`
+      біля нової анімації (`MainShell.kt`, той самий патерн, що
+      `Shimmer.kt`/`FadeUpReveal.kt`)
 - [ ] Мануальна/скріншот-перевірка на обох платформах: перехід між
       табами — контент фейдиться, бар лишається на місці,
-      selected-індикатор видимо анімується
+      selected-індикатор видимо анімується — **частково**: збілджено
+      й запущено на iPhone 17 Simulator, скріншотом підтверджено
+      видимий контраст індикатора; інтерактивний тап-перехід між
+      табами не пройдено, див. "Відхилення" нижче
 
 ---
 
@@ -3726,15 +3739,16 @@ unfiltered запит, і `MatcherState.deck`/`myTurnDeck` фільтрують 
 (`PlaceCandidate.kt:13`), стемпається в `PlaceImportPipeline.import(...)`.
 
 **Accept:**
-- [ ] Новий `PlaceCandidateDao.observeByTripAndAddedBy(tripId, userId)`
+- [x] Новий `PlaceCandidateDao.observeByTripAndAddedBy(tripId, userId)`
       (наскрізно через repository й domain-інтерфейс)
-- [ ] Places-таб використовує його з `ownUserId` (лише "мої")
-- [ ] Matcher's deck (`MatcherState.deck`/`myTurnDeck` або вище, в
-      `observeTripContent`) фільтрує `addedByUserId != ownUserId`
-      (лише "партнерові")
-- [ ] `PlaceCandidateDaoTest`/`PlaceCandidateRepositoryImplTest`/
-      `PlacesListDataSourceTest`/`MatcherContainerTest` — нові кейси
-      на фільтрацію в обидва боки
+- [x] Places-таб використовує його з `ownUserId` (лише "мої")
+- [x] Matcher's deck (`MatcherState.deck`) фільтрує
+      `addedByUserId != ownUserId` (лише "партнерові"); `matches` НЕ
+      фільтрується — матч уже вимагав взаємного "так" від обох, тож
+      хто саме імпортував місце більше не важливо
+- [x] `PlaceCandidateDaoTest`/`PlaceCandidateRepositoryImplTest`/
+      `PlacesListDataSourceTest`/`MatcherContainerTest`/`MatcherStateTest`
+      — нові кейси на фільтрацію в обидва боки
 
 ---
 
@@ -3751,19 +3765,85 @@ unfiltered запит, і `MatcherState.deck`/`myTurnDeck` фільтрують 
 `name` — усе потрібне для депліну.
 
 **Accept:**
-- [ ] Новий commonMain-інтерфейс `MapsLauncher` (той самий
-      Koin-платформний патерн, що `PermissionController`) з
+- [x] Новий commonMain-інтерфейс `MapsLauncher` (`core:domain`, той
+      самий крос-платформний Koin-патерн, що `PermissionController` —
+      звичайний інтерфейс, не `expect`/`actual`) з
       `openMaps(latitude, longitude, name)`
-- [ ] Android/iOS `actual`-реалізації відкривають universal-лінк
+- [x] Android/iOS `actual`-реалізації відкривають universal-лінк
       `https://www.google.com/maps/search/?api=1&query=lat,lng`
       (без кастомної схеми, без `LSApplicationQueriesSchemes` на
-      iOS — відкриває будь-який встановлений мапс-застосунок чи
-      браузер); Android опційно спершу пробує `geo:`-схему з
-      фолбеком на universal-лінк
-- [ ] `MatchRow`/`PaperCard` отримує `.clickable`, викликає
+      iOS); Android спершу пробує `geo:`-схему (несе `name` як
+      мітку маркера) з фолбеком на universal-лінк
+- [x] `MatchRow`/`PaperCard` отримує `.clickable`, викликає
       `mapsLauncher.openMaps(place.latitude, place.longitude, place.name)`
+      (`MapsLauncher` резолвиться через `koinInject()` один раз у
+      `MatchListScreen`, далі йде вниз як звичайний callback-параметр
+      — не сам DI-тип — для тестованості без Koin-скафолдингу)
 - [ ] Мануальна перевірка на обох платформах: тап відкриває
-      встановлений мапс-застосунок з правильною позначкою
+      встановлений мапс-застосунок з правильною позначкою — **не
+      пройдено в цій сесії**, див. "Відхилення" нижче
+
+---
+
+**Відхилення:**
+- **iOS-екосистема тестувалась живцем, знайшла 2 реальних баги поза
+  скоупом M21, обидва виправлені** — `iosApp/run.sh`-збірка встановлена
+  й запущена на iPhone 17 Simulator; live-тест M21.6's "tap matched
+  card" підняв `BUG IN CLIENT OF UIKIT: ... UIApplication.openURL(_:)
+  ... Force returning false` — цей одноаргументний виклик тепер
+  просто мовчки нічого не робить на iOS 18 Simulator (не просто
+  deprecation warning). Виправлено на
+  `openURL(url:options:completionHandler:)` в `IosMapsLauncher.kt`, і
+  той самий виклик в `IosPermissionController.openAppSettings()`
+  (M6/M7, поза M21) — той самий баг, той самий фікс.
+- **Android-емулятор виявився доступним** — `adb` не був у PATH, але
+  реально існує (`~/Library/Android/sdk/platform-tools/adb`), і Pixel
+  8 Pro AVD вже був запущений (той самий, що видно в Android Studio).
+  Live-тест на ньому підняв РЕАЛЬНИЙ, детермінований краш з M21.4:
+  `java.lang.IllegalStateException: Unknown screen Home` в
+  `NavDisplay.rememberDecoratedNavEntries` — коли `backStack`
+  мутується з корутини (`entry<Pairing>`'s `Paired` side effect →
+  `backStack.resetTo(Home)`, поза композицією), `NavDisplay`
+  (усередині ще старої `AuthGateAndStackedScreens`-гілки) незалежно
+  читає той самий `backStack` і може recompose проти нового
+  top-of-stack РАНІШЕ, ніж батьківський `if (currentMainTab != null)`
+  встигає перемкнути гілку й розмонтувати `NavDisplay` — а
+  `entry<Home>` більше не був зареєстрований (M21.4 прибрав його,
+  розраховуючи, що `NavDisplay` ніколи його не побачить). Падало
+  детерміновано на кожному холодному старті з уже спареним трипом —
+  саме такий шлях і запускає `singleTask`-launch через
+  `ACTION_SEND`-шер, тому спершу виглядало як "шер зламався".
+  Виправлено: `entry<Home>`/`entry<Timeline>`/`entry<Places>`/
+  `entry<Matcher>`/`entry<MatchList>` повернуто в `entryProvider` як
+  safety net (не основний шлях рендеру — `MainShell`'s гілка й далі
+  перехоплює всі п'ять ключів у звичайному випадку), щоб рейснутий
+  recompose показав один кадр контенту без бару замість краху.
+  Перевірено живцем на тому ж AVD: холодний старт з уже спареним
+  трипом і `ACTION_SEND`-шер (реальний `adb shell am start -a
+  android.intent.action.SEND`) обидва тепер доходять до потрібного
+  екрана без краху.
+- **Пункт 4 (кросфейд між табами) і частина пункту 6 (правильна
+  позначка на карті) лишаються не пройденими interactively** —
+  видимий контраст індикатора підтверджено скріншотом на обох
+  платформах; сам кросфейд-перехід і фінальний вигляд відкритої мапи
+  — ручний чекліст-пункт перед мержем.
+- **`allTests` не ловить Roborazzi-регресії** — виявлено живцем під
+  час пункту 6: `feature:matcher:allTests` пройшов зелено одразу
+  після пункту 5's зміни `MatcherState.deck` (новий фільтр
+  `addedByUserId != ownUserId`), хоча `MatcherDeckCardPreview`
+  (`MatcherPreviews.kt`) реально зламався — його кандидат мав той
+  самий `addedByUserId`, що й `ownUserId` перегляду, тож новий фільтр
+  тихо спорожнив колоду на скріншоті. Побачено тільки коли пункт 6
+  явно прогнав `:feature:matcher:verifyRoborazziAndroidHostTest` —
+  сам `testAndroidHostTest`/`allTests` без явного
+  `verifyRoborazziAndroidHostTest`/`recordRoborazziAndroidHostTest`
+  таргета, схоже, не вмикає Roborazzi-порівняння взагалі. Виправлено
+  (default `addedByUserId` у `previewCandidate` тепер `"member-1"`,
+  не `"owner-1"`) і задокументовано тут як пастку для майбутніх
+  мілстоунів: після будь-якої зміни, що торкається `@Preview`-контенту
+  чи даних, під які він побудований, обов'язково прогнати явний
+  `verifyRoborazziAndroidHostTest` для зачепленого модуля, не
+  покладатись на `allTests`.
 
 ---
 

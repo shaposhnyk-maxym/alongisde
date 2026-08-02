@@ -23,6 +23,14 @@ internal class RecordingPlaceCandidateRepository : PlaceCandidateRepository {
             all.values.filter { it.tripId == tripId }
         }
 
+    override fun observeByTripAndAddedBy(
+        tripId: String,
+        addedByUserId: String,
+    ): Flow<List<PlaceCandidate>> =
+        places.map { all ->
+            all.values.filter { it.tripId == tripId && it.addedByUserId == addedByUserId }
+        }
+
     override suspend fun delete(id: String) {
         places.value = places.value - id
     }

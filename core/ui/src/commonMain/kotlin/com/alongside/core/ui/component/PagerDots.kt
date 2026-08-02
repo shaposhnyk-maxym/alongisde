@@ -33,7 +33,7 @@ public fun PagerDots(
 ) {
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(DotSize),
+        horizontalArrangement = Arrangement.spacedBy(DotSize, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         repeat(pageCount) { index ->

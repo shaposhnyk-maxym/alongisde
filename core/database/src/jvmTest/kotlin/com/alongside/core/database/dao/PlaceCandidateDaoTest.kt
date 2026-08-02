@@ -8,6 +8,7 @@ import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.place.PlacePhoto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlin.test.AfterTest
@@ -139,5 +140,30 @@ class PlaceCandidateDaoTest {
             assertEquals(emptyList(), emissions.receive())
 
             job.cancel()
+        }
+
+    @Test
+    fun `observeByTripAndAddedBy only emits places added by the given user`() =
+        runTest {
+            val tripId = "trip-1"
+            val ownPlace = placeEntity(id = "place-own", tripId = tripId).copy(addedByUserId = "owner-1")
+            val partnerPlace = placeEntity(id = "place-partner", tripId = tripId).copy(addedByUserId = "member-1")
+            dao.upsert(ownPlace)
+            dao.upsert(partnerPlace)
+
+            val ownOnly = dao.observeByTripAndAddedBy(tripId, "owner-1")
+
+            assertEquals(listOf(ownPlace), ownOnly.first())
+        }
+
+    @Test
+    fun `observeByTripAndAddedBy excludes places from a different trip`() =
+        runTest {
+            val ownPlace = placeEntity(id = "place-1", tripId = "trip-1").copy(addedByUserId = "owner-1")
+            val otherTripPlace = placeEntity(id = "place-2", tripId = "trip-2").copy(addedByUserId = "owner-1")
+            dao.upsert(ownPlace)
+            dao.upsert(otherTripPlace)
+
+            assertEquals(listOf(ownPlace), dao.observeByTripAndAddedBy("trip-1", "owner-1").first())
         }
 }

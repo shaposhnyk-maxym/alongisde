@@ -43,6 +43,11 @@ class FirestorePlaceContentPullerTest {
 
         override fun observeByTrip(tripId: String): Flow<List<PlaceCandidate>> = MutableStateFlow(upserted)
 
+        override fun observeByTripAndAddedBy(
+            tripId: String,
+            addedByUserId: String,
+        ): Flow<List<PlaceCandidate>> = error("not exercised by this test")
+
         override suspend fun delete(id: String) {
             upserted.removeAll { it.id == id }
         }

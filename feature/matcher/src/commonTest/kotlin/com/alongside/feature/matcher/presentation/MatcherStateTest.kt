@@ -101,4 +101,57 @@ class MatcherStateTest {
 
         assertEquals(emptyList(), state.myTurnDeck)
     }
+
+    @Test
+    fun `a candidate I imported myself is excluded from deck even with no swipes`() {
+        val ownCandidate = fakeCandidate("place-own", addedByUserId = "owner-1")
+        val state = MatcherState(ownUserId = "owner-1", trip = trip, candidates = listOf(ownCandidate))
+
+        assertEquals(emptyList(), state.deck)
+        assertEquals(emptyList(), state.myTurnDeck)
+    }
+
+    @Test
+    fun `a candidate the partner imported still shows in deck alongside a self-imported one`() {
+        val ownCandidate = fakeCandidate("place-own", addedByUserId = "owner-1")
+        val partnerCandidate = fakeCandidate("place-partner", addedByUserId = "member-1")
+        val state =
+            MatcherState(ownUserId = "owner-1", trip = trip, candidates = listOf(ownCandidate, partnerCandidate))
+
+        assertEquals(listOf("place-partner"), state.deck.map { it.id })
+    }
+
+    @Test
+    fun `partner liking a self-imported candidate matches it via the importer's implicit LIKE`() {
+        val ownCandidate = fakeCandidate("place-own", addedByUserId = "owner-1")
+        val state =
+            MatcherState(
+                ownUserId = "owner-1",
+                trip = trip,
+                candidates = listOf(ownCandidate),
+                swipes = listOf(fakeSwipe("place-own", "member-1", SwipeDirection.LIKE)),
+            )
+
+        assertEquals(listOf("place-own"), state.matches.map { it.id })
+    }
+
+    @Test
+    fun `partner disliking a self-imported candidate stays pending and leaves the partner's myTurnDeck`() {
+        // Regression: PlaceImportContainer used to write a real, permanent LIKE PlaceSwipe for
+        // the importer, which made isMyTurn's split-reconsideration logic treat every partner
+        // dislike as an eternal "still my turn" - the card could never be swiped away, only
+        // matched (docs/roadmap.md M21.5 follow-up). The importer's vote must stay implicit
+        // (only inside matchStatus's resolution), not a real swipe backing isMyTurn.
+        val ownCandidate = fakeCandidate("place-own", addedByUserId = "owner-1")
+        val state =
+            MatcherState(
+                ownUserId = "member-1",
+                trip = trip,
+                candidates = listOf(ownCandidate),
+                swipes = listOf(fakeSwipe("place-own", "member-1", SwipeDirection.DISLIKE)),
+            )
+
+        assertEquals(emptyList(), state.matches)
+        assertEquals(emptyList(), state.myTurnDeck)
+    }
 }

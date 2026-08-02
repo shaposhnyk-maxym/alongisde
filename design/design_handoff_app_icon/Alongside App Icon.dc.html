@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,500;1,500&family=JetBrains+Mono:wght@500;600&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: oklch(0.17 0.02 260); }
+</style>
+</helmet>
+
+<div style="min-height:100vh;box-sizing:border-box;padding:72px 80px 120px;display:flex;flex-direction:column;gap:56px;font-family:'Manrope',sans-serif;">
+
+  <div style="display:flex;flex-direction:column;gap:8px;">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:oklch(0.68 0.15 45);">Alongside — app icon</span>
+    <span style="font-family:'Newsreader',serif;font-style:italic;font-size:34px;color:oklch(0.96 0.01 85);">Icon for Android &amp; iOS (KMP)</span>
+    <span style="font-size:14.5px;color:oklch(0.68 0.02 260);max-width:600px;line-height:1.5;">Two circles, blue and yellow, held inside a thin emblem ring, on a warm terracotta ground.</span>
+  </div>
+
+  <div style="display:flex;gap:64px;flex-wrap:wrap;align-items:flex-start;">
+
+    <!-- iOS icon -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:16px;">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.72 0.02 260);">iOS icon · 1024×1024 · flat, no alpha</span>
+      <div id="ios-icon" style="width:256px;height:256px;background:oklch(0.68 0.15 45);display:flex;align-items:center;justify-content:center;">
+        <div style="position:relative;width:150px;height:150px;">
+          <div style="position:absolute;inset:0;border-radius:50%;border:7px solid oklch(0.97 0.01 85);"></div>
+          <div style="position:absolute;left:15px;top:40px;width:70px;height:70px;border-radius:50%;background:oklch(0.55 0.16 250);"></div>
+          <div style="position:absolute;left:65px;top:40px;width:70px;height:70px;border-radius:50%;background:oklch(0.88 0.19 95);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Android foreground -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:16px;">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.72 0.02 260);">Android foreground layer · transparent</span>
+      <div id="android-fg" style="width:256px;height:256px;position:relative;background:
+        repeating-linear-gradient(45deg, oklch(0.3 0.02 260) 0 10px, oklch(0.26 0.02 260) 10px 20px);">
+        <div id="android-fg-export" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+          <div style="position:relative;width:150px;height:150px;">
+            <div style="position:absolute;inset:0;border-radius:50%;border:7px solid oklch(0.97 0.01 85);"></div>
+            <div style="position:absolute;left:15px;top:40px;width:70px;height:70px;border-radius:50%;background:oklch(0.55 0.16 250);"></div>
+            <div style="position:absolute;left:65px;top:40px;width:70px;height:70px;border-radius:50%;background:oklch(0.88 0.19 95);"></div>
+          </div>
+        </div>
+      </div>
+      <span style="font-size:11.5px;color:oklch(0.55 0.02 260);">(checker = transparent, export as PNG w/ alpha)</span>
+    </div>
+
+    <!-- Android background -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:16px;">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.72 0.02 260);">Android background layer · solid</span>
+      <div id="android-bg" style="width:256px;height:256px;background-color:oklch(0.68 0.15 45);background-image:radial-gradient(oklch(0.63 0.15 45) 1.5px, transparent 1.5px);background-size:16px 16px;"></div>
+    </div>
+
+    <!-- Adaptive preview -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:16px;">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.72 0.02 260);">Adaptive mask preview</span>
+      <div style="display:flex;gap:20px;">
+        <div style="width:118px;height:118px;border-radius:50%;overflow:hidden;position:relative;background-color:oklch(0.68 0.15 45);background-image:radial-gradient(oklch(0.63 0.15 45) 1.5px, transparent 1.5px);background-size:16px 16px;">
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:70px;height:70px;">
+            <div style="position:absolute;inset:0;border-radius:50%;border:3.5px solid oklch(0.97 0.01 85);"></div>
+            <div style="position:absolute;left:7px;top:19px;width:33px;height:33px;border-radius:50%;background:oklch(0.55 0.16 250);"></div>
+            <div style="position:absolute;left:30px;top:19px;width:33px;height:33px;border-radius:50%;background:oklch(0.88 0.19 95);"></div>
+          </div>
+        </div>
+        <div style="width:118px;height:118px;border-radius:26px;overflow:hidden;position:relative;background-color:oklch(0.68 0.15 45);background-image:radial-gradient(oklch(0.63 0.15 45) 1.5px, transparent 1.5px);background-size:16px 16px;">
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:70px;height:70px;">
+            <div style="position:absolute;inset:0;border-radius:50%;border:3.5px solid oklch(0.97 0.01 85);"></div>
+            <div style="position:absolute;left:7px;top:19px;width:33px;height:33px;border-radius:50%;background:oklch(0.55 0.16 250);"></div>
+            <div style="position:absolute;left:30px;top:19px;width:33px;height:33px;border-radius:50%;background:oklch(0.88 0.19 95);"></div>
+          </div>
+        </div>
+      </div>
+      <span style="font-size:11.5px;color:oklch(0.55 0.02 260);">circle mask · squircle mask</span>
+    </div>
+
+  </div>
+
+  <span style="font-size:12.5px;color:oklch(0.5 0.02 260);max-width:640px;line-height:1.6;">Emblem fits within Android's ~66% safe zone so it survives every OEM mask shape. Foreground/background export separately for adaptive icon; the flat iOS tile exports as one flattened 1024×1024 PNG.</span>
+
+</div>
+
+</x-dc>
+</body>
+</html>

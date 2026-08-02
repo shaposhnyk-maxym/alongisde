@@ -43,6 +43,7 @@ class PlaceCandidateRepositoryImplTest {
         rating: Double? = null,
         category: String? = null,
         city: String? = null,
+        addedByUserId: String = "owner-1",
     ) = PlaceCandidate(
         id = id,
         tripId = tripId,
@@ -50,7 +51,7 @@ class PlaceCandidateRepositoryImplTest {
         latitude = 49.8397,
         longitude = 24.0297,
         note = null,
-        addedByUserId = "owner-1",
+        addedByUserId = addedByUserId,
         syncStatus = SyncStatus.PENDING,
         createdAt = Instant.fromEpochMilliseconds(1_752_600_000_000),
         updatedAt = Instant.fromEpochMilliseconds(1_752_600_000_000),
@@ -111,5 +112,18 @@ class PlaceCandidateRepositoryImplTest {
             repository.upsert(place)
 
             assertEquals(listOf(place), repository.observeByTrip(place.tripId).first())
+        }
+
+    @Test
+    fun `observeByTripAndAddedBy only returns the mapped domain places added by the given user`() =
+        runTest {
+            val ownPlace = place(id = "place-own", addedByUserId = "owner-1")
+            val partnerPlace = place(id = "place-partner", addedByUserId = "member-1")
+            repository.upsert(ownPlace)
+            repository.upsert(partnerPlace)
+
+            val result = repository.observeByTripAndAddedBy(ownPlace.tripId, "owner-1").first()
+
+            assertEquals(listOf(ownPlace), result)
         }
 }

@@ -69,9 +69,13 @@ public class IosPermissionController : PermissionController {
         }
     }
 
+    // openURL(url:) (single-arg) is deprecated and, confirmed live on iOS 18 Simulator, now a
+    // silent no-op ("BUG IN CLIENT OF UIKIT... Force returning false") rather than merely a
+    // deprecation warning - openURL(url:options:completionHandler:) is the one that actually
+    // still works (same fix as IosMapsLauncher, docs/roadmap.md M21.6).
     override fun openAppSettings() {
         val url = NSURL(string = UIApplicationOpenSettingsURLString)
-        UIApplication.sharedApplication.openURL(url)
+        UIApplication.sharedApplication.openURL(url, options = emptyMap<Any?, Any>(), completionHandler = null)
     }
 
     private fun photoStatus(): PermissionStatus {

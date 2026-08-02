@@ -1,6 +1,7 @@
 package com.alongside.androidapp.di
 
 import android.content.Context
+import com.alongside.androidapp.maps.AndroidMapsLauncher
 import com.alongside.androidapp.work.AndroidWorkManagerScheduler
 import com.alongside.core.database.AlongsideDatabase
 import com.alongside.core.database.authSessionCache
@@ -12,6 +13,7 @@ import com.alongside.core.domain.auth.AuthSessionRepository
 import com.alongside.core.domain.diary.processing.EpisodeVisionDescriptionClient
 import com.alongside.core.domain.diary.processing.PhotoUploadClient
 import com.alongside.core.domain.diary.processing.PlaceGeocodingClient
+import com.alongside.core.domain.maps.MapsLauncher
 import com.alongside.core.domain.onboarding.OnboardingCompletionCache
 import com.alongside.core.domain.pairing.DefaultPairingRepository
 import com.alongside.core.domain.pairing.InviteCodeGenerator
@@ -87,6 +89,7 @@ public fun androidAppModule(
     }
     single { InviteCodeGenerator() }
     single<BackgroundWorkScheduler> { AndroidWorkManagerScheduler(context) }
+    single<MapsLauncher> { AndroidMapsLauncher(context) }
     // PairingTripDataSource comes from dataModule (Room + Firestore) since M9.
     // TripManagementRepository comes from dataModule too - it needs SyncCoordinator to confirm
     // Leave/Delete Trip against Firestore before returning.

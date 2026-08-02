@@ -106,15 +106,18 @@ internal fun DiaryTimelineContent(
                 }
                 // Once a day is UNLOCKED there's nothing left to add or close - both sides'
                 // episodes are already fully revealed, so the capture UI would just be a stale
-                // distraction. A day whose own date has already passed (docs/roadmap.md M12.12)
-                // is hidden too - MISSED is computed, not stored, so backdating a capture into it
-                // would just flip it back to READY; `today == null` (state not loaded yet)
-                // defaults to showing, not hiding, since `items` is only ever non-empty once
-                // `today` is known too. The Countdown card has no lock/unlock/past-date concept
-                // of its own (docs/roadmap.md M19.8) - its button area always shows while it's
-                // the selected page.
-                val isPastDay = selectedDay != null && today != null && selectedDay.date < today
-                if (selectedDay != null && selectedDay.unlockState == DayUnlockState.LOCKED && !isPastDay) {
+                // distraction. Only today's own card shows capture UI (docs/roadmap.md M21.2) -
+                // a day whose date has already passed (docs/roadmap.md M12.12) is hidden since
+                // MISSED is computed, not stored, and backdating a capture into it would just
+                // flip it back to READY; a future day is hidden too, since the trip hasn't
+                // reached it yet. `today == null` (state not loaded yet) hides every day, since
+                // `items` is only ever non-empty once `today` is known too. The Countdown card
+                // has no lock/unlock/date concept of its own (docs/roadmap.md M19.8) - its button
+                // area always shows while it's the selected page.
+                if (selectedDay != null &&
+                    selectedDay.unlockState == DayUnlockState.LOCKED &&
+                    selectedDay.date == today
+                ) {
                     CaptureButtonArea(
                         closedLabel = if (selectedDay.ownClosedAt != null) "This day's entry is closed" else null,
                         showCloseButton = selectedDay.ownEpisodes.isNotEmpty(),

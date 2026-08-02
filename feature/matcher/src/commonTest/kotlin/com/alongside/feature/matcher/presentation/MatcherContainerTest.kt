@@ -69,10 +69,58 @@ class MatcherContainerTest {
         }
 
     @Test
+    fun `deck excludes a candidate the current user imported themselves`() =
+        runTest {
+            pairingRepository.activeTrip.value = fakeTrip()
+            placeCandidateRepository.seed(
+                fakeCandidate("place-own", addedByUserId = "owner-1"),
+                fakeCandidate("place-partner", addedByUserId = "member-1"),
+            )
+
+            containerUnderTest(uid = "owner-1").test(this) {
+                runOnCreate()
+                awaitState() // ownUserId bootstrap
+                val loaded = awaitState() // trip + candidates loaded
+
+                assertEquals(listOf("place-partner"), loaded.deck.map { it.id })
+
+                cancelAndIgnoreRemainingItems()
+            }
+        }
+
+    @Test
+    fun `partner disliking a self-imported candidate drops it from their myTurnDeck - not just matches it`() =
+        // Regression: a real, permanent LIKE PlaceSwipe for the importer (briefly written by
+        // PlaceImportContainer) made isMyTurn treat every partner dislike as an eternal
+        // "still my turn" split - the card could only ever be matched, never swiped away.
+        runTest {
+            pairingRepository.activeTrip.value = fakeTrip(ownerId = "owner-1", memberId = "member-1")
+            placeCandidateRepository.seed(fakeCandidate("place-own", addedByUserId = "owner-1"))
+
+            containerUnderTest(uid = "member-1").test(this) {
+                runOnCreate()
+                awaitState()
+                awaitState()
+
+                containerHost.onIntent(MatcherIntent.Swipe("place-own", SwipeDirection.DISLIKE))
+                val afterDislike = awaitState()
+
+                assertEquals(emptyList(), afterDislike.matches)
+                assertEquals(emptyList(), afterDislike.myTurnDeck)
+                assertEquals(listOf("place-own"), afterDislike.deck.map { it.id })
+
+                cancelAndIgnoreRemainingItems()
+            }
+        }
+
+    @Test
     fun `swiping a candidate the partner hasn't seen yet keeps it pending in the deck`() =
         runTest {
             pairingRepository.activeTrip.value = fakeTrip()
-            placeCandidateRepository.seed(fakeCandidate("place-1"))
+            // Neither trip participant imported this one - isolates plain swipe mechanics from
+            // the self-import implicit-LIKE resolution (docs/roadmap.md M21.5 follow-up), which
+            // would otherwise make the importer's own side already-decided by definition.
+            placeCandidateRepository.seed(fakeCandidate("place-1", addedByUserId = "someone-else"))
 
             containerUnderTest().test(this) {
                 runOnCreate()
@@ -274,7 +322,9 @@ class MatcherContainerTest {
     fun `our own swipe and a partner's swipe on the same card resolve to a consistent match regardless of order`() =
         runTest {
             pairingRepository.activeTrip.value = fakeTrip()
-            placeCandidateRepository.seed(fakeCandidate("place-1"))
+            // Neither trip participant imported this one - see the comment on the "hasn't seen
+            // yet" test above for why that matters here too.
+            placeCandidateRepository.seed(fakeCandidate("place-1", addedByUserId = "someone-else"))
 
             containerUnderTest(uid = "owner-1").test(this) {
                 runOnCreate()

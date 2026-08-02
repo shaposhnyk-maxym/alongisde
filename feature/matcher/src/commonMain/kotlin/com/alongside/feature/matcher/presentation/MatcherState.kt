@@ -6,6 +6,7 @@ import com.alongside.core.domain.place.resolveMatchStatus
 import com.alongside.core.model.place.MatchStatus
 import com.alongside.core.model.place.PlaceCandidate
 import com.alongside.core.model.place.PlaceSwipe
+import com.alongside.core.model.place.SwipeDirection
 import com.alongside.core.model.trip.Trip
 
 /**
@@ -16,6 +17,20 @@ import com.alongside.core.model.trip.Trip
  * A candidate whose sides disagree (one LIKE, one DISLIKE) resolves to [MatchStatus.PENDING] -
  * the exact same bucket as "nobody has swiped yet" - so it stays in [deck] and gets shown again,
  * without either [PlaceSwipe] record ever needing to be reset or touched by the other user.
+ *
+ * [deck] additionally excludes candidates the current user imported themselves
+ * (docs/roadmap.md M21.5) - swiping on a place you just picked yourself defeats the "element of
+ * surprise" the deck exists for. [matches] is NOT filtered this way: a match already required
+ * both sides to say yes, so who originally imported it is no longer relevant once it's mutual.
+ *
+ * Since the importer never sees their own import in [deck] to cast a real vote, [matchStatus]
+ * gives them an implicit LIKE via [effectiveSwipe] - without it, a self-imported candidate could
+ * never match no matter how the partner swiped. That implicit vote is intentionally NOT a real
+ * [PlaceSwipe] and stays out of [swipeDirection]/[otherSwipeDirection] (which back [myTurnDeck]
+ * via [isMyTurn]) - a real, permanent LIKE there would make every partner DISLIKE an eternal
+ * "still my turn" split (the importer's side never changes), so a single-card deck could never be
+ * swiped away, only matched. Keeping the implied vote resolution-only lets a partner's dislike
+ * cleanly drop the candidate out of their [myTurnDeck] instead.
  */
 @Immutable
 public data class MatcherState(
@@ -25,7 +40,8 @@ public data class MatcherState(
     val swipes: List<PlaceSwipe> = emptyList(),
 ) {
     val deck: List<PlaceCandidate>
-        get() = candidates.filter { matchStatus(it) == MatchStatus.PENDING }
+        get() =
+            candidates.filter { matchStatus(it) == MatchStatus.PENDING && it.addedByUserId != ownUserId }
 
     val matches: List<PlaceCandidate>
         get() = candidates.filter { matchStatus(it) == MatchStatus.MATCHED }
@@ -49,10 +65,16 @@ public data class MatcherState(
 
     internal fun matchStatus(candidate: PlaceCandidate): MatchStatus {
         val trip = trip ?: return MatchStatus.PENDING
-        val ownerSwipe = swipeDirection(candidate.id, trip.ownerId)
-        val memberSwipe = trip.memberId?.let { swipeDirection(candidate.id, it) }
+        val ownerSwipe = effectiveSwipe(candidate, trip.ownerId)
+        val memberSwipe = trip.memberId?.let { effectiveSwipe(candidate, it) }
         return resolveMatchStatus(ownerSwipe, memberSwipe)
     }
+
+    private fun effectiveSwipe(
+        candidate: PlaceCandidate,
+        userId: String,
+    ) = swipeDirection(candidate.id, userId)
+        ?: SwipeDirection.LIKE.takeIf { candidate.addedByUserId == userId }
 
     private fun swipeDirection(
         candidateId: String,
