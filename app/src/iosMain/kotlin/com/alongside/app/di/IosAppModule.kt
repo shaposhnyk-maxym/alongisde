@@ -1,6 +1,6 @@
 package com.alongside.app.di
 
-import com.alongside.app.work.NoOpBackgroundWorkScheduler
+import com.alongside.app.work.IosBackgroundWorkScheduler
 import com.alongside.core.database.AlongsideDatabase
 import com.alongside.core.database.authSessionCache
 import com.alongside.core.database.getDatabaseBuilder
@@ -103,7 +103,7 @@ public fun iosAppModule(
         SessionFirestoreTokenProvider(get(), get<FirebaseAuthApi>().asIdTokenRefresher())
     }
     single { InviteCodeGenerator() }
-    single<BackgroundWorkScheduler> { NoOpBackgroundWorkScheduler() }
+    single<BackgroundWorkScheduler> { IosBackgroundWorkScheduler() }
     single<PairingRepository> { DefaultPairingRepository(get(), get()) }
     single<ExifPhotoReader> { IosExifPhotoReader() }
     single<PhotoByteReader> { IosPhotoByteReader() }
