@@ -150,139 +150,115 @@ public fun AlongsideApp(
             }
         }
 
-        AlongsideNavDisplay(
-            backStack = backStack,
-            modifier = modifier,
-            onBack = { backStack.removeLastOrNull() },
-            entryProvider =
-                entryProvider {
-                    entry<Login> {
-                        val container = koinViewModel<AuthContainer> { parametersOf(googleAuthProvider) }
-                        val onboardingCompletionCache = koinInject<OnboardingCompletionCache>()
-                        val scope = rememberCoroutineScope()
-                        container.collectSideEffect { effect ->
-                            if (effect is AuthSideEffect.SignedIn) {
-                                scope.launch {
-                                    val target = if (onboardingCompletionCache.isCompleted()) Pairing else Onboarding
-                                    backStack.resetTo(target)
-                                }
-                            }
-                        }
-                        AuthScreen(container)
-                    }
-                    entry<Onboarding> {
-                        val container = koinViewModel<OnboardingContainer> { parametersOf(permissionController) }
-                        container.collectSideEffect { effect ->
-                            if (effect is OnboardingSideEffect.Completed) backStack.resetTo(Pairing)
-                        }
-                        OnboardingScreen(container, platform = sharePlatform)
-                    }
-                    entry<Pairing> {
-                        val container = koinViewModel<PairingContainer>()
-                        container.collectSideEffect { effect ->
-                            if (effect is PairingSideEffect.Paired) backStack.resetTo(Home)
-                        }
-                        PairingScreen(container)
-                    }
-                    entry<Home> {
-                        MainTabScreen(tab = MainTab.HOME, backStack = backStack) {
-                            val homeContainer = koinViewModel<HomeContainer>()
-                            val homeState by homeContainer.collectAsState()
-                            HomeScreen(
-                                state = homeState,
-                                onOpenSettings = { backStack.add(Settings) },
-                                onOpenRecap = { backStack.add(Recap) },
-                                onOpenTimeline = { backStack[backStack.lastIndex] = Timeline },
-                                onOpenMatches = { backStack[backStack.lastIndex] = MatchList },
-                            )
-                        }
-                    }
-                    entry<Timeline> {
-                        MainTabScreen(tab = MainTab.TIMELINE, backStack = backStack) {
-                            val container = koinViewModel<DiaryTimelineContainer>()
-                            var captureDate by remember { mutableStateOf<LocalDate?>(null) }
-                            val launchPhotoPicker =
-                                rememberPhotoPickerLauncher { uris ->
-                                    // Cleared immediately after use (not left holding the last value
-                                    // forever) so a later, unrelated event can never misattribute
-                                    // photos to a stale date - the underlying system picker is modal,
-                                    // so a second "Add Photos" tap can't race this in practice, but
-                                    // there's no reason to leave a stale date sitting in state either.
-                                    captureDate?.let { date ->
-                                        container.onIntent(DiaryTimelineIntent.ProcessCapturedPhotos(date, uris))
-                                    }
-                                    captureDate = null
-                                }
-                            // A second, independent launcher instance (not reused with the one above)
-                            // - pre-trip photos have no `date` to capture at tap-time, so there's no
-                            // "which mode was the picker in" ambiguity to guard against
-                            // (docs/roadmap.md M19.8).
-                            val launchPreTripPhotoPicker =
-                                rememberPhotoPickerLauncher { uris ->
-                                    container.onIntent(DiaryTimelineIntent.ProcessPreTripPhotos(uris))
-                                }
-                            DiaryTimelineScreen(
-                                container,
-                                onAddPhotos = { date ->
-                                    captureDate = date
-                                    launchPhotoPicker()
-                                },
-                                onAddPreTripPhotos = { launchPreTripPhotoPicker() },
-                            )
-                        }
-                    }
-                    entry<Places> {
-                        MainTabScreen(tab = MainTab.PLACES, backStack = backStack) {
-                            // Manual add/edit/delete is M16's job - this is the read-only list, city-
-                            // grouped, synced from Firebase with Room as the source of truth. The
-                            // incomplete-photo retry loop moved into PlacesListContainer's own
-                            // onCreate (see PlaceRetryDataSource's kdoc for its documented gap).
-                            val container = koinViewModel<PlacesListContainer>()
-                            PlacesListScreen(container)
-                        }
-                    }
-                    entry<PlaceImport> { placeImport ->
-                        // key = shareText: without a distinguishing key, koinViewModel() resolves by
-                        // class name alone against this Activity's single ViewModelStore (Navigation3
-                        // gives no per-entry ViewModelStoreOwner here) - every share after the first
-                        // would silently get back the FIRST share's cached PlaceImportContainer,
-                        // ignoring its own shareText entirely (confirmed live via debug logging).
-                        val container =
-                            koinViewModel<PlaceImportContainer>(key = placeImport.shareText) {
-                                parametersOf(placeImport.shareText)
-                            }
-                        PlaceImportScreen(
-                            container = container,
-                            onImport = { backStack.removeLastOrNull() },
-                            onDiscard = { backStack.removeLastOrNull() },
-                        )
-                    }
-                    entry<Matcher> {
-                        MainTabScreen(tab = MainTab.MATCHER, backStack = backStack) {
-                            val container = koinViewModel<MatcherContainer>()
-                            MatcherScreen(container)
-                        }
-                    }
-                    entry<MatchList> {
-                        MainTabScreen(tab = MainTab.MATCH_LIST, backStack = backStack) {
-                            val container = koinViewModel<MatcherContainer>()
-                            MatchListScreen(container)
-                        }
-                    }
-                    entry<Settings> {
-                        val container = koinViewModel<SettingsContainer>()
-                        container.collectSideEffect { effect ->
-                            if (effect is SettingsSideEffect.LeftOrDeletedTrip) backStack.resetTo(Pairing)
-                        }
-                        SettingsScreen(container, onClose = { backStack.removeLastOrNull() })
-                    }
-                    entry<Recap> {
-                        val container = koinViewModel<RecapContainer>()
-                        RecapScreen(container, onFinish = { backStack.removeLastOrNull() })
-                    }
-                },
-        )
+        // Only Login/Onboarding/Pairing/PlaceImport/Settings/Recap route through
+        // AlongsideNavDisplay's entryProvider - the five tabs are rendered directly by
+        // MainShell instead (docs/roadmap.md M21.4), so entryProvider is never actually asked
+        // to resolve a tab key.
+        val currentMainTab = MainTab.entries.firstOrNull { it.key == backStack.lastOrNull() }
+        if (currentMainTab != null) {
+            MainShell(
+                currentTab = currentMainTab,
+                onTabSelect = { selected -> backStack[backStack.lastIndex] = selected.key },
+                modifier = modifier,
+            ) { tab ->
+                when (tab) {
+                    MainTab.HOME -> HomeTabContent(backStack)
+                    MainTab.TIMELINE -> TimelineTabContent()
+                    MainTab.PLACES -> PlacesTabContent()
+                    MainTab.MATCHER -> MatcherTabContent()
+                    MainTab.MATCH_LIST -> MatchListTabContent()
+                }
+            }
+        } else {
+            AuthGateAndStackedScreens(
+                backStack = backStack,
+                googleAuthProvider = googleAuthProvider,
+                permissionController = permissionController,
+                sharePlatform = sharePlatform,
+                modifier = modifier,
+            )
+        }
     }
+}
+
+/**
+ * Everything outside the five main tabs: the one-time auth gate (Login/Onboarding/Pairing) and
+ * the screens stacked on top of a tab (PlaceImport/Settings/Recap) - split out from
+ * [AlongsideApp] purely to keep it under detekt's `CyclomaticComplexMethod` threshold once the
+ * tab/non-tab branch was added (docs/roadmap.md M21.4), not because this is conceptually
+ * separate from the rest of the nav graph.
+ */
+@Composable
+private fun AuthGateAndStackedScreens(
+    backStack: NavBackStack<NavKey>,
+    googleAuthProvider: GoogleAuthProvider,
+    permissionController: PermissionController,
+    sharePlatform: SharePlatform,
+    modifier: Modifier = Modifier,
+) {
+    AlongsideNavDisplay(
+        backStack = backStack,
+        modifier = modifier,
+        onBack = { backStack.removeLastOrNull() },
+        entryProvider =
+            entryProvider {
+                entry<Login> {
+                    val container = koinViewModel<AuthContainer> { parametersOf(googleAuthProvider) }
+                    val onboardingCompletionCache = koinInject<OnboardingCompletionCache>()
+                    val scope = rememberCoroutineScope()
+                    container.collectSideEffect { effect ->
+                        if (effect is AuthSideEffect.SignedIn) {
+                            scope.launch {
+                                val target = if (onboardingCompletionCache.isCompleted()) Pairing else Onboarding
+                                backStack.resetTo(target)
+                            }
+                        }
+                    }
+                    AuthScreen(container)
+                }
+                entry<Onboarding> {
+                    val container = koinViewModel<OnboardingContainer> { parametersOf(permissionController) }
+                    container.collectSideEffect { effect ->
+                        if (effect is OnboardingSideEffect.Completed) backStack.resetTo(Pairing)
+                    }
+                    OnboardingScreen(container, platform = sharePlatform)
+                }
+                entry<Pairing> {
+                    val container = koinViewModel<PairingContainer>()
+                    container.collectSideEffect { effect ->
+                        if (effect is PairingSideEffect.Paired) backStack.resetTo(Home)
+                    }
+                    PairingScreen(container)
+                }
+                entry<PlaceImport> { placeImport ->
+                    // key = shareText: without a distinguishing key, koinViewModel() resolves by
+                    // class name alone against this Activity's single ViewModelStore (Navigation3
+                    // gives no per-entry ViewModelStoreOwner here) - every share after the first
+                    // would silently get back the FIRST share's cached PlaceImportContainer,
+                    // ignoring its own shareText entirely (confirmed live via debug logging).
+                    val container =
+                        koinViewModel<PlaceImportContainer>(key = placeImport.shareText) {
+                            parametersOf(placeImport.shareText)
+                        }
+                    PlaceImportScreen(
+                        container = container,
+                        onImport = { backStack.removeLastOrNull() },
+                        onDiscard = { backStack.removeLastOrNull() },
+                    )
+                }
+                entry<Settings> {
+                    val container = koinViewModel<SettingsContainer>()
+                    container.collectSideEffect { effect ->
+                        if (effect is SettingsSideEffect.LeftOrDeletedTrip) backStack.resetTo(Pairing)
+                    }
+                    SettingsScreen(container, onClose = { backStack.removeLastOrNull() })
+                }
+                entry<Recap> {
+                    val container = koinViewModel<RecapContainer>()
+                    RecapScreen(container, onFinish = { backStack.removeLastOrNull() })
+                }
+            },
+    )
 }
 
 /** Auth-gate transitions burn the bridge behind them: Back never re-enters a passed step. */
@@ -292,15 +268,68 @@ private fun NavBackStack<NavKey>.resetTo(key: NavKey) {
 }
 
 @Composable
-private fun MainTabScreen(
-    tab: MainTab,
-    backStack: NavBackStack<NavKey>,
-    content: @Composable () -> Unit,
-) {
-    MainShell(
-        currentTab = tab,
-        // Tabs swap in place at the top of the stack - lateral moves, not a growing history.
-        onTabSelect = { selected -> backStack[backStack.lastIndex] = selected.key },
-        content = content,
+private fun HomeTabContent(backStack: NavBackStack<NavKey>) {
+    val homeContainer = koinViewModel<HomeContainer>()
+    val homeState by homeContainer.collectAsState()
+    HomeScreen(
+        state = homeState,
+        onOpenSettings = { backStack.add(Settings) },
+        onOpenRecap = { backStack.add(Recap) },
+        onOpenTimeline = { backStack[backStack.lastIndex] = Timeline },
+        onOpenMatches = { backStack[backStack.lastIndex] = MatchList },
     )
+}
+
+@Composable
+private fun TimelineTabContent() {
+    val container = koinViewModel<DiaryTimelineContainer>()
+    var captureDate by remember { mutableStateOf<LocalDate?>(null) }
+    val launchPhotoPicker =
+        rememberPhotoPickerLauncher { uris ->
+            // Cleared immediately after use (not left holding the last value forever) so a
+            // later, unrelated event can never misattribute photos to a stale date - the
+            // underlying system picker is modal, so a second "Add Photos" tap can't race this
+            // in practice, but there's no reason to leave a stale date sitting in state either.
+            captureDate?.let { date ->
+                container.onIntent(DiaryTimelineIntent.ProcessCapturedPhotos(date, uris))
+            }
+            captureDate = null
+        }
+    // A second, independent launcher instance (not reused with the one above) - pre-trip
+    // photos have no `date` to capture at tap-time, so there's no "which mode was the picker
+    // in" ambiguity to guard against (docs/roadmap.md M19.8).
+    val launchPreTripPhotoPicker =
+        rememberPhotoPickerLauncher { uris ->
+            container.onIntent(DiaryTimelineIntent.ProcessPreTripPhotos(uris))
+        }
+    DiaryTimelineScreen(
+        container,
+        onAddPhotos = { date ->
+            captureDate = date
+            launchPhotoPicker()
+        },
+        onAddPreTripPhotos = { launchPreTripPhotoPicker() },
+    )
+}
+
+@Composable
+private fun PlacesTabContent() {
+    // Manual add/edit/delete is M16's job - this is the read-only list, city-grouped, synced
+    // from Firebase with Room as the source of truth. The incomplete-photo retry loop moved
+    // into PlacesListContainer's own onCreate (see PlaceRetryDataSource's kdoc for its
+    // documented gap).
+    val container = koinViewModel<PlacesListContainer>()
+    PlacesListScreen(container)
+}
+
+@Composable
+private fun MatcherTabContent() {
+    val container = koinViewModel<MatcherContainer>()
+    MatcherScreen(container)
+}
+
+@Composable
+private fun MatchListTabContent() {
+    val container = koinViewModel<MatcherContainer>()
+    MatchListScreen(container)
 }
