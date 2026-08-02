@@ -4,21 +4,16 @@ import androidx.lifecycle.ViewModel
 import com.alongside.core.domain.auth.AuthSessionCache
 import com.alongside.core.domain.pairing.PairingRepository
 import com.alongside.core.domain.place.PlaceCandidateRepository
-import com.alongside.core.domain.place.PlaceSwipeRepository
 import com.alongside.core.domain.place.importing.PlaceImportPipeline
 import com.alongside.core.domain.place.importing.PlaceImportResult
 import com.alongside.core.domain.place.importing.extractShareUrl
 import com.alongside.core.domain.work.BackgroundJobKind
 import com.alongside.core.domain.work.BackgroundWorkScheduler
-import com.alongside.core.model.SyncStatus
-import com.alongside.core.model.place.PlaceSwipe
-import com.alongside.core.model.place.SwipeDirection
 import kotlinx.coroutines.flow.first
 import org.orbitmvi.orbit.Container
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.syntax.Syntax
 import org.orbitmvi.orbit.viewmodel.container
-import kotlin.time.Clock
 
 /**
  * Drives the share-link confirmation card: runs [PlaceImportPipeline.import] once on creation
@@ -30,11 +25,9 @@ public class PlaceImportContainer(
     private val shareText: String,
     private val pipeline: PlaceImportPipeline,
     private val placeCandidateRepository: PlaceCandidateRepository,
-    private val placeSwipeRepository: PlaceSwipeRepository,
     private val authSessionCache: AuthSessionCache,
     private val pairingRepository: PairingRepository,
     private val backgroundWorkScheduler: BackgroundWorkScheduler,
-    private val clock: Clock = Clock.System,
 ) : ViewModel(),
     ContainerHost<PlaceImportState, PlaceImportSideEffect> {
     override val container: Container<PlaceImportState, PlaceImportSideEffect> =
@@ -80,23 +73,6 @@ public class PlaceImportContainer(
         intent {
             val place = state.place ?: return@intent
             placeCandidateRepository.upsert(place)
-            // Importing IS the importer's vote - Matcher's deck excludes places you added
-            // yourself (docs/roadmap.md M21.5, "element of surprise"), so without this the
-            // importer would never get a card to swipe on their own import, and it could never
-            // match no matter how the partner swiped.
-            val now = clock.now()
-            placeSwipeRepository.upsert(
-                PlaceSwipe(
-                    id = "${place.id}::${place.addedByUserId}",
-                    tripId = place.tripId,
-                    candidateId = place.id,
-                    userId = place.addedByUserId,
-                    direction = SwipeDirection.LIKE,
-                    swipedAt = now,
-                    syncStatus = SyncStatus.PENDING,
-                    updatedAt = now,
-                ),
-            )
             // Event-driven enqueue (docs/roadmap.md M12.11) - the periodic sweep is only a
             // backstop for a missed enqueue, not the primary path.
             if (place.needsRetry()) {
