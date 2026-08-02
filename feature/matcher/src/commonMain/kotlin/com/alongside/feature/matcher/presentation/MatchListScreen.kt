@@ -1,6 +1,7 @@
 package com.alongside.feature.matcher.presentation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +22,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.alongside.core.domain.maps.MapsLauncher
 import com.alongside.core.model.place.PlaceCandidate
 import com.alongside.core.ui.component.InkBackground
 import com.alongside.core.ui.component.MediaListRow
@@ -31,6 +34,7 @@ import com.alongside.core.ui.component.PaperCard
 import com.alongside.core.ui.component.ScreenHeader
 import com.alongside.core.ui.format.countryCodeToFlagEmoji
 import com.alongside.core.ui.theme.AlongsideSpacing
+import org.koin.compose.koinInject
 import org.orbitmvi.orbit.compose.collectAsState
 import kotlin.math.round
 
@@ -42,15 +46,21 @@ private const val OTHER_CITY_LABEL = "Other"
 public fun MatchListScreen(
     container: MatcherContainer,
     modifier: Modifier = Modifier,
+    mapsLauncher: MapsLauncher = koinInject(),
 ) {
     val state by container.collectAsState()
-    MatchListContent(state = state, modifier = modifier)
+    MatchListContent(
+        state = state,
+        onOpenMaps = { place -> mapsLauncher.openMaps(place.latitude, place.longitude, place.name) },
+        modifier = modifier,
+    )
 }
 
 @Composable
 internal fun MatchListContent(
     state: MatcherState,
     modifier: Modifier = Modifier,
+    onOpenMaps: (PlaceCandidate) -> Unit = {},
 ) {
     InkBackground(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -60,14 +70,17 @@ internal fun MatchListContent(
                     Text(text = "No matches yet - swipe on some places together.")
                 }
             } else {
-                MatchesByCity(state.matches.groupedByCity())
+                MatchesByCity(state.matches.groupedByCity(), onOpenMaps)
             }
         }
     }
 }
 
 @Composable
-private fun MatchesByCity(groups: List<PlaceCityGroup>) {
+private fun MatchesByCity(
+    groups: List<PlaceCityGroup>,
+    onOpenMaps: (PlaceCandidate) -> Unit,
+) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = AlongsideSpacing.xl),
         verticalArrangement = Arrangement.spacedBy(AlongsideSpacing.md),
@@ -80,14 +93,23 @@ private fun MatchesByCity(groups: List<PlaceCityGroup>) {
                     tone = OverlineLabelTone.Muted,
                 )
             }
-            items(group.places, key = { it.id }) { place -> MatchRow(place) }
+            items(group.places, key = { it.id }) { place -> MatchRow(place, onOpenMaps) }
         }
     }
 }
 
 @Composable
-private fun MatchRow(place: PlaceCandidate) {
-    PaperCard(modifier = Modifier.fillMaxWidth()) {
+private fun MatchRow(
+    place: PlaceCandidate,
+    onOpenMaps: (PlaceCandidate) -> Unit,
+) {
+    PaperCard(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { onOpenMaps(place) }
+                .testTag("match-row-${place.id}"),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             MediaListRow(
                 modifier = Modifier.weight(1f),

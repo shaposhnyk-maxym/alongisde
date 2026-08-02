@@ -38,7 +38,9 @@ private fun previewCandidate(
     latitude = 49.8397,
     longitude = 24.0297,
     note = null,
-    addedByUserId = "owner-1",
+    // The partner's import, not the deck viewer's own - the deck excludes self-imported
+    // candidates (docs/roadmap.md M21.5), and MatcherDeckCardPreview's ownUserId is "owner-1".
+    addedByUserId = "member-1",
     syncStatus = SyncStatus.SYNCED,
     createdAt = Instant.fromEpochMilliseconds(0),
     updatedAt = Instant.fromEpochMilliseconds(0),

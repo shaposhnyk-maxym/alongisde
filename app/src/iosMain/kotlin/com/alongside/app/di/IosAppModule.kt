@@ -1,5 +1,6 @@
 package com.alongside.app.di
 
+import com.alongside.app.maps.IosMapsLauncher
 import com.alongside.app.work.IosBackgroundWorkScheduler
 import com.alongside.core.database.AlongsideDatabase
 import com.alongside.core.database.authSessionCache
@@ -11,6 +12,7 @@ import com.alongside.core.domain.auth.AuthSessionRepository
 import com.alongside.core.domain.diary.processing.EpisodeVisionDescriptionClient
 import com.alongside.core.domain.diary.processing.PhotoUploadClient
 import com.alongside.core.domain.diary.processing.PlaceGeocodingClient
+import com.alongside.core.domain.maps.MapsLauncher
 import com.alongside.core.domain.onboarding.OnboardingCompletionCache
 import com.alongside.core.domain.pairing.DefaultPairingRepository
 import com.alongside.core.domain.pairing.InviteCodeGenerator
@@ -104,6 +106,7 @@ public fun iosAppModule(
     }
     single { InviteCodeGenerator() }
     single<BackgroundWorkScheduler> { IosBackgroundWorkScheduler() }
+    single<MapsLauncher> { IosMapsLauncher() }
     single<PairingRepository> { DefaultPairingRepository(get(), get()) }
     single<ExifPhotoReader> { IosExifPhotoReader() }
     single<PhotoByteReader> { IosPhotoByteReader() }
