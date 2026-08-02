@@ -63,16 +63,25 @@ public class PlaceImportPipeline
             ) : LookupOutcome()
         }
 
+        // Some shares are already a full, resolved `/maps/place/...` URL (a page URL copied/shared
+        // directly, not a `maps.app.goo.gl` short link) - parsing that directly, before ever
+        // touching the network, avoids both an unnecessary redirect-resolve call and its failure
+        // mode (a non-redirecting URL has no Location header to resolve, confirmed live: real
+        // Google Maps place links share as `HTTP 200`, not a redirect).
         private suspend fun resolveAndLookup(shareUrl: String): LookupOutcome {
-            val resolvedUrl =
-                when (val redirectResult = redirectResolver.resolve(shareUrl)) {
-                    is ShareLinkRedirectResult.Resolved -> redirectResult.url
-                    is ShareLinkRedirectResult.Failure -> return LookupOutcome.Failure(redirectResult.cause)
-                }
+            val parsedLink =
+                GoogleMapsShareLinkParser.parse(shareUrl)
+                    ?: run {
+                        val resolvedUrl =
+                            when (val redirectResult = redirectResolver.resolve(shareUrl)) {
+                                is ShareLinkRedirectResult.Resolved -> redirectResult.url
+                                is ShareLinkRedirectResult.Failure -> return LookupOutcome.Failure(redirectResult.cause)
+                            }
+                        GoogleMapsShareLinkParser.parse(resolvedUrl)
+                    }
 
-            val parsedLink = GoogleMapsShareLinkParser.parse(resolvedUrl)
             return if (parsedLink == null) {
-                LookupOutcome.Failure(IllegalArgumentException("Not a Google Maps place URL: $resolvedUrl"))
+                LookupOutcome.Failure(IllegalArgumentException("Not a Google Maps place URL: $shareUrl"))
             } else {
                 lookupDetails(parsedLink)
             }

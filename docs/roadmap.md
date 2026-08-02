@@ -541,6 +541,63 @@ Episode+Photo, PlaceCandidate).
   hard-crash). `IosAppModule.kt`'s kdoc вже документує цей гап; те саме
   стосується diary-фото пайплайну (M10).
 
+**Оновлення (2026-08-02, `feat/m13.2-ios-place-import`): iOS-гап
+закрито.** Додано `placesBindings()` в `IosAppModule.kt` — дзеркально
+до Android-блоку `AndroidAppModule.kt`'s `placesBindings()`
+(`ShareLinkRedirectResolver`, `PlaceDetailsLookupClient`,
+`PlacePhotoClient`, `PlacePhotoUploadClient`, `PlaceImportPipeline`),
+усі класи вже були в `commonMain`, жодного нового Kotlin/Native коду не
+знадобилось. Живо перевірено на Simulator (засіяний App Group
+`pendingShareText` + cold start): `entry<PlaceImport>` тепер компонується
+без Koin-краху, `PlaceImportScreen` показує реальний результат
+пайплайна (перевірено і error-станом — `ShareLinkRedirectResolver` на
+вигаданому лінку коректно показує "Expected a redirect... got HTTP
+404", і на реальному Google Maps лінку — коректний "got HTTP 200",
+обидва без краху застосунку).
+
+**Auto-foreground застосунку з Share Extension — дослідження й
+фінальне рішення (2026-08-02):** користувач хотів паритет з Android's
+`ACTION_SEND` (`singleTask` виводить `MainActivity` на передній план
+сам). Дві спроби виявилися глухим кутом, обидві підтверджено live-тестом
+і повністю відкочені: `NSExtensionContext.open(_:)` (офіційно
+підтримується лише для Today/Widget-екстеншенів, не Share —
+підтверджено документацією Apple; виклик показує "Open in Alongside?"
+-промпт, який блимає й ніколи не завершується, той самий клас багу, що
+openradar rdar://17551744) і приватний `UIResponder`-chain `openURL:`
+хак (responder chain не знаходить `UIApplication`-інстанс з процесу
+Share Extension на цій iOS). **Немає робочого способу (ні
+задокументованого, ні приватного API) відкрити контейнерний застосунок
+напряму з Share Extension на iOS.**
+
+**Фінальне рішення — локальна нотифікація (реалізовано, живо
+перевірено користувачем через реальний Share Sheet):**
+`ShareViewController` після запису `pendingShareText` планує локальну
+нотифікацію (`UNUserNotificationCenter`, `trigger: nil` — миттєва) з
+текстом "Місце готове до імпорту". Тап на нотифікацію — стандартний,
+завжди надійний спосіб вивести застосунок на передній план (жодних
+приватних API); `AlongsideiOSApp.swift`'s наявний
+`scenePhase == .active`-обробник уже підхоплює `pendingShareText` і
+веде на `PlaceImportScreen` — жодних змін на боці застосунку не
+знадобилось. Resolve/import-пайплайн (`PlaceImportPipeline`) свідомо
+й далі лишається тільки в основному застосунку, не дублюється в
+екстеншені (той лишається чистим Swift/UIKit, без KMP/Compose/Koin —
+пам'яттю-обмежений процес).
+
+**Супутній фікс, знайдений під час живого тестування реальним лінком:**
+`PlaceImportPipeline.resolveAndLookup` завжди спершу намагався
+резолвити редирект, навіть коли переданий `shareUrl` — уже повний,
+розрезолвлений `/maps/place/...` лінк (напр. скопійований з адресного
+рядка Safari чи Google-пошуку, не короткий `maps.app.goo.gl`-лінк) —
+такий лінк не робить редирект, тож `ShareLinkRedirectResolver` падав з
+"Expected a redirect... got HTTP 200". Виправлено: спершу пряма спроба
+`GoogleMapsShareLinkParser.parse(shareUrl)` (парсер і так вже шукає
+`/maps/place/` будь-де в URL, редирект тут не потрібен), і лише якщо
+не вдалось — фолбек на існуючий redirect-resolve шлях (короткі
+лінки). Регресійний тест —
+`PlaceImportPipelineTest`'s "shareUrl that already contains a resolved
+Google Maps place URL skips the redirect resolver". Той самий код
+(`core:domain`, commonMain) — фікс однаково діє і на Android.
+
 ---
 
 ### M8 — Pairing ✅ done
@@ -3527,7 +3584,190 @@ Recap-стек) — той самий мінімалізм, що вже в `M20.
 
 ---
 
-### M21 — Release readiness
+### M21 — Trip readiness
+
+Шість незалежних UX/логічних доробок, знайдених через реальне
+використання застосунку перед поїздкою — не одна велика фіча, а пул
+дрібних, окремо реалізовуваних виправлень (кожен пункт незалежний
+від інших, можна брати в будь-якому порядку). Досліджено й
+задокументовано 2026-08-02, ще не реалізовано.
+
+---
+
+**1. PagerDots в Timeline не центровані**
+
+`core/ui/src/commonMain/.../component/PagerDots.kt:34-38` — `Row` з
+`Arrangement.spacedBy(DotSize)` лише розставляє інтервали між
+крапками, не центрує сам `Row` всередині своєї ширини; коли викликач
+(`feature/diary/.../DiaryTimelineScreen.kt:97-105`) передає
+`.fillMaxWidth()` перед `.align(Alignment.BottomCenter)`, крапки
+притискаються до лівого краю. Робочий приклад для звірки —
+`FullscreenPhotoViewer.kt:111-118`, де `fillMaxWidth()` НЕ
+передається, і центрування працює як слід.
+
+**Accept:**
+- [ ] `PagerDots.kt`: `Arrangement.spacedBy(DotSize)` →
+      `Arrangement.spacedBy(DotSize, Alignment.CenterHorizontally)`
+      (фікс у самому компоненті, не в кожному виклику)
+- [ ] Скріншот-тест (`core:ui`, Roborazzi) підтверджує центрування в
+      `DiaryTimelineScreen`-контексті (`fillMaxWidth` + `BottomCenter`)
+- [ ] Існуючий скріншот-тест `FullscreenPhotoViewer` не регресує (той
+      самий компонент, інший виклик — без `fillMaxWidth`)
+
+---
+
+**2. "Add Photos" — лише для поточного дня**
+
+`feature/diary/.../DiaryTimelineScreen.kt:116-133` — поточний гейт
+`unlockState == LOCKED && !isPastDay` виключає лише минулі дні;
+майбутні дні поїздки (пейджер будує картку на кожен день трипу,
+`buildDiaryTimelineDays`, `core/domain/.../DiaryTimelineDay.kt:39-63`)
+лишаються LOCKED, але кнопка на них активна. `today` вже
+обчислюється (`DiaryTimelineContainer.kt:38`,
+`clock.todayIn(TimeZone.currentSystemDefault())`).
+
+**Accept:**
+- [ ] Гейт замінено на `selectedDay.date == today` (поглинає стару
+      `!isPastDay`-перевірку, додатково виключає майбутні дні)
+- [ ] Юніт/скріншот-тест: кнопка не показується ні для минулого, ні
+      для майбутнього дня, лише для today
+- [ ] Countdown-картка (pre-trip capture, окрема гілка коду) — не
+      зачіпати, її не стосується
+
+---
+
+**3. iOS: локальна нотифікація "рекап готовий"**
+
+M20.5 позначений "✅ done (Android)" — iOS лишився no-op
+(`NoOpBackgroundWorkScheduler.kt`), бо на момент M12.11 `iosApp` ще
+не існував. **Цей блокер застарів** — `iosApp` реально існує й
+білдиться з M7 (2026-07-29, `iosApp/run.sh`).
+`BackgroundWorkScheduler.scheduleRecapReadyNotification(tripId,
+fireAt: LocalDate)` (`core/domain/.../work/
+BackgroundWorkScheduler.kt:33`) — мережево-незалежний виклик, та
+сама дата обчислюється на обох пристроях. `NoOpBackgroundWorkScheduler
+.kt:23-51` вже містить детальний TODO-план. Дозвіл на нотифікації вже
+запитується в онбордингу (`IosPermissionController.kt:63-68`,
+підтверджено робочий cinterop без Swift-мосту). Живий прецедент
+миттєвої локальної нотифікації вже є
+(`iosApp/ShareExtension/ShareViewController.swift`,
+`feat/m13.2-ios-place-import`) — лишається замінити `trigger: nil` на
+реальний майбутньо-датований тригер.
+
+**Accept:**
+- [ ] Новий `IosBackgroundWorkScheduler` (iosMain), підключений в
+      `IosAppModule.kt` замість `NoOpBackgroundWorkScheduler` —
+      **лише** для `scheduleRecapReadyNotification`; два інші методи
+      (episode/place sync retry) лишаються no-op — легітимно
+      потребують `BGTaskScheduler`, поза скоупом цього пункту
+- [ ] Використовує вже наявну чисту функцію
+      `durationUntilRecapNotification` (`core/domain/.../recap/
+      RecapNotificationTiming.kt`) для обчислення тригера
+      (`UNCalendarNotificationTrigger`/`UNTimeIntervalNotificationTrigger`)
+- [ ] Ідентифікатор запиту — `"recap-ready-$tripId"` (той самий, що
+      Android's `enqueueUniqueWork`-ключ) — повторний виклик
+      перезаписує, не дублює
+- [ ] Мануальна Simulator-перевірка: майбутньо-датований тригер
+      реально доставляє нотифікацію (можна прискорити тестовим
+      коротким delay), тап відкриває застосунок на Home (не
+      deep-лінк, той самий UX, що Android)
+
+---
+
+**4. Bottom nav: розділити анімацію контенту й бару, зробити видимою
+стандартну M3-індикацію**
+
+Дві окремі причини під одним симптомом. (a) `MainShell`
+(`app/.../navigation/MainShell.kt:19-60`) інстанціюється ВСЕРЕДИНІ
+кожного nav-entry (`AlongsideApp.kt:294-306`), тож перемикання таба
+свопить увесь `NavEntry` разом з баром — на Android це дефолтний
+Nav3 crossfade цілого дерева (`AlongsideNavDisplay.android.kt`, без
+кастомного `transitionSpec`), на iOS — взагалі без анімації
+(`AlongsideNavDisplay.ios.kt`, `entryProvider(key).Content()` напряму,
+`navigation3-ui` немає iOS-артефактів). (b) Сам `NavigationBar` —
+вже РЕАЛЬНИЙ `androidx.compose.material3.NavigationBar`/
+`NavigationBarItem` (не кастомний), тобто стандартна M3-анімація
+(ripple + expanding pill-індикатор) вже є з коробки — просто
+невидима: `indicatorColor = MaterialTheme.colorScheme.background`
+(`Ink`, майже чорний) на тлі `containerColor = colorScheme.surface`
+(`SurfaceInk`, теж темний) — контраст майже нульовий.
+
+**Accept:**
+- [ ] `MainShell`/`NavigationBar` піднято НАД навігацією як один
+      persistent інстанс (не всередині кожного `entry<Tab>`);
+      `currentTab` — похідне з `backStack.last()`
+- [ ] Лише контент-область обгорнута в `AnimatedContent`/`Crossfade`,
+      keyed по табу — однаково на Android і iOS (не покладатись на
+      Nav3-ui, якого нема на iOS)
+- [ ] `indicatorColor` виправлено на видимий контраст (напр.
+      дефолтний M3 `secondaryContainer`-похідний колір замість
+      `background`) — вже наявна pill-анімація стає видимою
+- [ ] Локальна `private const val ..._DURATION_MILLIS`-константа
+      біля нової анімації (той самий патерн, що `Shimmer.kt`/
+      `FadeUpReveal.kt` — жодного нового спільного токен-об'єкта)
+- [ ] Мануальна/скріншот-перевірка на обох платформах: перехід між
+      табами — контент фейдиться, бар лишається на місці,
+      selected-індикатор видимо анімується
+
+---
+
+**5. Places-таб — лише свої місця цього трипу; Matcher — лише
+партнерові**
+
+`PlacesListDataSource.kt:34-56` → `placeCandidateRepository
+.observeByTrip(tripId)` (`PlaceCandidateDao.kt:18-19`, підтверджено
+SQL: `WHERE tripId = :tripId`, без фільтра `addedByUserId`) — показує
+місця ОБОХ партнерів. **Ripple-ефект, знайдений під час
+дослідження:** `MatcherContainer.kt:118` викликає той самий
+unfiltered запит, і `MatcherState.deck`/`myTurnDeck` фільтрують лише
+по статусу матчу — тобто сьогодні свайп-колода показує користувачу
+картки місць, які він САМ імпортував, що прямо суперечить бажаному
+"елементу сюрпризу". `addedByUserId` вже є на моделі
+(`PlaceCandidate.kt:13`), стемпається в `PlaceImportPipeline.import(...)`.
+
+**Accept:**
+- [ ] Новий `PlaceCandidateDao.observeByTripAndAddedBy(tripId, userId)`
+      (наскрізно через repository й domain-інтерфейс)
+- [ ] Places-таб використовує його з `ownUserId` (лише "мої")
+- [ ] Matcher's deck (`MatcherState.deck`/`myTurnDeck` або вище, в
+      `observeTripContent`) фільтрує `addedByUserId != ownUserId`
+      (лише "партнерові")
+- [ ] `PlaceCandidateDaoTest`/`PlaceCandidateRepositoryImplTest`/
+      `PlacesListDataSourceTest`/`MatcherContainerTest` — нові кейси
+      на фільтрацію в обидва боки
+
+---
+
+**6. Клік на matched-картку → відкрити мапи (Android + iOS)**
+
+`MatchListScreen.kt:88-116`'s `MatchRow` підтверджено інертний —
+жодного `onClick`/`clickable`, `PaperCard`
+(`core/ui/.../PaperCard.kt:18-21`) навіть не має `onClick`-параметра.
+Готовий cross-platform шаблон "відкрити зовнішній застосунок" уже є —
+`PermissionController.openAppSettings()`
+(`feature/onboarding/.../PermissionController.kt:14-23`: звичайний
+інтерфейс + окремі android/iOS реалізації через Koin, не
+`expect`/`actual`). `PlaceCandidate` вже має `latitude`/`longitude`/
+`name` — усе потрібне для депліну.
+
+**Accept:**
+- [ ] Новий commonMain-інтерфейс `MapsLauncher` (той самий
+      Koin-платформний патерн, що `PermissionController`) з
+      `openMaps(latitude, longitude, name)`
+- [ ] Android/iOS `actual`-реалізації відкривають universal-лінк
+      `https://www.google.com/maps/search/?api=1&query=lat,lng`
+      (без кастомної схеми, без `LSApplicationQueriesSchemes` на
+      iOS — відкриває будь-який встановлений мапс-застосунок чи
+      браузер); Android опційно спершу пробує `geo:`-схему з
+      фолбеком на universal-лінк
+- [ ] `MatchRow`/`PaperCard` отримує `.clickable`, викликає
+      `mapsLauncher.openMaps(place.latitude, place.longitude, place.name)`
+- [ ] Мануальна перевірка на обох платформах: тап відкриває
+      встановлений мапс-застосунок з правильною позначкою
+
+---
+
+### M22 — Release readiness
 Наскрізна перевірка перед реальним використанням у поїздці.
 
 **Accept:**
@@ -3535,6 +3775,6 @@ Recap-стек) — той самий мінімалізм, що вже в `M20.
 - Повний офлайн-флоу вручну прогнаний на двох реальних пристроях
   одночасно (Android + iOS): symmetric unlock, matcher, push — всі
   працюють у зв'язці, не тільки ізольовано
-- Мануальний чекліст з M5/M7/M13/M17 (усе, що позначено як
+- Мануальний чекліст з M5/M7/M13/M17/M21 (усе, що позначено як
   "не автоматизується") пройдено й зафіксовано
 - Немає відкритих P0/P1 багів

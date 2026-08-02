@@ -15,6 +15,11 @@ import com.alongside.core.domain.onboarding.OnboardingCompletionCache
 import com.alongside.core.domain.pairing.DefaultPairingRepository
 import com.alongside.core.domain.pairing.InviteCodeGenerator
 import com.alongside.core.domain.pairing.PairingRepository
+import com.alongside.core.domain.place.importing.PlaceDetailsLookupClient
+import com.alongside.core.domain.place.importing.PlaceImportPipeline
+import com.alongside.core.domain.place.importing.PlacePhotoClient
+import com.alongside.core.domain.place.importing.PlacePhotoUploadClient
+import com.alongside.core.domain.place.importing.ShareLinkRedirectResolver
 import com.alongside.core.domain.pretrip.PreTripPhotoUploadClient
 import com.alongside.core.domain.work.BackgroundWorkScheduler
 import com.alongside.core.network.auth.FirebaseAuthApi
@@ -23,14 +28,21 @@ import com.alongside.core.network.auth.FirebaseAuthSessionRepository
 import com.alongside.core.network.auth.SessionFirestoreTokenProvider
 import com.alongside.core.network.auth.asIdTokenRefresher
 import com.alongside.core.network.client.createFirestoreHttpClient
+import com.alongside.core.network.client.createShareLinkRedirectHttpClient
 import com.alongside.core.network.firestore.FirestoreConfig
 import com.alongside.core.network.firestore.FirestoreTokenProvider
 import com.alongside.core.network.gemini.GeminiConfig
 import com.alongside.core.network.gemini.GeminiVisionApi
 import com.alongside.core.network.gemini.GeminiVisionDescriptionClient
 import com.alongside.core.network.places.GooglePlacesConfig
+import com.alongside.core.network.places.GooglePlacesDetailsApi
+import com.alongside.core.network.places.GooglePlacesDetailsClient
 import com.alongside.core.network.places.GooglePlacesGeocodingApi
 import com.alongside.core.network.places.GooglePlacesGeocodingClient
+import com.alongside.core.network.places.GooglePlacesPhotoApi
+import com.alongside.core.network.places.GooglePlacesPhotoClient
+import com.alongside.core.network.places.KtorShareLinkRedirectResolver
+import com.alongside.core.network.storage.FirebasePlacePhotoUploadClient
 import com.alongside.core.network.storage.FirebasePreTripPhotoUploadClient
 import com.alongside.core.network.storage.FirebaseStorageApi
 import com.alongside.core.network.storage.FirebaseStorageConfig
@@ -41,6 +53,7 @@ import com.alongside.feature.diary.capture.IosPhotoByteReader
 import com.alongside.feature.diary.capture.IosPhotoCompressor
 import com.alongside.feature.diary.capture.PhotoByteReader
 import com.alongside.feature.diary.capture.PhotoCompressor
+import org.koin.core.module.Module
 import org.koin.dsl.module
 
 /**
@@ -56,11 +69,11 @@ import org.koin.dsl.module
  * with a Koin `NoDefinitionFoundException` for exactly these types until the bindings below were
  * added).
  *
- * Deliberately still NOT ported (see docs/roadmap.md M10's iOS TODO and M13.2's Share Extension
- * note): the Places share-link import bindings (`ShareLinkRedirectResolver`,
- * `PlaceDetailsLookupClient`, `PlacePhotoClient`, `PlacePhotoUploadClient`, `PlaceImportPipeline`)
- * - those are a separate feature (M13.2's share-link import), not on the Timeline's dependency
- * chain, so they don't block Timeline/diary capture.
+ * `placesBindings()` mirrors Android's `AndroidAppModule.kt`'s block of the same name - the
+ * Places share-link import pipeline (`ShareLinkRedirectResolver`, `PlaceDetailsLookupClient`,
+ * `PlacePhotoClient`, `PlacePhotoUploadClient`, `PlaceImportPipeline`), reusing the
+ * `GooglePlacesConfig`/`FirebaseStorageApi`/`FirebaseStorageConfig`/`PlaceGeocodingClient` singles
+ * already bound above for geocoding/diary upload.
  *
  * [firebaseApiKey]/[firebaseProjectId]/[storageBucket] mirror the same Firebase project's values
  * committed in `androidApp/google-services.json` - there is no iOS-side equivalent file to read
@@ -112,4 +125,19 @@ public fun iosAppModule(
         )
     }
     single<PreTripPhotoUploadClient> { FirebasePreTripPhotoUploadClient(get(), get()) }
+    placesBindings()
+}
+
+/**
+ * Split out from [iosAppModule] purely to keep it under detekt's `LongMethod` threshold, same
+ * reasoning as Android's `AndroidAppModule.kt`'s `placesBindings()`.
+ */
+private fun Module.placesBindings() {
+    single<ShareLinkRedirectResolver> { KtorShareLinkRedirectResolver(createShareLinkRedirectHttpClient()) }
+    single { GooglePlacesDetailsApi(get(), get()) }
+    single<PlaceDetailsLookupClient> { GooglePlacesDetailsClient(get()) }
+    single { GooglePlacesPhotoApi(get(), get()) }
+    single<PlacePhotoClient> { GooglePlacesPhotoClient(get()) }
+    single<PlacePhotoUploadClient> { FirebasePlacePhotoUploadClient(get(), get()) }
+    single { PlaceImportPipeline(get(), get(), get(), get(), get()) }
 }
