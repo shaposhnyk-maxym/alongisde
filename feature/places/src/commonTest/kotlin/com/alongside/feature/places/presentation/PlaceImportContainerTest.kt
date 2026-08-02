@@ -7,6 +7,7 @@ import com.alongside.core.domain.work.BackgroundJobKind
 import com.alongside.core.model.SyncStatus
 import com.alongside.core.model.place.PlaceCandidate
 import com.alongside.core.model.place.PlacePhoto
+import com.alongside.core.model.place.SwipeDirection
 import com.alongside.feature.places.FakeAuthSessionCache
 import com.alongside.feature.places.FakeBackgroundWorkScheduler
 import com.alongside.feature.places.FakePairingRepository
@@ -16,6 +17,7 @@ import com.alongside.feature.places.FakePlacePhotoClient
 import com.alongside.feature.places.FakePlacePhotoUploadClient
 import com.alongside.feature.places.FakeShareLinkRedirectResolver
 import com.alongside.feature.places.RecordingPlaceCandidateRepository
+import com.alongside.feature.places.RecordingPlaceSwipeRepository
 import com.alongside.feature.places.fakeTrip
 import com.alongside.feature.places.testAuthSession
 import kotlinx.coroutines.test.runTest
@@ -65,6 +67,7 @@ private val EXPECTED_PLACE =
 
 class PlaceImportContainerTest {
     private val placeCandidateRepository = RecordingPlaceCandidateRepository()
+    private val placeSwipeRepository = RecordingPlaceSwipeRepository()
     private val pairingRepository =
         FakePairingRepository(initialActiveTrip = fakeTrip(id = "trip-1", ownerId = "uid-1"))
     private val authSessionCache = FakeAuthSessionCache(testAuthSession("uid-1"))
@@ -94,9 +97,11 @@ class PlaceImportContainerTest {
         shareText = shareText,
         pipeline = pipeline,
         placeCandidateRepository = placeCandidateRepository,
+        placeSwipeRepository = placeSwipeRepository,
         authSessionCache = authSessionCache,
         pairingRepository = pairingRepository,
         backgroundWorkScheduler = backgroundWorkScheduler,
+        clock = FixedClock,
     )
 
     @Test
@@ -178,6 +183,27 @@ class PlaceImportContainerTest {
             }
             assertEquals(1, placeCandidateRepository.upserted.size)
             assertEquals("place-1", placeCandidateRepository.upserted.single().id)
+        }
+
+    @Test
+    fun `Accept records an implicit LIKE swipe from the importer - so a self-imported place can still match`() =
+        // Regression: M21.5's Matcher deck excludes places the current user imported themselves
+        // (docs/roadmap.md M21.5) - without this, the importer would never see their own import
+        // in their deck to swipe on it, so their side of the match could never be recorded and
+        // the place could never match at all, no matter how the partner swiped. Importing IS the
+        // importer's vote.
+        runTest {
+            containerUnderTest().test(this) {
+                runOnCreate()
+                expectState { copy(status = PlaceImportStatus.FOUND, place = EXPECTED_PLACE) }
+
+                containerHost.onIntent(PlaceImportIntent.Accept)
+                expectSideEffect(PlaceImportSideEffect.Imported)
+            }
+            val recorded = placeSwipeRepository.upserted.single()
+            assertEquals("place-1::uid-1", recorded.id)
+            assertEquals("uid-1", recorded.userId)
+            assertEquals(SwipeDirection.LIKE, recorded.direction)
         }
 
     @Test

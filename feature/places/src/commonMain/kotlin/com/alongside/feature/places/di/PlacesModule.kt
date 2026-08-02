@@ -11,7 +11,7 @@ import org.koin.dsl.module
 /** PlaceImportContainer needs the raw shared text at creation time - callers pass it via `parametersOf`. */
 public val placesFeatureModule =
     module {
-        viewModel { (shareText: String) -> PlaceImportContainer(shareText, get(), get(), get(), get(), get()) }
+        viewModel { (shareText: String) -> PlaceImportContainer(shareText, get(), get(), get(), get(), get(), get()) }
         single { PlaceRetryCoordinator(get(), get(), get()) }
         single { PlaceContentPullCoordinator(get(), get()) }
         single { PlacesListDataSource(get(), get(), get()) }
