@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType
+
 plugins {
     alias(libs.plugins.convention.kmp.library.compose)
     alias(libs.plugins.convention.koin)
@@ -9,6 +11,19 @@ plugins {
 kotlin {
     android {
         namespace = "com.alongside.app"
+    }
+    // KmpLibraryPlugin (build-logic) only registers a DEBUG framework for every module - Release
+    // linking was deliberately skipped project-wide (heavy on the K/N linker, App Store publishing
+    // was out of scope). `app` is the one module that actually exports its .framework to Xcode
+    // (OTHER_LDFLAGS/FRAMEWORK_SEARCH_PATHS in iosApp/project.yml), so it's the only one that needs
+    // a RELEASE variant too - for `Product > Archive`, which always builds Release regardless of
+    // App Store scope (confirmed live 2026-08-06: archiving failed with "Unable to resolve module
+    // dependency: 'app'" since no Release framework existed to embed).
+    listOf(iosArm64(), iosSimulatorArm64()).forEach { iosTarget ->
+        iosTarget.binaries.framework(listOf(NativeBuildType.RELEASE)) {
+            baseName = project.name
+            isStatic = true
+        }
     }
 }
 

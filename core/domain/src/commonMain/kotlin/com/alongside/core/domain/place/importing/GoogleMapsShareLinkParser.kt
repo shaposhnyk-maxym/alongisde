@@ -14,24 +14,38 @@ public data class ParsedGoogleMapsLink(
  * `maps.app.goo.gl` short link's HTTP redirect - that hop is [ShareLinkRedirectResolver]'s job,
  * kept separate so this stays a zero-I/O function, unit-testable with literal fixture strings).
  *
- * Every real share link resolves to `.../maps/place/<name>[,<address>][/@lat,lng,zoom]/data=
+ * Most real share links resolve to `.../maps/place/<name>[,<address>][/@lat,lng,zoom]/data=
  * !4m2!3m1!1s<hex>:<hex>!18m1!1e1?...` - the name+address segment is URL-encoded (`+` for space),
  * comma-separated, first component is the display name; the `@lat,lng` segment is only present
  * for pin-drop shares, absent for the far more common place-card share (confirmed against 4 real
- * links); the `!1s<hex>:<hex>` pair is Google's internal feature id for the place.
+ * links); the `!1s<hex>:<hex>` pair is Google's internal feature id for the place. Some resolve to
+ * a legacy `maps.google.<tld>/?q=<name>[,<address>]&...` shape instead - no path, no coordinates,
+ * no feature id, just the name/address crammed into the `q` query param the same
+ * comma-separated way (confirmed live 2026-08-07 against a real device share) - Google's redirect
+ * service appears to pick this shape for at least some shares, not a hypothetical edge case.
  */
 public object GoogleMapsShareLinkParser {
     private val featureIdRegex = Regex("""!1s(0x[0-9a-fA-F]+:0x[0-9a-fA-F]+)""")
     private val coordinatesRegex = Regex("""@(-?\d+\.\d+),(-?\d+\.\d+)""")
+    private val mapsGoogleQueryHostRegex = Regex("""^https?://maps\.google\.[^/?]+(/[^?]*)?\?""")
     private const val PLACE_MARKER = "/maps/place/"
 
     public fun parse(url: String): ParsedGoogleMapsLink? {
-        val rawNameSegment = extractRawNameSegment(url) ?: return null
+        val rawNameSegment = extractRawNameSegment(url)
+        return if (rawNameSegment != null) {
+            fromNameSegment(rawNameSegment, url)
+        } else if (mapsGoogleQueryHostRegex.containsMatchIn(url)) {
+            fromQueryParam(url)
+        } else {
+            null
+        }
+    }
 
-        val components = rawNameSegment.decodeUrlComponent().split(", ")
-        val displayName = components.first()
-        val address = if (components.size > 1) components.drop(1).joinToString(", ") else null
-
+    private fun fromNameSegment(
+        rawNameSegment: String,
+        url: String,
+    ): ParsedGoogleMapsLink {
+        val (displayName, address) = splitNameAndAddress(rawNameSegment)
         val coordinatesMatch = coordinatesRegex.find(url)
         val featureIdMatch = featureIdRegex.find(url)
 
@@ -54,6 +68,33 @@ public object GoogleMapsShareLinkParser {
         val nameSegmentEnd =
             afterMarker.indexOfFirst { it == '/' || it == '?' }.takeIf { it != -1 } ?: afterMarker.length
         return afterMarker.substring(0, nameSegmentEnd).ifEmpty { null }
+    }
+
+    private fun fromQueryParam(url: String): ParsedGoogleMapsLink? {
+        val query = url.substringAfter('?', missingDelimiterValue = "")
+        val qValue =
+            query
+                .split('&')
+                .firstOrNull { it.startsWith("q=") }
+                ?.removePrefix("q=")
+                ?.ifEmpty { null }
+                ?: return null
+
+        val (displayName, address) = splitNameAndAddress(qValue)
+        return ParsedGoogleMapsLink(
+            displayName = displayName,
+            address = address,
+            latitude = null,
+            longitude = null,
+            featureId = null,
+        )
+    }
+
+    private fun splitNameAndAddress(raw: String): Pair<String, String?> {
+        val components = raw.decodeUrlComponent().split(", ")
+        val displayName = components.first()
+        val address = if (components.size > 1) components.drop(1).joinToString(", ") else null
+        return displayName to address
     }
 }
 

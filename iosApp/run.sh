@@ -29,5 +29,5 @@ APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData/Alongside-*/Build/Products
 
 echo "==> install + launch"
 xcrun simctl install booted "$APP_PATH"
-xcrun simctl terminate booted com.alongside.app 2>/dev/null || true
-xcrun simctl launch --console booted com.alongside.app
+xcrun simctl terminate booted com.alongside.max 2>/dev/null || true
+xcrun simctl launch --console booted com.alongside.max
