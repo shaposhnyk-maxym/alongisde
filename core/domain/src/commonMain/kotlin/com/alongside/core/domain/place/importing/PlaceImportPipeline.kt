@@ -69,10 +69,11 @@ public class PlaceImportPipeline
         // mode (a non-redirecting URL has no Location header to resolve, confirmed live: real
         // Google Maps place links share as `HTTP 200`, not a redirect).
         private suspend fun resolveAndLookup(shareUrl: String): LookupOutcome {
+            var resolvedUrl = shareUrl
             val parsedLink =
                 GoogleMapsShareLinkParser.parse(shareUrl)
                     ?: run {
-                        val resolvedUrl =
+                        resolvedUrl =
                             when (val redirectResult = redirectResolver.resolve(shareUrl)) {
                                 is ShareLinkRedirectResult.Resolved -> redirectResult.url
                                 is ShareLinkRedirectResult.Failure -> return LookupOutcome.Failure(redirectResult.cause)
@@ -81,7 +82,7 @@ public class PlaceImportPipeline
                     }
 
             return if (parsedLink == null) {
-                LookupOutcome.Failure(IllegalArgumentException("Not a Google Maps place URL: $shareUrl"))
+                LookupOutcome.Failure(IllegalArgumentException("Not a Google Maps place URL: $resolvedUrl"))
             } else {
                 lookupDetails(parsedLink)
             }

@@ -55,6 +55,25 @@ class GoogleMapsShareLinkParserTest {
     }
 
     @Test
+    fun `parses a legacy maps google query link with no place path`() {
+        // Real resolve of a maps.app.goo.gl short link, confirmed live 2026-08-07 - Google's
+        // redirect service returns this legacy `maps.google.com/?q=...` shape (no `/maps/place/`
+        // segment, no coordinates, no feature id) for at least some shares, not just the
+        // `/maps/place/...` shape the other fixtures above use.
+        val url =
+            "https://maps.google.com/?q=%D0%90%D0%BF%D1%82%D0%B5%D0%BA%D0%B0%2C+%D0%92%D1%96%D0%BD%D0%BD" +
+                "%D0%B8%D1%86%D1%8F&g_st=com.alongside.max.ShareExtension"
+
+        val result = GoogleMapsShareLinkParser.parse(url)
+
+        assertEquals("Аптека", result?.displayName)
+        assertEquals("Вінниця", result?.address)
+        assertNull(result?.latitude)
+        assertNull(result?.longitude)
+        assertNull(result?.featureId)
+    }
+
+    @Test
     fun `returns null for a URL with no maps place segment`() {
         val result = GoogleMapsShareLinkParser.parse("https://www.google.com/search?q=coffee")
 
